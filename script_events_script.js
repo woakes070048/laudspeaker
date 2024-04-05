@@ -5,7 +5,7 @@ import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 export const options = {
   /* Option 0: Smoke test */
    vus: 5,
-   duration: '5s',
+   duration: '2m',
 
   /* Option 1: Average load test*/
 

@@ -17,3 +17,22 @@ export function createAccount(email, httpxWrapper) {
   const apiKey = accountsResponse.json("workspace.apiKey");
   return { email, password, authorization, apiKey };
 }
+
+export function login(email, password, apiKey, httpxWrapper) {
+  // Assuming the API expects a JSON body with email and password for authentication
+  let loginResponse = httpxWrapper.postOrFail(
+      "/api/auth/login",
+      `{"email":"${email}","password":"${password}"}`
+  );
+
+  // Extract the access token from the response
+  let authorization = `Bearer ${loginResponse.json("access_token")}`;
+  
+  // Set the Authorization header for subsequent requests
+  httpxWrapper.session.addHeader("Authorization", authorization);
+  
+  // Optionally, if your API interactions require the apiKey, set it as a header or handle it accordingly
+  // httpxWrapper.session.addHeader("x-api-key", apiKey);
+
+  return { email, authorization, apiKey };
+}
