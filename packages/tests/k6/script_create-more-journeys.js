@@ -6,16 +6,16 @@ import { Counter } from "k6/metrics";
 import { createAccount, login } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
- /*
-  * this test is supposed to be used semi manually
-  * ie a human creates the account, sets the end-user schema
-  * 
-  * then puts the NUM_CUSTOMERS field in, as well as the 
-  * login params
-  * 
-  * You can then use this test with others as well, and do
-  * human testing all on the same acount
-  */
+/*
+ * this test is supposed to be used semi manually
+ * ie a human creates the account, sets the end-user schema
+ *
+ * then puts the NUM_CUSTOMERS field in, as well as the
+ * login params
+ *
+ * You can then use this test with others as well, and do
+ * human testing all on the same acount
+ */
 
 export const options = {
   scenarios: {
@@ -39,7 +39,7 @@ const POLLING_MINUTES = parseFloat(__ENV.POLLING_MINUTES) || 1;
 const PRIMARY_KEY_HEADER = "user_id";
 //const NUM_CUSTOMERS = //__ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
 //let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
-let BASE_URL = "http://localhost:3001/"
+let BASE_URL = "http://localhost:3001/";
 if (BASE_URL.at(-1) === "/") {
   BASE_URL = BASE_URL.substring(0, BASE_URL.length - 1);
 }
@@ -71,13 +71,13 @@ export default function main() {
 
   // LOGIN and set Auth header. Replace createAccount with login here.
   // Make sure to define or retrieve the EMAIL, PASSWORD, and API_KEY variables appropriately.
-  
+
   // to do put in the email, password, and api key as you want
 
   let { authorization, email } = login(
     "mykola.laudspeaker31@gmail.com",
     "mykola.laudspeaker31@gmail.com",
-    "Co8VrrKLS6gentOCio2622uDBq91Fz1f342h3evU",
+    "TbZcNQvP3MV4BgSzq8bia2OfkEdsQkYCh40JWYaV",
     httpxWrapper
   );
   console.log(`Logged in with ${email}, Authorization: ${authorization}`);
@@ -89,7 +89,6 @@ export default function main() {
 
   // STEP 3 CREATE JOURNEY
   for (let i = 0; i < 20; i++) {
-
     reporter.setStep("JOURNEY_CREATION");
     reporter.log(`Starting journey creation`);
     reporter.addTimer(
@@ -98,8 +97,11 @@ export default function main() {
     );
     reporter.log(`Posting new journey`);
     //response = httpxWrapper.postOrFail("/api/journeys", '{"name":"test"}');
-    let journeyName = "test_" + uuidv4();
-    response = httpxWrapper.postOrFail("/journeys", `{"name": "${journeyName}"}`);
+    let journeyName = "[mykola]first_" + uuidv4();
+    response = httpxWrapper.postOrFail(
+      "/journeys",
+      `{"name": "${journeyName}"}`
+    );
     let visualLayout = response.json("visualLayout");
     const JOURNEY_ID = response.json("id");
 
@@ -113,26 +115,155 @@ export default function main() {
     */
     response = httpxWrapper.postOrFail(
       "/steps",
-      `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+      `{"type":"waitUntil","journeyID":"${JOURNEY_ID}"}`
     );
 
     const START_STEP_NODE = visualLayout.nodes[0];
     const START_STEP_EDGE = visualLayout.edges[0];
-    const MESSAGE_STEP_ID = response.json("id");
+    const WAIT_UNTIL_STEP_ID = response.json("id");
 
     //response = httpxWrapper.getOrFail("/api/templates", {});
+
+    let waitUntilStepNode = visualLayout.nodes[1];
+    waitUntilStepNode.type = "waitUntil";
+
+    const branch1UUID = uuidv4();
+    const branch2UUID = uuidv4();
+
+    waitUntilStepNode.data = {
+      type: "waitUntil",
+      stepId: WAIT_UNTIL_STEP_ID,
+      branches: [
+        {
+          id: branch1UUID,
+          type: "event",
+          conditions: [
+            {
+              name: "example1",
+              statements: [],
+              providerType: "custom",
+              relationToNext: "or",
+            },
+          ],
+        },
+        {
+          id: branch2UUID,
+          type: "event",
+          conditions: [
+            {
+              name: "example2",
+              statements: [],
+              providerType: "custom",
+              relationToNext: "or",
+            },
+          ],
+        },
+      ],
+      showErrors: true,
+    };
+
     response = httpxWrapper.getOrFail("/templates", {});
     const TEMPLATE_ONE = response.json("data")[0];
-    let messageStepNode = visualLayout.nodes[1];
-    messageStepNode.type = "message";
-    messageStepNode.data = {
-      stepId: MESSAGE_STEP_ID,
-      type: "message",
-      customName: "Email 1",
-      template: {
-        type: "email",
-        selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
+    const TEMPLATE_TWO = response.json("data")[1];
+
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+    );
+
+    const MESSAGE1_STEP_ID = response.json("id");
+    const MESSAGE1_NODE_ID = uuidv4();
+
+    const email1StepNode = {
+      id: MESSAGE1_NODE_ID,
+      data: {
+        type: "message",
+        stepId: MESSAGE1_STEP_ID,
+        template: {
+          type: "email",
+          selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
+        },
+        customName: "Email 1",
+        showErrors: true,
       },
+      type: "message",
+      position: {
+        x: -260,
+        y: 326,
+      },
+      selected: false,
+    };
+
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+    );
+
+    const MESSAGE2_STEP_ID = response.json("id");
+    const MESSAGE2_NODE_ID = uuidv4();
+
+    const email2StepNode = {
+      id: MESSAGE2_NODE_ID,
+      data: {
+        type: "message",
+        stepId: MESSAGE2_STEP_ID,
+        template: {
+          type: "email",
+          selected: { id: TEMPLATE_TWO.id, name: TEMPLATE_TWO.name },
+        },
+        customName: "Email 2",
+        showErrors: true,
+      },
+      type: "message",
+      position: {
+        x: 260,
+        y: 326,
+      },
+      selected: false,
+    };
+
+    const waitUntilBranch1 = {
+      id: `b${branch1UUID}`,
+      data: {
+        type: "branch",
+        branch: {
+          id: branch1UUID,
+          type: "event",
+          conditions: [
+            {
+              name: "example1",
+              statements: [],
+              providerType: "custom",
+              relationToNext: "or",
+            },
+          ],
+        },
+      },
+      type: "branch",
+      source: waitUntilStepNode.id,
+      target: email1StepNode.id,
+    };
+
+    const waitUntilBranch2 = {
+      id: `b${branch2UUID}`,
+      data: {
+        type: "branch",
+        branch: {
+          id: branch2UUID,
+          type: "event",
+          conditions: [
+            {
+              name: "example2",
+              statements: [],
+              providerType: "custom",
+              relationToNext: "or",
+            },
+          ],
+        },
+      },
+      type: "branch",
+      source: waitUntilStepNode.id,
+      target: email2StepNode.id,
     };
 
     /*
@@ -147,32 +278,76 @@ export default function main() {
       `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
     );
 
-    const EXIT_STEP_ID = response.json("id");
-    const EXIT_STEP_NODE_ID = uuidv4();
-    const EXIT_STEP_NODE = {
-      id: EXIT_STEP_NODE_ID,
-      type: "exit",
+    const EXIT1_STEP_ID = response.json("id");
+    const EXIT1_STEP_NODE_ID = uuidv4();
+
+    const exit1StepNode = {
+      id: EXIT1_STEP_NODE_ID,
       data: {
-        stepId: EXIT_STEP_ID,
+        stepId: EXIT1_STEP_ID,
+        showErrors: true,
       },
+      type: "exit",
       position: {
-        x: 0,
-        y: 228,
+        x: -260,
+        y: 440,
       },
       selected: false,
     };
 
-    const EXIT_STEP_EDGE = {
-      id: `${messageStepNode.id}-${EXIT_STEP_NODE_ID}`,
+    const toExitEdge1 = {
+      id: `e${email1StepNode.id}-${exit1StepNode.id}`,
       type: "primary",
-      source: messageStepNode.id,
-      target: EXIT_STEP_NODE_ID,
+      source: email1StepNode.id,
+      target: exit1StepNode.id,
+    };
+
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
+    );
+
+    const EXIT2_STEP_ID = response.json("id");
+    const EXIT2_STEP_NODE_ID = uuidv4();
+
+    const exit2StepNode = {
+      id: EXIT2_STEP_NODE_ID,
+      data: {
+        stepId: EXIT2_STEP_ID,
+        showErrors: true,
+      },
+      type: "exit",
+      position: {
+        x: 260,
+        y: 440,
+      },
+      selected: false,
+    };
+
+    const toExitEdge2 = {
+      id: `e${email2StepNode.id}-${exit2StepNode.id}`,
+      type: "primary",
+      source: email2StepNode.id,
+      target: exit2StepNode.id,
     };
 
     let visualLayoutBody = JSON.stringify({
       id: JOURNEY_ID,
-      nodes: [START_STEP_NODE, messageStepNode, EXIT_STEP_NODE],
-      edges: [START_STEP_EDGE, EXIT_STEP_EDGE],
+      nodes: [
+        START_STEP_NODE,
+        waitUntilStepNode,
+        email1StepNode,
+        email2StepNode,
+        exit1StepNode,
+        exit2StepNode,
+      ],
+      edges: [
+        START_STEP_EDGE,
+        waitUntilBranch1,
+        waitUntilBranch2,
+        toExitEdge1,
+        toExitEdge2,
+      ],
     });
 
     /*
@@ -186,6 +361,8 @@ export default function main() {
       `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
     );
     */
+
+    reporter.report(visualLayoutBody);
 
     response = httpxWrapper.patchOrFail(
       "/journeys/visual-layout",
@@ -212,13 +389,9 @@ export default function main() {
       "{}"
     );
     */
-    response = httpxWrapper.patchOrFail(
-      `/journeys/start/${JOURNEY_ID}`,
-      "{}"
-    );
+    response = httpxWrapper.patchOrFail(`/journeys/start/${JOURNEY_ID}`, "{}");
     reporter.report(`Journey started.`);
   }
-
 
   /*
 
@@ -267,7 +440,6 @@ export default function main() {
 
   */
 }
-
 
 /*
 
