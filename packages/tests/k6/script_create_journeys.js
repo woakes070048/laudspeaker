@@ -3,8 +3,19 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import http from "k6/http";
 import { Httpx } from "https://jslib.k6.io/httpx/0.1.0/index.js";
 import { Counter } from "k6/metrics";
-import { createAccount } from "./utils/accounts.js";
+import { createAccount, login } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
+
+ /*
+  * this test is supposed to be used semi manually
+  * ie a human creates the account, sets the end-user schema
+  * 
+  * then puts the NUM_CUSTOMERS field in, as well as the 
+  * login params
+  * 
+  * You can then use this test with others as well, and do
+  * human testing all on the same acount
+  */
 
 export const options = {
   scenarios: {
@@ -23,11 +34,12 @@ const customersMessagedTime = new Counter("customers_messaged_time");
 // Test config
 const EMAIL =
   __ENV.EMAIL || `perf${String(Math.random()).substring(2, 7)}@test.com`;
-const UPLOAD_FILE = open(__ENV.CSV_FILEPATH, "b");
+//const UPLOAD_FILE = open(__ENV.CSV_FILEPATH, "b");
 const POLLING_MINUTES = parseFloat(__ENV.POLLING_MINUTES) || 1;
 const PRIMARY_KEY_HEADER = "user_id";
-const NUM_CUSTOMERS = __ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
-let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
+//const NUM_CUSTOMERS = //__ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
+//let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
+let BASE_URL = "http://localhost:3001/"
 if (BASE_URL.at(-1) === "/") {
   BASE_URL = BASE_URL.substring(0, BASE_URL.length - 1);
 }
@@ -61,8 +73,8 @@ export default function main() {
   // Make sure to define or retrieve the EMAIL, PASSWORD, and API_KEY variables appropriately.
   
   // to do put in the email, password, and api key as you want
-  
-  let { authorization, email } = login(EMAIL, PASSWORD, API_KEY, httpxWrapper);
+
+  let { authorization, email } = login( "abe@bond.com",  "irio24234newiJ3289yu*", "UxLhrWODANbwW8gLDsqfQxqhsno5yB7JFbpROsoh", httpxWrapper);
   console.log(`Logged in with ${email}, Authorization: ${authorization}`);
 
   reporter.report(`Finished logging in.`);
@@ -71,100 +83,139 @@ export default function main() {
   reporter.removeTimer("login");
 
   // STEP 3 CREATE JOURNEY
+  for (let i = 0; i < 20; i++) {
 
-  reporter.setStep("JOURNEY_CREATION");
-  reporter.log(`Starting journey creation`);
-  reporter.addTimer(
-    "journeyCreation",
-    "Time elapsed to create a simple journey"
-  );
-  reporter.log(`Posting new journey`);
-  response = httpxWrapper.postOrFail("/api/journeys", '{"name":"test"}');
-  let visualLayout = response.json("visualLayout");
-  const JOURNEY_ID = response.json("id");
+    reporter.setStep("JOURNEY_CREATION");
+    reporter.log(`Starting journey creation`);
+    reporter.addTimer(
+      "journeyCreation",
+      "Time elapsed to create a simple journey"
+    );
+    reporter.log(`Posting new journey`);
+    //response = httpxWrapper.postOrFail("/api/journeys", '{"name":"test"}');
+    let journeyName = "test_" + uuidv4();
+    response = httpxWrapper.postOrFail("/journeys", `{"name": "${journeyName}"}`);
+    let visualLayout = response.json("visualLayout");
+    const JOURNEY_ID = response.json("id");
 
-  reporter.log(`Journey created with id: ${JOURNEY_ID}`);
+    reporter.log(`Journey created with id: ${JOURNEY_ID}`);
 
-  response = httpxWrapper.postOrFail(
-    "/api/steps",
-    `{"type":"message","journeyID":"${JOURNEY_ID}"}`
-  );
+    /*
+    response = httpxWrapper.postOrFail(
+      "/api/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+    );
+    */
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+    );
 
-  const START_STEP_NODE = visualLayout.nodes[0];
-  const START_STEP_EDGE = visualLayout.edges[0];
-  const MESSAGE_STEP_ID = response.json("id");
+    const START_STEP_NODE = visualLayout.nodes[0];
+    const START_STEP_EDGE = visualLayout.edges[0];
+    const MESSAGE_STEP_ID = response.json("id");
 
-  response = httpxWrapper.getOrFail("/api/templates", {});
-  const TEMPLATE_ONE = response.json("data")[0];
-  let messageStepNode = visualLayout.nodes[1];
-  messageStepNode.type = "message";
-  messageStepNode.data = {
-    stepId: MESSAGE_STEP_ID,
-    type: "message",
-    customName: "Email 1",
-    template: {
-      type: "email",
-      selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
-    },
-  };
+    //response = httpxWrapper.getOrFail("/api/templates", {});
+    response = httpxWrapper.getOrFail("/templates", {});
+    const TEMPLATE_ONE = response.json("data")[0];
+    let messageStepNode = visualLayout.nodes[1];
+    messageStepNode.type = "message";
+    messageStepNode.data = {
+      stepId: MESSAGE_STEP_ID,
+      type: "message",
+      customName: "Email 1",
+      template: {
+        type: "email",
+        selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
+      },
+    };
 
-  response = httpxWrapper.postOrFail(
-    "/api/steps",
-    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
-  );
+    /*
+    response = httpxWrapper.postOrFail(
+      "/api/steps",
+      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
+    );
+    */
 
-  const EXIT_STEP_ID = response.json("id");
-  const EXIT_STEP_NODE_ID = uuidv4();
-  const EXIT_STEP_NODE = {
-    id: EXIT_STEP_NODE_ID,
-    type: "exit",
-    data: {
-      stepId: EXIT_STEP_ID,
-    },
-    position: {
-      x: 0,
-      y: 228,
-    },
-    selected: false,
-  };
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
+    );
 
-  const EXIT_STEP_EDGE = {
-    id: `${messageStepNode.id}-${EXIT_STEP_NODE_ID}`,
-    type: "primary",
-    source: messageStepNode.id,
-    target: EXIT_STEP_NODE_ID,
-  };
+    const EXIT_STEP_ID = response.json("id");
+    const EXIT_STEP_NODE_ID = uuidv4();
+    const EXIT_STEP_NODE = {
+      id: EXIT_STEP_NODE_ID,
+      type: "exit",
+      data: {
+        stepId: EXIT_STEP_ID,
+      },
+      position: {
+        x: 0,
+        y: 228,
+      },
+      selected: false,
+    };
 
-  let visualLayoutBody = JSON.stringify({
-    id: JOURNEY_ID,
-    nodes: [START_STEP_NODE, messageStepNode, EXIT_STEP_NODE],
-    edges: [START_STEP_EDGE, EXIT_STEP_EDGE],
-  });
+    const EXIT_STEP_EDGE = {
+      id: `${messageStepNode.id}-${EXIT_STEP_NODE_ID}`,
+      type: "primary",
+      source: messageStepNode.id,
+      target: EXIT_STEP_NODE_ID,
+    };
 
-  response = httpxWrapper.patchOrFail(
-    "/api/journeys/visual-layout",
-    visualLayoutBody
-  );
+    let visualLayoutBody = JSON.stringify({
+      id: JOURNEY_ID,
+      nodes: [START_STEP_NODE, messageStepNode, EXIT_STEP_NODE],
+      edges: [START_STEP_EDGE, EXIT_STEP_EDGE],
+    });
 
-  response = httpxWrapper.patchOrFail(
-    "/api/journeys",
-    `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
-  );
-  reporter.report(`Journey creation completed.`);
-  reporter.removeTimer("journeyCreation");
+    /*
+    response = httpxWrapper.patchOrFail(
+      "/api/journeys/visual-layout",
+      visualLayoutBody
+    );
 
-  reporter.setStep("CUSTOMER_MESSAGING");
-  reporter.log(`Starting journey.`);
-  reporter.addTimer(
-    "journeyMessaging",
-    "Time elapsed since journey started triggering customer messages."
-  );
+    response = httpxWrapper.patchOrFail(
+      "/api/journeys",
+      `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
+    );
+    */
 
-  response = httpxWrapper.patchOrFail(
-    `/api/journeys/start/${JOURNEY_ID}`,
-    "{}"
-  );
-  reporter.report(`Journey started.`);
+    response = httpxWrapper.patchOrFail(
+      "/journeys/visual-layout",
+      visualLayoutBody
+    );
+
+    response = httpxWrapper.patchOrFail(
+      "/journeys",
+      `{"id":"${JOURNEY_ID}","name":"${journeyName}","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
+    );
+    reporter.report(`Journey creation completed.`);
+    reporter.removeTimer("journeyCreation");
+
+    reporter.setStep("CUSTOMER_MESSAGING");
+    reporter.log(`Starting journey.`);
+    reporter.addTimer(
+      "journeyMessaging",
+      "Time elapsed since journey started triggering customer messages."
+    );
+
+    /*
+    response = httpxWrapper.patchOrFail(
+      `/journeys/start/${JOURNEY_ID}`,
+      "{}"
+    );
+    */
+    response = httpxWrapper.patchOrFail(
+      `/journeys/start/${JOURNEY_ID}`,
+      "{}"
+    );
+    reporter.report(`Journey started.`);
+  }
+
+
+  /*
 
   reporter.log(`Check stats: /api/steps/stats/${MESSAGE_STEP_ID}`);
 
@@ -208,7 +259,12 @@ export default function main() {
     `{"password":"${password}"}`
   );
   reporter.log(`Account deleted.`);
+
+  */
 }
+
+
+/*
 
 export function handleSummary(data) {
   const imported = data.metrics["customers_imported"]
@@ -256,3 +312,4 @@ export function handleSummary(data) {
     stdout: summary,
   };
 }
+*/

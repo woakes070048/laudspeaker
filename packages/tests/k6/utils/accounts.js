@@ -21,7 +21,9 @@ export function createAccount(email, httpxWrapper) {
 export function login(email, password, apiKey, httpxWrapper) {
   // Assuming the API expects a JSON body with email and password for authentication
   let loginResponse = httpxWrapper.postOrFail(
-      "/api/auth/login",
+      // this is correct but not for local
+      //"/api/auth/login",
+      "/auth/login",
       `{"email":"${email}","password":"${password}"}`
   );
 
