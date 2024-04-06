@@ -23,7 +23,7 @@ export const options = {
       executor: "per-vu-iterations",
       vus: 1,
       iterations: 1,
-      maxDuration: "2h",
+      maxDuration: "2s",
     },
   },
 };
@@ -75,9 +75,12 @@ export default function main() {
   // to do put in the email, password, and api key as you want
 
   let { authorization, email } = login(
-    "mykola.laudspeaker31@gmail.com",
-    "mykola.laudspeaker31@gmail.com",
-    "TbZcNQvP3MV4BgSzq8bia2OfkEdsQkYCh40JWYaV",
+    "abe@bond.com",
+    "irio24234newiJ3289yu*",
+    "R86XdJtbQqzNLbYL1ISwRyh7LQMC3MFAjwjTM6bw",
+    //"mykola.laudspeaker31@gmail.com",
+    //"mykola.laudspeaker31@gmail.com",
+    //"TbZcNQvP3MV4BgSzq8bia2OfkEdsQkYCh40JWYaV",
     httpxWrapper
   );
   console.log(`Logged in with ${email}, Authorization: ${authorization}`);

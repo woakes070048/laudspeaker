@@ -5,7 +5,7 @@ import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 export const options = {
   /* Option 0: Smoke test */
    vus: 5,
-   duration: '10m',
+   duration: '1s',
 
   /* Option 1: Average load test*/
 
@@ -49,20 +49,39 @@ export const options = {
 
 };
 
+function randomDate(start, end) {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())).toISOString().split('T')[0];
+}
+
+function randomName() {
+  const names = ["Mahamad", "Boson", "Atisa", "Plank", "Hyee Jun"];
+  return names[Math.floor(Math.random() * names.length)];
+}
+
 export default function () {
-  let data = {
-    primary_key: uuidv4(),
-    properties: {
-      name: "mahamad"
+
+  let creditScore = Math.floor(Math.random() * (800 - 400 + 1)) + 400;
+  let loanDate = randomDate(new Date('2022-01-01'), new Date('2024-12-31'));
+  let mktAgree = Math.random() < 0.5; // 50% chance to be true or false
+  let name = randomName(); // Selects a random name from the list
+
+  let data = JSON.stringify({
+    "primary_key": uuidv4(),
+    "properties": {
+      "name": name,
+      "credit_score": creditScore,
+      "loan_date": loanDate,
+      "mkt_agree": mktAgree
     }
-  }
+  });
+  
   let res = http.post(
     // 'https://api.laudspeaker.com/customers/upsert',
-    'http://localhost:3001/customers/upsert',
-    `{"primary_key":"${uuidv4()}","properties":{"name":"mahamad"}}`,
+    'http://localhost:3001/customers/upsert', data,
+    //`{"primary_key":"${uuidv4()}","properties":{"name":"mahamad"}}`,
     {
       headers: {
-        'Authorization': 'Api-Key X0rsmyqAFSIl80uD9SC5B4Fy9cfzNO1pHCs8d6xT',
+        'Authorization': 'Api-Key R86XdJtbQqzNLbYL1ISwRyh7LQMC3MFAjwjTM6bw',
         'Content-Type': 'application/json'
       }
     })

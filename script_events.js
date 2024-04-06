@@ -5,7 +5,7 @@ import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 export const options = {
   /* Option 0: Smoke test */
    vus: 5,
-   duration: '2m',
+   duration: '5s',
 
   /* Option 1: Average load test*/
 
@@ -127,7 +127,7 @@ export default function () {
   }`,
     {
       headers: {
-        'Authorization': 'Api-Key wMcK5xzLUGKcIjQ0O2ncwWRDaydWqDI3Ntm4Qjwf',
+        'Authorization': 'Api-Key UxLhrWODANbwW8gLDsqfQxqhsno5yB7JFbpROsoh',
         'Content-Type': 'application/json'
       }
     })
