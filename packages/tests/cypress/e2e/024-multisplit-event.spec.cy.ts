@@ -66,6 +66,10 @@ describe("multisplit event", () => {
             2
           )
         );
+
+        cy.contains("GET").click();
+        cy.get('[data-option="POST"]').click();
+
         cy.get("#saveDraftTemplate").click();
         cy.get(".invert").click();
 
@@ -92,6 +96,10 @@ describe("multisplit event", () => {
             2
           )
         );
+
+        cy.contains("GET").click();
+        cy.get('[data-option="POST"]').click();
+
         cy.get("#saveDraftTemplate").click();
         cy.get(".invert").click();
 
@@ -205,6 +213,10 @@ describe("multisplit event", () => {
             2
           )
         );
+
+        cy.contains("GET").click();
+        cy.get('[data-option="POST"]').click();
+
         cy.get("#saveDraftTemplate").click();
         cy.get(".invert").click();
 
@@ -231,6 +243,10 @@ describe("multisplit event", () => {
             2
           )
         );
+
+        cy.contains("GET").click();
+        cy.get('[data-option="POST"]').click();
+
         cy.get("#saveDraftTemplate").click();
         cy.get(".invert").click();
 
