@@ -114,7 +114,7 @@ const AttributeBranchEditor: FC<AttributeBranchEditorProps> = ({
                     key={k}
                   >
                     "{statement.key}" {statement.comparisonType} "
-                    {statement.value}"
+                    {String(statement.value)}"
                   </div>
                   {k !== condition.statements.length - 1 && (
                     <select
