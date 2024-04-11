@@ -19,6 +19,7 @@ import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import {
   FallBackAction,
+  MIMEType,
   Template,
   TemplateType,
   WebhookData,
@@ -303,6 +304,8 @@ export class TemplatesService extends QueueEventsHost {
           break;
         case TemplateType.WEBHOOK:
           template.webhookData = createTemplateDto.webhookData;
+          if (template.webhookData)
+            template.webhookData.mimeType ||= MIMEType.JSON;
           break;
         case TemplateType.MODAL:
           template.modalState = createTemplateDto.modalState;
