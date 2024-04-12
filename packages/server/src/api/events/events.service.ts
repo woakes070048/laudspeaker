@@ -1214,15 +1214,10 @@ export class EventsService {
       if (customer) findType = 2;
     }
 
-    // if still not found, try finding by:
-    //    field in correlationKey that has the value correlationValue OR
-    //    other_ids array containing the correlationValue
+    // If still not found, try finding by other_ids array containing the correlationValue
     if (!customer && event.correlationValue) {
       customer = await this.customersService.CustomerModel.findOne({
-        $or: [
-          { [event.correlationKey]: event.correlationValue },
-          { other_ids: { $in: [event.correlationValue] } },
-        ],
+        other_ids: { $in: [event.correlationValue] },
         workspaceId,
       });
       if (customer) findType = 3;
