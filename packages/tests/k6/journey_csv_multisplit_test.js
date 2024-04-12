@@ -6,7 +6,6 @@ import { Counter } from "k6/metrics";
 import { createAccount } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
-
 /*
  * Depending on how you are testing, you need to change 
  * devOrProdUrl = "" to devOrProdUrl = "/api"
@@ -15,9 +14,10 @@ import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
  * 
  */
 
+
 export const options = {
   scenarios: {
-    upload_and_send: {
+    account_and_upload: {
       executor: "per-vu-iterations",
       vus: 1,
       iterations: 1,
@@ -36,12 +36,16 @@ const EMAIL =
   __ENV.EMAIL || `perf${String(Math.random()).substring(2, 7)}@test.com`;
 const UPLOAD_FILE = open(__ENV.CSV_FILEPATH, "b");
 const POLLING_MINUTES = parseFloat(__ENV.POLLING_MINUTES) || 1;
+
 const PRIMARY_KEY_HEADER = "user_id";
 const source = "source";
 const mkt_agree = "mkt_agree";
 const credit_score = "credit_score";
 const credit_score_date = "credit_score_date";
+
 const NUM_CUSTOMERS = __ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
+
+
 let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
 if (BASE_URL.at(-1) === "/") {
   BASE_URL = BASE_URL.substring(0, BASE_URL.length - 1);
@@ -73,8 +77,11 @@ export default function main() {
   reporter.log(`Creating account and organization`);
 
   // CREATE ACCOUNT and set Auth header
-  let { authorization, email, password } = createAccount(EMAIL, httpxWrapper);
-  console.log(authorization, email, password);
+  let { authorization, email, password, apiKey } = createAccount(
+    EMAIL,
+    httpxWrapper
+  );
+  console.log(authorization, email, password, apiKey);
 
   reporter.report(`Finished creating account and organization.`);
   reporter.log(`Email: ${email}`);
@@ -99,7 +106,7 @@ export default function main() {
     }
   );
   */
-  // NOT USING httpx because file uploads not working
+
   response = http.post(
     `${BASE_URL}/customers/uploadCSV`,
     { file: http.file(UPLOAD_FILE, "upload.csv", "text/csv") },
@@ -113,26 +120,19 @@ export default function main() {
 
   failOnError(response);
 
-  //response = httpxWrapper.getOrFail("/api/customers/getLastImportCSV");
-  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", undefined, devOrProdUrl);
-
+  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", null, devOrProdUrl);
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
   reporter.removeTimer("csvUpload");
 
   reporter.log(`Creating customer attributes`);
-  /*
-  response = httpxWrapper.postOrFail(
-    "/api/customers/attributes/create",
-    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`
-  );
-  */
   response = httpxWrapper.postOrFail(
     "/customers/attributes/create",
-    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`, 
+    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`,
     devOrProdUrl
   );
+
   response = httpxWrapper.postOrFail(
     "/customers/attributes/create",
     `{"name":"${source}","type":"String"}`,
@@ -616,7 +616,9 @@ export default function main() {
   while (numPages < expectedPages) {
     sleep(POLLING_MINUTES * 60);
     response = httpxWrapper.getOrFail(
-      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc", null, devOrProdUrl
+      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc",
+      null,
+      devOrProdUrl
     );
     numPages = parseInt(response.json("totalPages"));
 
@@ -632,6 +634,7 @@ export default function main() {
         reporter.report(
           `Sent count hasn't increased in 5 retries. Failing test...`
         );
+        break; 
         fail(
           `Import customers has failed after ${numPages} imported, but ${expectedPages} pages expected.`
         );
@@ -660,75 +663,287 @@ export default function main() {
     "Time elapsed to create a simple journey"
   );
   reporter.log(`Posting new journey`);
-  response = httpxWrapper.postOrFail("/journeys", '{"name":"test"}', devOrProdUrl);
-  let visualLayout = response.json("visualLayout");
-  const JOURNEY_ID = response.json("id");
+  let journeyName = "[mykola]second_" + uuidv4();
+    response = httpxWrapper.postOrFail(
+      "/journeys",
+      `{"name": "${journeyName}"}`,
+      devOrProdUrl
+    );
+    let visualLayout = response.json("visualLayout");
+    const JOURNEY_ID = response.json("id");
 
-  reporter.log(`Journey created with id: ${JOURNEY_ID}`);
+    reporter.log(`Journey created with id: ${JOURNEY_ID}`);
 
-  response = httpxWrapper.postOrFail(
-    "/steps",
-    `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
-    devOrProdUrl
-  );
+    /*
+    response = httpxWrapper.postOrFail(
+      "/api/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+    );
+    */
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"waitUntil","journeyID":"${JOURNEY_ID}"}`,
+      devOrProdUrl
+    );
 
-  const START_STEP_NODE = visualLayout.nodes[0];
-  const START_STEP_EDGE = visualLayout.edges[0];
-  const MESSAGE_STEP_ID = response.json("id");
+    const START_STEP_NODE = visualLayout.nodes[0];
+    const START_STEP_EDGE = visualLayout.edges[0];
+
 
   response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
-  const TEMPLATE_ONE = response.json("data")[0];
-  let messageStepNode = visualLayout.nodes[1];
-  messageStepNode.type = "message";
-  messageStepNode.data = {
-    stepId: MESSAGE_STEP_ID,
-    type: "message",
-    customName: "Email 1",
-    template: {
-      type: "email",
-      selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
-    },
-  };
+    const TEMPLATE_ONE = response.json("data")[0];
+    const TEMPLATE_TWO = response.json("data")[1];
+    const TEMPLATE_THREE = response.json("data")[2];
 
   response = httpxWrapper.postOrFail(
     "/steps",
-    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
+    `{"type":"multisplit","journeyID":"${JOURNEY_ID}"}`,
     devOrProdUrl
   );
 
-  const EXIT_STEP_ID = response.json("id");
-  const EXIT_STEP_NODE_ID = uuidv4();
-  const EXIT_STEP_NODE = {
-    id: EXIT_STEP_NODE_ID,
-    type: "exit",
-    data: {
-      stepId: EXIT_STEP_ID,
-    },
-    position: {
-      x: 0,
-      y: 228,
-    },
-    selected: false,
-  };
+  // to do
+  const MULTISPLIT_STEP_ID = response.json("id");
+    const MULTISPLIT_NODE_ID = uuidv4();
+    const MULTISPLIT_BRANCH1_ID = uuidv4();
+    const MULTISPLIT_BRANCH2_ID = uuidv4();
 
-  const EXIT_STEP_EDGE = {
-    id: `${messageStepNode.id}-${EXIT_STEP_NODE_ID}`,
-    type: "primary",
-    source: messageStepNode.id,
-    target: EXIT_STEP_NODE_ID,
-  };
+    const multisplitNode = {
+      id: MULTISPLIT_NODE_ID,
+      data: {
+        type: "multisplit",
+        stepId: MULTISPLIT_STEP_ID,
+        branches: [
+          {
+            id: MULTISPLIT_BRANCH1_ID,
+            type: "multisplit",
+            conditions: {
+              type: "conditional",
+              query: {
+                type: "any",
+                statements: [
+                  {
+                    key: "credit_score",
+                    type: "Attribute",
+                    value: "500",
+                    valueType: "Number",
+                    comparisonType: "is greater than",
+                    subComparisonType: "exist",
+                    dateComparisonType: "absolute",
+                    subComparisonValue: "",
+                  },
+                ],
+              },
+            },
+          },
+          {
+            id: MULTISPLIT_BRANCH2_ID,
+            type: "multisplit",
+            isOthers: true,
+          },
+        ],
+        showErrors: true,
+      },
+      type: "multisplit",
+      position: {
+        x: 0,
+        y: 238,
+      },
+      selected: false,
+    };
 
-  let visualLayoutBody = JSON.stringify({
-    id: JOURNEY_ID,
-    nodes: [START_STEP_NODE, messageStepNode, EXIT_STEP_NODE],
-    edges: [START_STEP_EDGE, EXIT_STEP_EDGE],
-  });
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
+      devOrProdUrl
+    );
 
-  response = httpxWrapper.patchOrFail(
-    "/journeys/visual-layout",
-    visualLayoutBody,
-    devOrProdUrl
-  );
+    const MESSAGE2_STEP_ID = response.json("id");
+    const MESSAGE2_NODE_ID = uuidv4();
+
+    const email2StepNode = {
+      id: MESSAGE2_NODE_ID,
+      data: {
+        type: "message",
+        stepId: MESSAGE2_STEP_ID,
+        template: {
+          type: "email",
+          selected: { id: TEMPLATE_TWO.id, name: TEMPLATE_TWO.name },
+        },
+        customName: "Email 2",
+        showErrors: true,
+      },
+      type: "message",
+      position: {
+        x: -260,
+        y: 574,
+      },
+      selected: false,
+    };
+
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
+      devOrProdUrl
+    );
+
+    const MESSAGE3_STEP_ID = response.json("id");
+    const MESSAGE3_NODE_ID = uuidv4();
+
+    const email3StepNode = {
+      id: MESSAGE3_NODE_ID,
+      data: {
+        type: "message",
+        stepId: MESSAGE3_STEP_ID,
+        template: {
+          type: "email",
+          selected: { id: TEMPLATE_THREE.id, name: TEMPLATE_THREE.name },
+        },
+        customName: "Email 3",
+        showErrors: true,
+      },
+      type: "message",
+      position: {
+        x: 260,
+        y: 574,
+      },
+      selected: false,
+    };
+
+    const multisplitBranch1 = {
+      id: `b${MULTISPLIT_BRANCH1_ID}`,
+      data: {
+        type: "branch",
+        branch: {
+          id: MULTISPLIT_BRANCH1_ID,
+          type: "multisplit",
+          conditions: {
+            type: "conditional",
+            query: {
+              type: "any",
+              statements: [
+                {
+                  key: "credit_score",
+                  type: "Attribute",
+                  value: "500",
+                  valueType: "Number",
+                  comparisonType: "is greater than",
+                  subComparisonType: "exist",
+                  dateComparisonType: "absolute",
+                  subComparisonValue: "",
+                },
+              ],
+            },
+          },
+        },
+      },
+      type: "branch",
+      source: MULTISPLIT_NODE_ID,
+      target: MESSAGE2_NODE_ID,
+    };
+
+    const multisplitBranch2 = {
+      id: `b${MULTISPLIT_BRANCH2_ID}`,
+      data: {
+        type: "branch",
+        branch: {
+          id: MULTISPLIT_BRANCH2_ID,
+          type: "multisplit",
+          isOthers: true,
+        },
+      },
+      type: "branch",
+      source: MULTISPLIT_NODE_ID,
+      target: MESSAGE3_NODE_ID,
+    };
+
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
+      devOrProdUrl
+    );
+
+    const EXIT1_STEP_ID = response.json("id");
+    const EXIT1_STEP_NODE_ID = uuidv4();
+
+    const exit1StepNode = {
+      id: EXIT1_STEP_NODE_ID,
+      data: {
+        stepId: EXIT1_STEP_ID,
+        showErrors: true,
+      },
+      type: "exit",
+      position: {
+        x: -260,
+        y: 688,
+      },
+      selected: false,
+    };
+
+    const toExitEdge1 = {
+      id: `e${email2StepNode.id}-${exit1StepNode.id}`,
+      type: "primary",
+      source: email2StepNode.id,
+      target: exit1StepNode.id,
+    };
+
+    response = httpxWrapper.postOrFail(
+      "/steps",
+      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
+      devOrProdUrl
+    );
+
+    const EXIT2_STEP_ID = response.json("id");
+    const EXIT2_STEP_NODE_ID = uuidv4();
+
+    const exit2StepNode = {
+      id: EXIT2_STEP_NODE_ID,
+      data: {
+        stepId: EXIT2_STEP_ID,
+        showErrors: true,
+      },
+      type: "exit",
+      position: {
+        x: 260,
+        y: 688,
+      },
+      selected: false,
+    };
+
+    const toExitEdge2 = {
+      id: `e${email3StepNode.id}-${exit2StepNode.id}`,
+      type: "primary",
+      source: email3StepNode.id,
+      target: exit2StepNode.id,
+    };
+
+
+    let visualLayoutBody = JSON.stringify({
+      id: JOURNEY_ID,
+      nodes: [START_STEP_NODE, multisplitNode, email2StepNode, email3StepNode, exit1StepNode, exit2StepNode],
+      edges: [START_STEP_EDGE, multisplitBranch1, multisplitBranch2, toExitEdge1, toExitEdge2],
+    });
+
+    /*
+    response = httpxWrapper.patchOrFail(
+      "/api/journeys/visual-layout",
+      visualLayoutBody
+    );
+
+    response = httpxWrapper.patchOrFail(
+      "/api/journeys",
+      `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
+    );
+    */
+
+    reporter.report(visualLayoutBody);
+
+    response = httpxWrapper.patchOrFail(
+      "/journeys/visual-layout",
+      visualLayoutBody,
+      devOrProdUrl
+    );
+
+  // to do
 
   response = httpxWrapper.patchOrFail(
     "/journeys",
@@ -752,55 +967,74 @@ export default function main() {
   );
   reporter.report(`Journey started.`);
 
-  reporter.log(`Check stats: /steps/stats/${MESSAGE_STEP_ID}`);
+  reporter.log(`Check stats: /api/steps/stats/${MESSAGE_STEP_ID}`);
 
+  /*
   let sentCount = 0;
+  let eventsSent = 0;
   let retries = 0; // kill stat checking early if sent count not increasing
   let prevSentCount = 0;
-  while (sentCount < NUM_CUSTOMERS) {
-    sleep(POLLING_MINUTES * 60);
-    response = httpxWrapper.getOrFail(`/steps/stats/${MESSAGE_STEP_ID}`, undefined, devOrProdUrl);
-    prevSentCount = sentCount;
-    sentCount = parseInt(response.json("sent"));
-    reporter.report(`Current sent messages: ${sentCount} of ${NUM_CUSTOMERS}`);
-    let deltaSent = sentCount - prevSentCount;
-    customersMessaged.add(deltaSent);
-    customersMessagedTime.add(POLLING_MINUTES * 60);
-    if (prevSentCount === sentCount) {
-      reporter.log(
-        `Sent count hasn't increased since last poll. Current count: ${sentCount}. number of retries: ${retries}`
+  while (sentCount < NUM_CUSTOMERS || eventsSent < NUM_CUSTOMERS) {
+    if (sentCount < NUM_CUSTOMERS) {
+      response = httpxWrapper.session.get(
+        `/api/steps/stats/${MESSAGE_STEP_ID}`
       );
-      if (retries > 5) {
-        reporter.report(
-          `Sent count hasn't increased in 5 retries. Failing test...`
-        );
-        fail(
-          `Message customers has failed after ${sentCount} messages sent, but ${NUM_CUSTOMERS} messages expected.`
+      if (response.status == 200) {
+        prevSentCount = sentCount;
+        sentCount = parseInt(response.json("sent"));
+      } else {
+        reporter.log(
+          `GET /api/steps/stats/${MESSAGE_STEP_ID} bad status_code: ${response.status}. Will retry in next poll`
         );
       }
-      retries = retries + 1;
-    } else {
-      retries = 0;
+      reporter.report(
+        `Current sent messages: ${sentCount} of ${NUM_CUSTOMERS}`
+      );
+      let deltaSent = sentCount - prevSentCount;
+      customersMessaged.add(deltaSent);
+      customersMessagedTime.add(POLLING_MINUTES * 60);
+      if (prevSentCount === sentCount && prevSentCount < NUM_CUSTOMERS) {
+        reporter.log(
+          `Sent count hasn't increased since last poll. Current count: ${sentCount}. number of retries: ${retries}`
+        );
+        if (retries > 5) {
+          reporter.report(
+            `Sent count hasn't increased in 5 retries. Failing test...`
+          );
+          fail(
+            `Message customers has failed after ${sentCount} messages sent, but ${NUM_CUSTOMERS} messages expected.`
+          );
+        }
+        retries = retries + 1;
+      } else {
+        retries = 0;
+      }
     }
+    if (eventsSent < NUM_CUSTOMERS) {
+      let eventsToSend = parseInt(__ENV.EVENTS_PER_ITERATION);
+      if (eventsSent + eventsToSend > NUM_CUSTOMERS) {
+        // This is when we don't need to send full events value because we're at the end of the customer list
+        eventsToSend = NUM_CUSTOMERS - eventsSent;
+      }
+      reporter.report(
+        `Current # events sent: ${eventsSent}. Triggering ${eventsToSend} more events.`
+      );
+      sendEvents("send", apiKey, 10000000 + eventsSent, eventsToSend);
+      eventsSent += eventsToSend;
+    }
+    sleep(POLLING_MINUTES * 60);
   }
+  */
   reporter.report(`Test successfully finished.`);
-  reporter.log(`Final sentCount: ${sentCount}.`);
+  //reporter.log(`Final sentCount: ${sentCount}.`);
+  //reporter.log(`Final sentCount: ${sentCount}.`);
   reporter.removeTimer("journeyMessaging");
 
+  /*
   reporter.setStep(`CLEANUP`);
-  /*
   reporter.log(`Deleting account ${email}`);
   response = httpxWrapper.deleteOrFail(
-    `/api/accounts`,
-    `{"password":"${password}"}`
-  );
-  reporter.log(`Account deleted.`);
-  */
-
-  /*
-  reporter.log(`Deleting account ${email}`);
-  response = httpxWrapper.deleteOrFail(
-    `//accounts`,
+    `/accounts`,
     `{"password":"${password}"}`,
     devOrProdUrl
   );
@@ -853,4 +1087,32 @@ export function handleSummary(data) {
   return {
     stdout: summary,
   };
+}
+
+function sendEvents(eventName, apiKey, startId, numberEvents) {
+  let userId = startId;
+  let promises = [];
+  while (userId < startId + numberEvents) {
+    let asyncReq = http.asyncRequest(
+      "POST",
+      `${__ENV.BASE_URL}/api/events/batch`,
+      JSON.stringify({
+        correlationKey: "user_id",
+        correlationValue: String(userId),
+        event: eventName,
+        source: "custom",
+      }),
+      {
+        headers: {
+          authorization: `Api-Key ${apiKey}`,
+          "content-type": "application/json",
+        },
+        tags: {
+          laudspeaker_request: "eventPost",
+        },
+      }
+    );
+    promises.push(asyncReq);
+    userId++;
+  }
 }
