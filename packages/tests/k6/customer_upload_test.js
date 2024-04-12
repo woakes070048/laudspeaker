@@ -6,6 +6,15 @@ import { Counter } from "k6/metrics";
 import { createAccount } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
+
+/*
+ * Depending on how you are testing, you need to change 
+ * devOrProdUrl = "" to devOrProdUrl = "/api"
+ * 
+ * and use the right upload csv option post call
+ * 
+ */
+
 export const options = {
   scenarios: {
     upload_and_send: {
@@ -51,6 +60,8 @@ export default function main() {
   let UPLOADED_FILE_KEY;
   let httpxWrapper = new HttpxWrapper(session);
 
+  let devOrProdUrl = "";
+
   let reporter = new Reporter("SETUP");
   reporter.addTimer("totalElapsed", "Total elapsed time of k6 test");
   reporter.report(
@@ -76,8 +87,21 @@ export default function main() {
   reporter.addTimer("csvUpload", "Total elapsed time of csv upload");
 
   // NOT USING httpx because file uploads not working
+  /*
   response = http.post(
     `${BASE_URL}/api/customers/uploadCSV`,
+    { file: http.file(UPLOAD_FILE, "upload.csv", "text/csv") },
+    {
+      timeout: "600s",
+      headers: {
+        authorization,
+      },
+    }
+  );
+  */
+  // NOT USING httpx because file uploads not working
+  response = http.post(
+    `${BASE_URL}/customers/uploadCSV`,
     { file: http.file(UPLOAD_FILE, "upload.csv", "text/csv") },
     {
       timeout: "600s",
@@ -89,36 +113,48 @@ export default function main() {
 
   failOnError(response);
 
-  response = httpxWrapper.getOrFail("/api/customers/getLastImportCSV");
+  //response = httpxWrapper.getOrFail("/api/customers/getLastImportCSV");
+  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", undefined, devOrProdUrl);
+
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
   reporter.removeTimer("csvUpload");
 
   reporter.log(`Creating customer attributes`);
+  /*
   response = httpxWrapper.postOrFail(
     "/api/customers/attributes/create",
     `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`
   );
-
+  */
   response = httpxWrapper.postOrFail(
-    "/api/customers/attributes/create",
-    `{"name":"${source}","type":"String"}`
+    "/customers/attributes/create",
+    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`, 
+    devOrProdUrl
+  );
+  response = httpxWrapper.postOrFail(
+    "/customers/attributes/create",
+    `{"name":"${source}","type":"String"}`,
+    devOrProdUrl
   );
 
   response = httpxWrapper.postOrFail(
-    "/api/customers/attributes/create",
-    `{"name":"${mkt_agree}","type":"Boolean"}`
+    "/customers/attributes/create",
+    `{"name":"${mkt_agree}","type":"Boolean"}`,
+    devOrProdUrl
   );
 
   response = httpxWrapper.postOrFail(
-    "/api/customers/attributes/create",
-    `{"name":"${credit_score}","type":"Number"}`
+    "/customers/attributes/create",
+    `{"name":"${credit_score}","type":"Number"}`,
+    devOrProdUrl
   );
 
   response = httpxWrapper.postOrFail(
-    "/api/customers/attributes/create",
-    `{"name":"${credit_score_date}","type":"Date", "dateFormat": "yyyy-MM-dd"}`
+    "/customers/attributes/create",
+    `{"name":"${credit_score_date}","type":"Date", "dateFormat": "yyyy-MM-dd"}`,
+    devOrProdUrl
   );
 
   // // TODO fix this endpoint and then use this as the num expected customers
@@ -135,7 +171,7 @@ export default function main() {
     "Time elapsed of import process (not including csv upload)"
   );
   response = httpxWrapper.postOrFail(
-    "/api/customers/attributes/start-import",
+    "/customers/attributes/start-import",
     `{
       "mapping": {
         "dsr": {
@@ -567,7 +603,8 @@ export default function main() {
       },
       "importOption": "NEW",
       "fileKey": "${UPLOADED_FILE_KEY}"
-    }`
+    }`,
+    devOrProdUrl
   );
 
   // Verify upload finished
@@ -579,7 +616,7 @@ export default function main() {
   while (numPages < expectedPages) {
     sleep(POLLING_MINUTES * 60);
     response = httpxWrapper.getOrFail(
-      "/api/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc"
+      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc", null, devOrProdUrl
     );
     numPages = parseInt(response.json("totalPages"));
 
@@ -623,22 +660,23 @@ export default function main() {
     "Time elapsed to create a simple journey"
   );
   reporter.log(`Posting new journey`);
-  response = httpxWrapper.postOrFail("/api/journeys", '{"name":"test"}');
+  response = httpxWrapper.postOrFail("/journeys", '{"name":"test"}', devOrProdUrl);
   let visualLayout = response.json("visualLayout");
   const JOURNEY_ID = response.json("id");
 
   reporter.log(`Journey created with id: ${JOURNEY_ID}`);
 
   response = httpxWrapper.postOrFail(
-    "/api/steps",
-    `{"type":"message","journeyID":"${JOURNEY_ID}"}`
+    "/steps",
+    `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
   );
 
   const START_STEP_NODE = visualLayout.nodes[0];
   const START_STEP_EDGE = visualLayout.edges[0];
   const MESSAGE_STEP_ID = response.json("id");
 
-  response = httpxWrapper.getOrFail("/api/templates", {});
+  response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
   const TEMPLATE_ONE = response.json("data")[0];
   let messageStepNode = visualLayout.nodes[1];
   messageStepNode.type = "message";
@@ -653,8 +691,9 @@ export default function main() {
   };
 
   response = httpxWrapper.postOrFail(
-    "/api/steps",
-    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
+    "/steps",
+    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
   );
 
   const EXIT_STEP_ID = response.json("id");
@@ -686,13 +725,15 @@ export default function main() {
   });
 
   response = httpxWrapper.patchOrFail(
-    "/api/journeys/visual-layout",
-    visualLayoutBody
+    "/journeys/visual-layout",
+    visualLayoutBody,
+    devOrProdUrl
   );
 
   response = httpxWrapper.patchOrFail(
-    "/api/journeys",
-    `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
+    "/journeys",
+    `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`,
+    devOrProdUrl
   );
   reporter.report(`Journey creation completed.`);
   reporter.removeTimer("journeyCreation");
@@ -705,19 +746,20 @@ export default function main() {
   );
 
   response = httpxWrapper.patchOrFail(
-    `/api/journeys/start/${JOURNEY_ID}`,
-    "{}"
+    `/journeys/start/${JOURNEY_ID}`,
+    "{}",
+    devOrProdUrl
   );
   reporter.report(`Journey started.`);
 
-  reporter.log(`Check stats: /api/steps/stats/${MESSAGE_STEP_ID}`);
+  reporter.log(`Check stats: /steps/stats/${MESSAGE_STEP_ID}`);
 
   let sentCount = 0;
   let retries = 0; // kill stat checking early if sent count not increasing
   let prevSentCount = 0;
   while (sentCount < NUM_CUSTOMERS) {
     sleep(POLLING_MINUTES * 60);
-    response = httpxWrapper.getOrFail(`/api/steps/stats/${MESSAGE_STEP_ID}`);
+    response = httpxWrapper.getOrFail(`/steps/stats/${MESSAGE_STEP_ID}`, undefined, devOrProdUrl);
     prevSentCount = sentCount;
     sentCount = parseInt(response.json("sent"));
     reporter.report(`Current sent messages: ${sentCount} of ${NUM_CUSTOMERS}`);

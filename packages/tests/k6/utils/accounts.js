@@ -1,29 +1,29 @@
 import http from "k6/http";
-export function createAccount(email, httpxWrapper) {
+export function createAccount(email, httpxWrapper, devOrProdUrl = '') {
   let password = "Password1$";
   let registerResponse = httpxWrapper.postOrFail(
-    "/api/auth/register",
+    devOrProdUrl + "/auth/register",
     `{"firstName":"Test","lastName":"Test","email":"${email}","password":"${password}"}`
   );
 
   let authorization = `Bearer ${registerResponse.json("access_token")}`;
   httpxWrapper.session.addHeader("Authorization", authorization);
   let organizatonResponse = httpxWrapper.postOrFail(
-    "/api/organizations",
+    devOrProdUrl +  "/organizations",
     '{"name":"Test","timezoneUTCOffset":"UTC-07:00"}'
   );
 
-  let accountsResponse = httpxWrapper.getOrFail("/api/accounts");
+  let accountsResponse = httpxWrapper.getOrFail( devOrProdUrl + "/accounts");
   const apiKey = accountsResponse.json("workspace.apiKey");
   return { email, password, authorization, apiKey };
 }
 
-export function login(email, password, apiKey, httpxWrapper) {
+export function login(email, password, apiKey, httpxWrapper, devOrProdUrl = '') {
   // Assuming the API expects a JSON body with email and password for authentication
   let loginResponse = httpxWrapper.postOrFail(
       // this is correct but not for local
       //"/api/auth/login",
-      "/auth/login",
+      devOrProdUrl + "/auth/login",
       `{"email":"${email}","password":"${password}"}`
   );
 
