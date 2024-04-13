@@ -4,9 +4,15 @@ on:
     inputs:
       tag:
         description: Tag of laudspeaker/laudspeaker image to deploy
-        required: false
-        default: latest
+        required: true
         type: string
+      env:
+        description: Tag of laudspeaker/laudspeaker image to deploy
+        required: true
+        type: choice
+        options:
+          - "staging"
+          - "prod"
 jobs:
   deploy-staging:
     name: Redeploy staging
@@ -14,6 +20,5 @@ jobs:
     with:
       image-repository: laudspeaker/laudspeaker
       image-tag: ${{ inputs.tag }}
-      cluster: laudspeaker-staging
-      env: staging
+      env: ${{ inputs.env }}
     secrets: inherit
