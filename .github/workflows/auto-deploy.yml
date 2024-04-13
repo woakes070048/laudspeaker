@@ -1,0 +1,70 @@
+name: Build, test, push, deploy on commit
+on:
+  push:
+    branches:
+      - production
+      - staging
+jobs:
+  setup:
+    name: Setup variables
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.params.outputs.short_sha }}
+      env: ${{ steps.params.outputs.env }}
+      external_url: ${{ steps.params.outputs.external_url }}
+    steps:
+      - id: params
+        run: |
+          SHA=${{ github.sha }}
+          echo short_sha=${SHA:0:20} >> "$GITHUB_OUTPUT"
+          BRANCH=${{ github.ref_name }}
+          if [[ $BRANCH == "staging" ]]; then
+            echo env=staging >> "$GITHUB_OUTPUT"
+            echo external_url=staging-app.laudspeaker.com >> "$GITHUB_OUTPUT"
+          fi
+          if [[ $BRANCH == "production" ]]; then
+            echo env=prod >> "$GITHUB_OUTPUT"
+            echo external_url=app.laudspeaker.com >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: [setup]
+    name: Build docker image
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      dockerfile: Dockerfile
+      output: laudspeaker
+      external_url: ${{ needs.setup.outputs.external_url }}
+  test:
+    needs: [setup, build]
+    name: Test docker image
+    uses: ./.github/workflows/test.yml
+    with:
+      image: laudspeaker
+  push:
+    needs: [setup, test]
+    name: Tag and push docker image
+    uses: ./.github/workflows/push.yml
+    with:
+      image: laudspeaker
+      tags: laudspeaker/laudspeaker:${{ needs.setup.outputs.short_sha }}
+    secrets: inherit
+  push-latest:
+    needs: [setup, test]
+    name: "Tag and push 'latest' docker image"
+    uses: ./.github/workflows/push.yml
+    if: "github.ref_name == 'staging'"
+    with:
+      image: laudspeaker
+      tags: laudspeaker/laudspeaker:latest
+    secrets: inherit
+  deploy:
+    needs: [setup, push]
+    name: Redeploy staging
+    uses: ./.github/workflows/deploy.yml
+    with:
+      image-repository: laudspeaker/laudspeaker
+      image-tag: ${{ needs.setup.outputs.short_sha }}
+      env: ${{ needs.setup.outputs.env }}
+    secrets: inherit
