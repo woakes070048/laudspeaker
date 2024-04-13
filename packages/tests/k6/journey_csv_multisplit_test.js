@@ -663,7 +663,7 @@ export default function main() {
     "Time elapsed to create a simple journey"
   );
   reporter.log(`Posting new journey`);
-  let journeyName = "[mykola]second_" + uuidv4();
+  let journeyName = "[test]simple_waituntil" + uuidv4();
     response = httpxWrapper.postOrFail(
       "/journeys",
       `{"name": "${journeyName}"}`,
@@ -682,28 +682,19 @@ export default function main() {
     */
     response = httpxWrapper.postOrFail(
       "/steps",
-      `{"type":"waitUntil","journeyID":"${JOURNEY_ID}"}`,
+      `{"type":"multisplit","journeyID":"${JOURNEY_ID}"}`,
       devOrProdUrl
     );
 
-    const START_STEP_NODE = visualLayout.nodes[0];
-    const START_STEP_EDGE = visualLayout.edges[0];
-
-
-  response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
-    const TEMPLATE_ONE = response.json("data")[0];
-    const TEMPLATE_TWO = response.json("data")[1];
-    const TEMPLATE_THREE = response.json("data")[2];
-
-  response = httpxWrapper.postOrFail(
-    "/steps",
-    `{"type":"multisplit","journeyID":"${JOURNEY_ID}"}`,
-    devOrProdUrl
-  );
+    let START_STEP_NODE = visualLayout.nodes[0];
+    START_STEP_NODE["selected"] = false;
+    let START_STEP_EDGE = visualLayout.edges[0];
+    //START_STEP_NODE["target"] = false;
 
   // to do
   const MULTISPLIT_STEP_ID = response.json("id");
     const MULTISPLIT_NODE_ID = uuidv4();
+    START_STEP_EDGE["target"] = MULTISPLIT_NODE_ID;
     const MULTISPLIT_BRANCH1_ID = uuidv4();
     const MULTISPLIT_BRANCH2_ID = uuidv4();
 
@@ -719,17 +710,17 @@ export default function main() {
             conditions: {
               type: "conditional",
               query: {
-                type: "any",
+                type: "all",
                 statements: [
                   {
-                    key: "credit_score",
                     type: "Attribute",
-                    value: "500",
-                    valueType: "Number",
-                    comparisonType: "is greater than",
+                    key: "mkt_agree",
+                    comparisonType: "is equal to",
                     subComparisonType: "exist",
-                    dateComparisonType: "absolute",
                     subComparisonValue: "",
+                    valueType: "Boolean",
+                    value: true,
+                    dateComparisonType: "absolute"
                   },
                 ],
               },
@@ -746,7 +737,7 @@ export default function main() {
       type: "multisplit",
       position: {
         x: 0,
-        y: 238,
+        y: 114,
       },
       selected: false,
     };
@@ -760,6 +751,11 @@ export default function main() {
     const MESSAGE2_STEP_ID = response.json("id");
     const MESSAGE2_NODE_ID = uuidv4();
 
+    response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
+    const TEMPLATE_ONE = response.json("data")[0];
+    const TEMPLATE_TWO = response.json("data")[1];
+    const TEMPLATE_THREE = response.json("data")[2];
+
     const email2StepNode = {
       id: MESSAGE2_NODE_ID,
       data: {
@@ -769,13 +765,13 @@ export default function main() {
           type: "email",
           selected: { id: TEMPLATE_TWO.id, name: TEMPLATE_TWO.name },
         },
-        customName: "Email 2",
+        customName: "Email 1",
         showErrors: true,
       },
       type: "message",
       position: {
         x: -260,
-        y: 574,
+        y: 326,
       },
       selected: false,
     };
@@ -798,13 +794,13 @@ export default function main() {
           type: "email",
           selected: { id: TEMPLATE_THREE.id, name: TEMPLATE_THREE.name },
         },
-        customName: "Email 3",
+        customName: "Email 2",
         showErrors: true,
       },
       type: "message",
       position: {
         x: 260,
-        y: 574,
+        y: 324,
       },
       selected: false,
     };
@@ -819,17 +815,17 @@ export default function main() {
           conditions: {
             type: "conditional",
             query: {
-              type: "any",
+              type: "all",
               statements: [
                 {
-                  key: "credit_score",
                   type: "Attribute",
-                  value: "500",
-                  valueType: "Number",
-                  comparisonType: "is greater than",
+                  key: "mkt_agree",
+                  comparisonType: "is equal to",
                   subComparisonType: "exist",
-                  dateComparisonType: "absolute",
                   subComparisonValue: "",
+                  valueType: "Boolean",
+                  value: true,
+                  dateComparisonType: "absolute"
                 },
               ],
             },
@@ -874,7 +870,7 @@ export default function main() {
       type: "exit",
       position: {
         x: -260,
-        y: 688,
+        y: 440,
       },
       selected: false,
     };
@@ -904,7 +900,7 @@ export default function main() {
       type: "exit",
       position: {
         x: 260,
-        y: 688,
+        y: 440,
       },
       selected: false,
     };
@@ -947,9 +943,10 @@ export default function main() {
 
   response = httpxWrapper.patchOrFail(
     "/journeys",
-    `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`,
+    `{"id":"${JOURNEY_ID}","name":"${journeyName}","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`,
     devOrProdUrl
   );
+
   reporter.report(`Journey creation completed.`);
   reporter.removeTimer("journeyCreation");
 
@@ -967,7 +964,7 @@ export default function main() {
   );
   reporter.report(`Journey started.`);
 
-  reporter.log(`Check stats: /api/steps/stats/${MESSAGE_STEP_ID}`);
+  //reporter.log(`Check stats: /api/steps/stats/${MESSAGE_STEP_ID}`);
 
   /*
   let sentCount = 0;
