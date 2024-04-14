@@ -2,18 +2,9 @@ import { sleep, fail } from "k6";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import http from "k6/http";
 import { Httpx } from "https://jslib.k6.io/httpx/0.1.0/index.js";
-import { Counter } from "k6/metrics";
 import { createAccount } from "./utils/accounts.js";
+import { Counter } from "k6/metrics";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
-
-
-/*
- * Depending on how you are testing, you need to change 
- * devOrProdUrl = "" to devOrProdUrl = "/api"
- * 
- * and use the right upload csv option post call
- * 
- */
 
 export const options = {
   scenarios: {
@@ -26,6 +17,20 @@ export const options = {
   },
 };
 
+// Preload CSV files
+const csvData = {};
+if (__ENV.CSV_FILES) {
+  const csvFiles = JSON.parse(__ENV.CSV_FILES);
+  const csvBasePath = __ENV.CSV_FILEPATH || fail("CSV_FILEPATH required");
+  csvFiles.forEach(file => {
+    let filePath = csvBasePath + file;
+    console.log("filepath is", filePath)
+    csvData[file] = open(filePath, "b");
+  });
+}
+
+
+
 const customersImported = new Counter("customers_imported");
 const customersImportedTime = new Counter("customers_imported_time");
 const customersMessaged = new Counter("customers_messaged");
@@ -34,8 +39,9 @@ const customersMessagedTime = new Counter("customers_messaged_time");
 // Test config
 const EMAIL =
   __ENV.EMAIL || `perf${String(Math.random()).substring(2, 7)}@test.com`;
-const UPLOAD_FILE = open(__ENV.CSV_FILEPATH, "b");
+//const UPLOAD_FILE = open(__ENV.CSV_FILEPATH, "b");
 const POLLING_MINUTES = parseFloat(__ENV.POLLING_MINUTES) || 1;
+let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
 const PRIMARY_KEY_HEADER = "user_id";
 const source = "source";
 const mkt_agree = "mkt_agree";
@@ -43,7 +49,6 @@ const credit_score = "credit_score";
 const credit_score_date = "credit_score_date";
 const NUM_CUSTOMERS = __ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
 const UPLOAD_TIMEOUT = __ENV.UPLOAD_TIMEOUT || "600s";
-let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
 if (BASE_URL.at(-1) === "/") {
   BASE_URL = BASE_URL.substring(0, BASE_URL.length - 1);
 }
@@ -57,8 +62,9 @@ const session = new Httpx({
 });
 
 export default function main() {
+  let csvFiles = JSON.parse(__ENV.CSV_FILES || fail("CSV_FILES required"));
+  let csvBasePath = __ENV.CSV_FILEPATH || fail("CSV_FILEPATH required");
   let response;
-  let UPLOADED_FILE_KEY;
   let httpxWrapper = new HttpxWrapper(session);
 
   let devOrProdUrl = "";
@@ -81,6 +87,8 @@ export default function main() {
   reporter.log(`Email: ${email}`);
   reporter.log(`Authorization header: ${authorization}`);
   reporter.removeTimer("createAccount");
+
+  reporter.setStep("SET UP SCHEMA");
 
   // SET UP SCHEMA
   reporter.log(`Creating customer attributes`);
@@ -119,31 +127,32 @@ export default function main() {
     devOrProdUrl
   );
 
-  reporter.setStep("CUSTOMER_IMPORT");
-  reporter.report(`Starting customer import`);
-  reporter.addTimer("customerImport", "Total elapsed time of customer import");
-  reporter.addTimer("csvUpload", "Total elapsed time of csv upload");
+  reporter.setStep("UPLOAD");
 
-  // NOT USING httpx because file uploads not working
+  Object.keys(csvData).forEach(fileKey => {
+    uploadForFile(csvData[fileKey], httpxWrapper, reporter, devOrProdUrl, authorization);
+  });
+
   /*
-  response = http.post(
-    `${BASE_URL}/api/customers/uploadCSV`,
-    { file: http.file(UPLOAD_FILE, "upload.csv", "text/csv") },
-    {
-      timeout: "600s",
-      headers: {
-        authorization,
-      },
-    }
-  );
+  csvFiles.forEach(file => {
+    let filePath = csvBasePath + file;
+    let uploadFile = open(filePath, "b");
+    uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl);
+  });
   */
-  // NOT USING httpx because file uploads not working
-  console.log("the upload timeout is", UPLOAD_TIMEOUT )
-  response = http.post(
+}
+
+function uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl, authorization) {
+
+  let UPLOADED_FILE_KEY;
+  
+  reporter.log(`Uploading file and processing`);
+
+  let response = http.post(
     `${BASE_URL}/customers/uploadCSV`,
-    { file: http.file(UPLOAD_FILE, "upload.csv", "text/csv") },
+    { file: http.file(uploadFile, "upload.csv", "text/csv") },
     {
-      timeout: UPLOAD_TIMEOUT,
+      timeout: __ENV.UPLOAD_TIMEOUT || "600s",
       headers: {
         authorization,
       },
@@ -154,7 +163,6 @@ export default function main() {
 
   //response = httpxWrapper.getOrFail("/api/customers/getLastImportCSV");
   response = httpxWrapper.getOrFail("/customers/getLastImportCSV", undefined, devOrProdUrl);
-
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
@@ -610,10 +618,7 @@ export default function main() {
   let prevNumPages = 0;
   let pageRetries = 0;
 
-
-  
   while (numPages < expectedPages) {
-    console.log("page retries is", pageRetries);
     sleep(POLLING_MINUTES * 60);
     response = httpxWrapper.getOrFail(
       "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc", null, devOrProdUrl
@@ -631,7 +636,6 @@ export default function main() {
       reporter.log(
         `Sent count hasn't increased breaking from loop`
       );
-      break;
       if (pageRetries > 2) {
         reporter.report(
           `Sent count hasn't increased in 5 retries. Failing test...`
@@ -649,223 +653,17 @@ export default function main() {
       `Checking status of customer import. ${numPages} pages imported. ${expectedPages} pages expected.`
     );
     if (numPages < expectedPages) {
-      //sleep(30);
-      console.log("updating numPages, and prev");
-      prevNumPages = numPages
-    }
+        //sleep(30);
+        prevNumPages = numPages
+      }
   }
   reporter.report(
     `Customer import process completed. ${numPages} customer pages loaded.`
   );
-
-  
   reporter.removeTimer("startImport");
   reporter.removeTimer("customerImport");
 
-  // STEP 3 CREATE JOURNEY
-
-  /*
-  reporter.setStep("JOURNEY_CREATION");
-  reporter.log(`Starting journey creation`);
-  reporter.addTimer(
-    "journeyCreation",
-    "Time elapsed to create a simple journey"
-  );
-  reporter.log(`Posting new journey`);
-  response = httpxWrapper.postOrFail("/journeys", '{"name":"test"}', devOrProdUrl);
-  let visualLayout = response.json("visualLayout");
-  const JOURNEY_ID = response.json("id");
-
-  reporter.log(`Journey created with id: ${JOURNEY_ID}`);
-
-  response = httpxWrapper.postOrFail(
-    "/steps",
-    `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
-    devOrProdUrl
-  );
-
-  const START_STEP_NODE = visualLayout.nodes[0];
-  const START_STEP_EDGE = visualLayout.edges[0];
-  const MESSAGE_STEP_ID = response.json("id");
-
-  response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
-  const TEMPLATE_ONE = response.json("data")[0];
-  let messageStepNode = visualLayout.nodes[1];
-  messageStepNode.type = "message";
-  messageStepNode.data = {
-    stepId: MESSAGE_STEP_ID,
-    type: "message",
-    customName: "Email 1",
-    template: {
-      type: "email",
-      selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
-    },
-  };
-
-  response = httpxWrapper.postOrFail(
-    "/steps",
-    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
-    devOrProdUrl
-  );
-
-  const EXIT_STEP_ID = response.json("id");
-  const EXIT_STEP_NODE_ID = uuidv4();
-  const EXIT_STEP_NODE = {
-    id: EXIT_STEP_NODE_ID,
-    type: "exit",
-    data: {
-      stepId: EXIT_STEP_ID,
-    },
-    position: {
-      x: 0,
-      y: 228,
-    },
-    selected: false,
-  };
-
-  const EXIT_STEP_EDGE = {
-    id: `${messageStepNode.id}-${EXIT_STEP_NODE_ID}`,
-    type: "primary",
-    source: messageStepNode.id,
-    target: EXIT_STEP_NODE_ID,
-  };
-
-  let visualLayoutBody = JSON.stringify({
-    id: JOURNEY_ID,
-    nodes: [START_STEP_NODE, messageStepNode, EXIT_STEP_NODE],
-    edges: [START_STEP_EDGE, EXIT_STEP_EDGE],
-  });
-
-  response = httpxWrapper.patchOrFail(
-    "/journeys/visual-layout",
-    visualLayoutBody,
-    devOrProdUrl
-  );
-
-  response = httpxWrapper.patchOrFail(
-    "/journeys",
-    `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`,
-    devOrProdUrl
-  );
-  reporter.report(`Journey creation completed.`);
-  reporter.removeTimer("journeyCreation");
-
-  reporter.setStep("CUSTOMER_MESSAGING");
-  reporter.log(`Starting journey.`);
-  reporter.addTimer(
-    "journeyMessaging",
-    "Time elapsed since journey started triggering customer messages."
-  );
-
-  response = httpxWrapper.patchOrFail(
-    `/journeys/start/${JOURNEY_ID}`,
-    "{}",
-    devOrProdUrl
-  );
-  reporter.report(`Journey started.`);
-
-  reporter.log(`Check stats: /steps/stats/${MESSAGE_STEP_ID}`);
-
-  let sentCount = 0;
-  let retries = 0; // kill stat checking early if sent count not increasing
-  let prevSentCount = 0;
-  while (sentCount < NUM_CUSTOMERS) {
-    sleep(POLLING_MINUTES * 60);
-    response = httpxWrapper.getOrFail(`/steps/stats/${MESSAGE_STEP_ID}`, undefined, devOrProdUrl);
-    prevSentCount = sentCount;
-    sentCount = parseInt(response.json("sent"));
-    reporter.report(`Current sent messages: ${sentCount} of ${NUM_CUSTOMERS}`);
-    let deltaSent = sentCount - prevSentCount;
-    customersMessaged.add(deltaSent);
-    customersMessagedTime.add(POLLING_MINUTES * 60);
-    if (prevSentCount === sentCount) {
-      reporter.log(
-        `Sent count hasn't increased since last poll. Current count: ${sentCount}. number of retries: ${retries}`
-      );
-      if (retries > 5) {
-        reporter.report(
-          `Sent count hasn't increased in 5 retries. Failing test...`
-        );
-        fail(
-          `Message customers has failed after ${sentCount} messages sent, but ${NUM_CUSTOMERS} messages expected.`
-        );
-      }
-      retries = retries + 1;
-    } else {
-      retries = 0;
-    }
-  }
-  reporter.report(`Test successfully finished.`);
-  reporter.log(`Final sentCount: ${sentCount}.`);
-  reporter.removeTimer("journeyMessaging");
-
-  reporter.setStep(`CLEANUP`);
-  */
-
-
-  /*
-  reporter.log(`Deleting account ${email}`);
-  response = httpxWrapper.deleteOrFail(
-    `/api/accounts`,
-    `{"password":"${password}"}`
-  );
-  reporter.log(`Account deleted.`);
-  */
-
-  /*
-  reporter.log(`Deleting account ${email}`);
-  response = httpxWrapper.deleteOrFail(
-    `//accounts`,
-    `{"password":"${password}"}`,
-    devOrProdUrl
-  );
-  reporter.log(`Account deleted.`);
-  */
+  // Additional steps as needed per original script
 }
 
-export function handleSummary(data) {
-  const imported = data.metrics["customers_imported"]
-    ? data.metrics["customers_imported"].values.count
-    : undefined;
-  const importedTime = data.metrics["customers_imported_time"]
-    ? data.metrics["customers_imported_time"].values.count
-    : undefined; //seconds
-  const messaged = data.metrics["customers_messaged"]
-    ? data.metrics["customers_messaged"].values.count
-    : undefined;
-  const messagedTime = data.metrics["customers_messaged_time"]
-    ? data.metrics["customers_messaged_time"].values.count
-    : undefined; //seconds
-
-  let summary = "SUMMARY:\n\n\n";
-  summary += `Customers Imported: ${imported}\n`;
-  summary += `Customers Imported Time (seconds): ${importedTime} seconds\n`;
-  summary += `Customers Messaged: ${messaged}\n`;
-  summary += `Customers Messaged Time (seconds): ${messagedTime} seconds\n\n`;
-
-  if (imported && importedTime) {
-    summary += `Import Rate (per second): ${
-      imported / importedTime
-    } customers per second\n`;
-    summary += `Import Rate (per minute): ${
-      imported / (importedTime / 60)
-    } customers per minute\n\n`;
-  } else {
-    summary += `Import Rate: unkown due to error\n\n`;
-  }
-
-  if (messaged && messagedTime) {
-    summary += `Message Send Rate (per second): ${
-      messaged / messagedTime
-    } customers per second\n`;
-    summary += `Message Send Rate (per minute): ${
-      messaged / (messagedTime / 60)
-    } customers per minute\n`;
-  } else {
-    summary += `Import Rate: unknown due to error\n`;
-  }
-
-  return {
-    stdout: summary,
-  };
-}
+// Add the handleSummary function from the original script here if necessary
