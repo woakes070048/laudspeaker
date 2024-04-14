@@ -65,28 +65,39 @@ export class HttpxWrapper {
     }
     this.session = session;
   }
-  getOrFail(url, params = undefined) {
+
+  // Helper method to prepare the URL
+  prepareUrl(url, devOrProdUrl = '') {
+    return `${devOrProdUrl}${url}`;
+  }
+
+  getOrFail(url, params = undefined, devOrProdUrl = '') {
+    url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.get(url, params);
     failOnError(response);
     return response;
   }
-  postOrFail(url, body = undefined, params = undefined) {
+  postOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+    url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.post(url, body, params);
     failOnError(response);
     return response;
   }
 
-  putOrFail(url, body = undefined, params = undefined) {
+  putOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+    url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.put(url, body, params);
     failOnError(response);
     return response;
   }
-  patchOrFail(url, body = undefined, params = undefined) {
+  patchOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+    url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.patch(url, body, params);
     failOnError(response);
     return response;
   }
-  deleteOrFail(url, body = undefined, params = undefined) {
+  deleteOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+    url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.delete(url, body, params);
     failOnError(response);
     return response;
