@@ -165,7 +165,7 @@ const ConditionViewer: FC<ConditionViewerProps> = ({
                   </span>{" "}
                   {statement.comparisonType}{" "}
                   <span className="px-[5px] py-[2px] bg-white rounded-sm border border-[#E5E7EB] font-normal">
-                    {String(statement.value)}
+                    {statement.value}
                   </span>
                 </div>
               ) : (
