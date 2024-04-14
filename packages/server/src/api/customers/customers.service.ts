@@ -130,8 +130,8 @@ export interface QueryObject {
 }
 
 const acceptableBooleanConvertable = {
-  true: ['TRUE', 'true', 'T', 't'],
-  false: ['FALSE', 'false', 'F', 'f'],
+  true: ['TRUE', 'true', 'T', 't', 'yes', '1'],
+  false: ['FALSE', 'false', 'F', 'f', 'no', '0'],
 };
 
 export interface SystemAttribute {
@@ -5433,9 +5433,10 @@ export class CustomersService {
         }
       }
     } else if (convertTo === AttributeType.BOOLEAN) {
-      converted = acceptableBooleanConvertable.true.includes(value)
+      const trimmedLowerValue = value.trim().toLowerCase();
+      converted = acceptableBooleanConvertable.true.includes(trimmedLowerValue)
         ? true
-        : acceptableBooleanConvertable.false.includes(value)
+        : acceptableBooleanConvertable.false.includes(trimmedLowerValue)
         ? false
         : null;
     } else if (
