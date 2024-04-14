@@ -62,7 +62,7 @@ const FilterViewer: FC<FilterViewerProps> = ({
                       statement.dateComparisonType ===
                         DateComparisonType.ABSOLUTE
                         ? format(new Date(statement.value), "MM/dd/yyyy HH:mm")
-                        : statement.value}
+                        : String(statement.value)}
                     </div>
                   )}
 

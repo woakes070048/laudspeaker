@@ -46,7 +46,7 @@ const MultisplitCondtionsReview = ({
                     <span className="max-w-[90px] overflow-hidden text-ellipsis px-[5px] py-[2px] text-[#4B5563] border border-[#E5E7EB] rounded-sm bg-white">
                       {statement.valueType === StatementValueType.DATE
                         ? format(new Date(statement.value), "MM/dd/yyyy HH:mm")
-                        : statement.value}
+                        : String(statement.value)}
                     </span>
                   )}
 
