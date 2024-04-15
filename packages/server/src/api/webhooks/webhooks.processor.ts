@@ -15,7 +15,7 @@ import {
   FallBackAction,
   Template,
   WebhookMethod,
-  MIMEType
+  MIMEType,
 } from '../templates/entities/template.entity';
 import { TemplatesService } from '../templates/templates.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -143,11 +143,11 @@ export class WebhooksProcessor extends WorkerHost {
     );
 
     // add content type to headers
-    if ( Object.values(MIMEType).includes(mimeType) ) {
+    if (Object.values(MIMEType).includes(mimeType)) {
       headers = {
         ...headers,
-        "content-type": mimeType
-      }
+        'content-type': mimeType,
+      };
     }
 
     const account = await this.accountRepository.findOne({
