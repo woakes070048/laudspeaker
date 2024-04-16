@@ -9,6 +9,7 @@ import Select from "components/Elements/Selectv2";
 import Input from "components/Elements/Inputv2";
 import { Textarea } from "components/Elements";
 import { CustomerResponse, SearchUser } from "pages/PushBuilder/SearchUser";
+import TrashIcon from "assets/icons/TrashIcon";
 
 export enum WebhookMethod {
   GET = "GET",
@@ -378,6 +379,14 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
               onFocus={() => setSelectedRef?.(customHeaderValueRef)}
               placeholder="header value"
             />
+            <button
+              onClick={() => {
+                customHeaders.splice(i, 1);
+                setCustomHeaders([...customHeaders]);
+              }}
+            >
+              <TrashIcon />
+            </button>
           </div>
         ))}
         <Button
