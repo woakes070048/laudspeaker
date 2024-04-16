@@ -18,6 +18,12 @@ export enum WebhookMethod {
   OPTIONS = 'OPTIONS',
 }
 
+export enum MIMEType {
+  JSON = 'application/json',
+  HTML = 'text/html',
+  XML = 'application/xml',
+}
+
 export type WebhookHeaders = { Authorization?: string } & Record<
   string,
   string
@@ -31,6 +37,7 @@ export interface WebhookData {
   url: string;
   method: WebhookMethod;
   body: string;
+  mimeType?: MIMEType;
   headers: WebhookHeaders;
   retries: number;
   fallBackAction: FallBackAction;

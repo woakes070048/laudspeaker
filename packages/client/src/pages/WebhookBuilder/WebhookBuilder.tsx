@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { getResources } from "pages/Segment/SegmentHelpers";
 import WebhookSettings, {
   FallBackAction,
+  MIMEType,
   WebhookMethod,
   WebhookState,
 } from "./WebhookSettings";
@@ -21,6 +22,7 @@ const WebhookBuilder = () => {
     url: "",
     method: WebhookMethod.GET,
     body: "",
+    mimeType: MIMEType.JSON,
     headers: {},
     retries: 5,
     fallBackAction: FallBackAction.NOTHING,

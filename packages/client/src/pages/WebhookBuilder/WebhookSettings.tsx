@@ -29,22 +29,13 @@ export enum FallBackAction {
   NOTHING,
 }
 
-export interface WebhookState {
-  url: string;
-  method: WebhookMethod;
-  body: string;
-  headers: WebhookHeaders;
-  retries: number;
-  fallBackAction: FallBackAction;
-}
-
 enum AuthType {
   BEARER,
   BASIC,
   CUSTOM,
 }
 
-enum MIMEType {
+export enum MIMEType {
   JSON = "application/json",
   HTML = "text/html",
   XML = "application/xml",
@@ -54,6 +45,16 @@ enum BodyType {
   JSON = `JSON (application/json)`,
   HTML = "HTML (text/html)",
   XML = "XML (application/xml)",
+}
+
+export interface WebhookState {
+  url: string;
+  method: WebhookMethod;
+  body: string;
+  mimeType: MIMEType;
+  headers: WebhookHeaders;
+  retries: number;
+  fallBackAction: FallBackAction;
 }
 
 export interface TestResponseData {
@@ -66,6 +67,12 @@ const mimeTypeMap: Record<BodyType, MIMEType> = {
   [BodyType.JSON]: MIMEType.JSON,
   [BodyType.HTML]: MIMEType.HTML,
   [BodyType.XML]: MIMEType.XML,
+};
+
+const bodyTypeMap: Record<MIMEType, BodyType> = {
+  [MIMEType.JSON]: BodyType.JSON,
+  [MIMEType.HTML]: BodyType.HTML,
+  [MIMEType.XML]: BodyType.XML,
 };
 
 function classNames(...classes: string[]) {
@@ -118,7 +125,9 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   className,
 }) => {
   const [authType, setAuthType] = useState<AuthType>(AuthType.CUSTOM);
-  const [bodyType, setBodyType] = useState(BodyType.JSON);
+  const [bodyType, setBodyType] = useState(
+    bodyTypeMap[webhookState.mimeType] || BodyType.JSON
+  );
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse>();
   const [testResponseData, setTestResponseData] = useState<TestResponseData>();
 
@@ -175,6 +184,10 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
       return newState;
     });
   }, [customHeaders]);
+
+  useEffect(() => {
+    setWebhookState({ ...webhookState, mimeType: mimeTypeMap[bodyType] });
+  }, [bodyType]);
 
   const handleUrl = (value: string) =>
     setWebhookState({ ...webhookState, url: value });

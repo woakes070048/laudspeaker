@@ -6,6 +6,7 @@ import ReactDOM from "react-dom";
 import ApiCallMergeTagModal from "./ApiCallMergeTagModal";
 import {
   FallBackAction,
+  MIMEType,
   WebhookMethod,
   WebhookState,
 } from "pages/WebhookBuilder/WebhookSettings";
@@ -29,6 +30,7 @@ const defaultWebhookState: WebhookState = {
   url: "https://jsonplaceholder.typicode.com/posts",
   method: WebhookMethod.GET,
   body: "{}",
+  mimeType: MIMEType.JSON,
   headers: {},
   fallBackAction: FallBackAction.NOTHING,
   retries: 5,
