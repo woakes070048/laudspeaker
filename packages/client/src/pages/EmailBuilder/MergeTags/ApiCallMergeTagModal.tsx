@@ -2,6 +2,7 @@ import Modal from "components/Elements/Modal";
 import SlackTemplateHeader from "pages/SlackBuilder/SlackTemplateHeader";
 import WebhookSettings, {
   FallBackAction,
+  MIMEType,
   WebhookMethod,
   WebhookState,
 } from "pages/WebhookBuilder/WebhookSettings";
@@ -26,6 +27,7 @@ const ApiCallMergeTagModal: FC<ApiCallMergeTagModalProps> = ({
   let initialWebhookState: WebhookState = {
     url: "https://jsonplaceholder.typicode.com/posts",
     body: "{}",
+    mimeType: MIMEType.JSON,
     method: WebhookMethod.GET,
     headers: { Authorization: "" },
     retries: 5,

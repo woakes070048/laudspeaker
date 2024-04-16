@@ -3,6 +3,7 @@ import React, { FC, RefObject, useEffect, useRef, useState } from "react";
 import { Buffer } from "buffer";
 import WebhookSettings, {
   FallBackAction,
+  MIMEType,
   WebhookMethod,
   WebhookState,
 } from "pages/WebhookBuilder/WebhookSettings";
@@ -25,6 +26,7 @@ const ApiCallTagPicker: FC<ApiCallTagPickerProps> = ({
   let initialWebhookState: WebhookState = {
     url: "https://jsonplaceholder.typicode.com/posts",
     body: "{}",
+    mimeType: MIMEType.JSON,
     method: WebhookMethod.GET,
     headers: { Authorization: "" },
     retries: 5,
