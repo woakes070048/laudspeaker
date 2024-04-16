@@ -128,6 +128,8 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const [isTesting, setIsTesting] = useState(false);
+
   const [customHeaders, setCustomHeaders] = useState<
     { key: string; value: string }[]
   >(
@@ -521,40 +523,170 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
         <div className="w-full h-full bg-white order-1 md:order-2">
           <div className="px-5 flex w-full flex-col gap-2.5">
             <div className="w-full flex flex-col gap-2.5">
-              <p className="text-[16px] font-semibold pt-[20px] leading-[24px]">
-                URL
-              </p>
-              <div className="flex items-center gap-[10px] w-full">
-                <Select
-                  value={webhookState.method}
-                  options={[
-                    { key: WebhookMethod.GET, title: WebhookMethod.GET },
-                    { key: WebhookMethod.POST, title: WebhookMethod.POST },
-                    { key: WebhookMethod.PUT, title: WebhookMethod.PUT },
-                    { key: WebhookMethod.PATCH, title: WebhookMethod.PATCH },
-                    { key: WebhookMethod.DELETE, title: WebhookMethod.DELETE },
-                    { key: WebhookMethod.HEAD, title: WebhookMethod.HEAD },
-                    {
-                      key: WebhookMethod.OPTIONS,
-                      title: WebhookMethod.OPTIONS,
-                    },
-                  ]}
-                  buttonClassName="w-full"
-                  className="w-fit max-w-[100px]"
-                  onChange={(val) =>
-                    setWebhookState({ ...webhookState, method: val })
-                  }
-                />
-                <Input
-                  wrapperClassName="w-full"
-                  placeholder="Enter webhook URL"
-                  className="w-full"
-                  name="webhookURL"
-                  id="webhookURL"
-                  onFocus={() => setSelectedRef?.(urlRef)}
-                  value={webhookState.url}
-                  onChange={handleUrl}
-                />
+              <div className="flex items-center justify-center gap-5 font-inter text-[14px] leading-[24px] font-normal">
+                <div
+                  className={`py-2.5 cursor-pointer border-b-[4px] ${
+                    isTesting
+                      ? "border-transparent text-[#9CA3AF]"
+                      : "border-[#6366F1] text-[#6366F1]"
+                  }`}
+                  onClick={() => setIsTesting(false)}
+                >
+                  Edit
+                </div>
+                <div
+                  className={`py-2.5 cursor-pointer border-b-[4px] ${
+                    isTesting
+                      ? "border-[#6366F1] text-[#6366F1]"
+                      : "border-transparent text-[#9CA3AF]"
+                  }`}
+                  onClick={() => setIsTesting(true)}
+                >
+                  Test
+                </div>
+              </div>
+
+              {!isTesting && (
+                <>
+                  <p className="text-[16px] font-semibold pt-[20px] leading-[24px]">
+                    URL
+                  </p>
+                  <div className="flex items-center gap-[10px] w-full">
+                    <Select
+                      value={webhookState.method}
+                      options={[
+                        { key: WebhookMethod.GET, title: WebhookMethod.GET },
+                        { key: WebhookMethod.POST, title: WebhookMethod.POST },
+                        { key: WebhookMethod.PUT, title: WebhookMethod.PUT },
+                        {
+                          key: WebhookMethod.PATCH,
+                          title: WebhookMethod.PATCH,
+                        },
+                        {
+                          key: WebhookMethod.DELETE,
+                          title: WebhookMethod.DELETE,
+                        },
+                        { key: WebhookMethod.HEAD, title: WebhookMethod.HEAD },
+                        {
+                          key: WebhookMethod.OPTIONS,
+                          title: WebhookMethod.OPTIONS,
+                        },
+                      ]}
+                      buttonClassName="w-full"
+                      className="w-fit max-w-[100px]"
+                      onChange={(val) =>
+                        setWebhookState({ ...webhookState, method: val })
+                      }
+                    />
+                    <Input
+                      wrapperClassName="w-full"
+                      placeholder="Enter webhook URL"
+                      className="w-full"
+                      name="webhookURL"
+                      id="webhookURL"
+                      onFocus={() => setSelectedRef?.(urlRef)}
+                      value={webhookState.url}
+                      onChange={handleUrl}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {isTesting ? (
+              <></>
+            ) : (
+              <>
+                <div className="flex flex-col gap-[10px]">
+                  {webhookProps && setWebhookProps && (
+                    <div className="flex justify-between items-center">
+                      <div>Data to retrieve:</div>
+                      <div>
+                        <Input
+                          name="webhookProps"
+                          id="webhookProps"
+                          value={webhookProps}
+                          onChange={(e) => {
+                            const event =
+                              e as unknown as React.ChangeEvent<HTMLInputElement>;
+                            if (
+                              /^response\..*/.test(event.target.value) &&
+                              setWebhookProps
+                            )
+                              setWebhookProps(event.target.value);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex w-full justify-between gap-2">
+                    <div className="flex flex-col w-full gap-[5px]">
+                      <p className="text-[16px] font-semibold leading-[24px]">
+                        Retries
+                      </p>
+                      <div>
+                        <Input
+                          name="retries"
+                          id="retries"
+                          type="number"
+                          max={5}
+                          min={0}
+                          value={webhookState.retries.toString()}
+                          onChange={(e) => handleRetriesChange(parseInt(e))}
+                          wrapperClassName="w-full"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col w-full gap-[5px]">
+                      <p className="text-[16px] font-semibold leading-[24px]">
+                        Fallback action
+                      </p>
+                      <div>
+                        <Select
+                          id="fallbackAction"
+                          value={webhookState.fallBackAction}
+                          options={[
+                            {
+                              key: FallBackAction.NOTHING,
+                              title: "Do nothing",
+                            },
+                          ]}
+                          onChange={(val) =>
+                            setWebhookState({
+                              ...webhookState,
+                              fallBackAction: val,
+                            })
+                          }
+                          className="w-full"
+                          buttonClassName="w-full"
+                          panelClassName="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {isTesting && (
+            <>
+              <div className="pb-5 w-full mt-5">
+                <div className="px-5 flex flex-col gap-2.5 pt-2.5">
+                  <p className="text-[16px] font-semibold leading-[24px]">
+                    Preview with sample user
+                  </p>
+                  <SearchUser
+                    selectedCustomer={selectedCustomer}
+                    setSelectedCustomer={setSelectedCustomer}
+                    previewFieldKey="email"
+                    buttonClassName="w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="px-5">
                 <Button
                   type={ButtonType.PRIMARY}
                   onClick={handleTest}
@@ -563,139 +695,62 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
                   Send test
                 </Button>
               </div>
-            </div>
+            </>
+          )}
 
-            <div className="flex flex-col gap-[10px]">
-              {webhookProps && setWebhookProps && (
-                <div className="flex justify-between items-center">
-                  <div>Data to retrieve:</div>
-                  <div>
-                    <Input
-                      name="webhookProps"
-                      id="webhookProps"
-                      value={webhookProps}
-                      onChange={(e) => {
-                        const event =
-                          e as unknown as React.ChangeEvent<HTMLInputElement>;
-                        if (
-                          /^response\..*/.test(event.target.value) &&
-                          setWebhookProps
-                        )
-                          setWebhookProps(event.target.value);
-                      }}
-                    />
+          {!isTesting && (
+            <div className="px-5">
+              <div className="pt-2.5 md:pt-0">
+                <div className="md:hidden">
+                  <label htmlFor="selected-tab" className="sr-only">
+                    Select a tab
+                  </label>
+                  <Select
+                    id="selected-tab"
+                    options={[
+                      { key: "Authorization", title: "Authorization" },
+                      { key: "Headers", title: "Headers" },
+                      { key: "Content", title: "Content" },
+                    ]}
+                    value={currentTab}
+                    onChange={(val) =>
+                      setCurrentTab(val as keyof typeof tabComponents)
+                    }
+                  />
+                </div>
+                <div className="hidden md:block">
+                  <div className="border-b border-gray-200">
+                    <nav className="-mb-px flex space-x-8">
+                      {(
+                        Object.keys(
+                          tabComponents
+                        ) as (keyof typeof tabComponents)[]
+                      ).map((tab) => (
+                        <div
+                          key={tab}
+                          className={classNames(
+                            tab === currentTab
+                              ? "border-[#6366F1] text-[#6366F1]"
+                              : "border-transparent text-black-500 hover:border-black-300 hover:text-black-700",
+                            "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm cursor-pointer"
+                          )}
+                          onClick={() => setCurrentTab(tab)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setCurrentTab(tab);
+                          }}
+                        >
+                          {tab}
+                        </div>
+                      ))}
+                    </nav>
                   </div>
                 </div>
-              )}
-              <div className="flex w-full justify-between gap-2">
-                <div className="flex flex-col w-full gap-[5px]">
-                  <p className="text-[16px] font-semibold leading-[24px]">
-                    Retries
-                  </p>
-                  <div>
-                    <Input
-                      name="retries"
-                      id="retries"
-                      type="number"
-                      max={5}
-                      min={0}
-                      value={webhookState.retries.toString()}
-                      onChange={(e) => handleRetriesChange(parseInt(e))}
-                      wrapperClassName="w-full"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col w-full gap-[5px]">
-                  <p className="text-[16px] font-semibold leading-[24px]">
-                    Fallback action
-                  </p>
-                  <div>
-                    <Select
-                      id="fallbackAction"
-                      value={webhookState.fallBackAction}
-                      options={[
-                        { key: FallBackAction.NOTHING, title: "Do nothing" },
-                      ]}
-                      onChange={(val) =>
-                        setWebhookState({
-                          ...webhookState,
-                          fallBackAction: val,
-                        })
-                      }
-                      className="w-full"
-                      buttonClassName="w-full"
-                      panelClassName="w-full"
-                    />
-                  </div>
+                <div className="my-2.5 flex flex-col gap-2.5">
+                  {tabComponents[currentTab]}
                 </div>
               </div>
             </div>
-          </div>
-          <div className="border-y-[1px] pb-5 w-full mt-5 ">
-            <div className="px-5 flex flex-col gap-2.5 pt-2.5">
-              <p className="text-[16px] font-semibold leading-[24px]">
-                Preview with sample user
-              </p>
-              <SearchUser
-                selectedCustomer={selectedCustomer}
-                setSelectedCustomer={setSelectedCustomer}
-                previewFieldKey="email"
-                buttonClassName="w-full"
-              />
-            </div>
-          </div>
-          <div className="px-5">
-            <div className="pt-2.5 md:pt-0">
-              <div className="md:hidden">
-                <label htmlFor="selected-tab" className="sr-only">
-                  Select a tab
-                </label>
-                <Select
-                  id="selected-tab"
-                  options={[
-                    { key: "Authorization", title: "Authorization" },
-                    { key: "Headers", title: "Headers" },
-                    { key: "Content", title: "Content" },
-                  ]}
-                  value={currentTab}
-                  onChange={(val) =>
-                    setCurrentTab(val as keyof typeof tabComponents)
-                  }
-                />
-              </div>
-              <div className="hidden md:block">
-                <div className="border-b border-gray-200">
-                  <nav className="-mb-px flex space-x-8">
-                    {(
-                      Object.keys(
-                        tabComponents
-                      ) as (keyof typeof tabComponents)[]
-                    ).map((tab) => (
-                      <div
-                        key={tab}
-                        className={classNames(
-                          tab === currentTab
-                            ? "border-[#6366F1] text-[#6366F1]"
-                            : "border-transparent text-black-500 hover:border-black-300 hover:text-black-700",
-                          "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm cursor-pointer"
-                        )}
-                        onClick={() => setCurrentTab(tab)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") setCurrentTab(tab);
-                        }}
-                      >
-                        {tab}
-                      </div>
-                    ))}
-                  </nav>
-                </div>
-              </div>
-              <div className="my-2.5 flex flex-col gap-2.5">
-                {tabComponents[currentTab]}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
       <Modal
