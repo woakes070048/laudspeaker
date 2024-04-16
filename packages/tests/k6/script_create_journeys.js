@@ -6,16 +6,16 @@ import { Counter } from "k6/metrics";
 import { createAccount, login } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
- /*
-  * this test is supposed to be used semi manually
-  * ie a human creates the account, sets the end-user schema
-  * 
-  * then puts the NUM_CUSTOMERS field in, as well as the 
-  * login params
-  * 
-  * You can then use this test with others as well, and do
-  * human testing all on the same acount
-  */
+/*
+ * this test is supposed to be used semi manually
+ * ie a human creates the account, sets the end-user schema
+ *
+ * then puts the NUM_CUSTOMERS field in, as well as the
+ * login params
+ *
+ * You can then use this test with others as well, and do
+ * human testing all on the same acount
+ */
 
 export const options = {
   scenarios: {
@@ -39,7 +39,7 @@ const POLLING_MINUTES = parseFloat(__ENV.POLLING_MINUTES) || 1;
 const PRIMARY_KEY_HEADER = "user_id";
 //const NUM_CUSTOMERS = //__ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
 //let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
-let BASE_URL = "http://localhost:3001/"
+let BASE_URL = "http://localhost:3001/";
 if (BASE_URL.at(-1) === "/") {
   BASE_URL = BASE_URL.substring(0, BASE_URL.length - 1);
 }
@@ -71,7 +71,7 @@ export default function main() {
 
   // LOGIN and set Auth header. Replace createAccount with login here.
   // Make sure to define or retrieve the EMAIL, PASSWORD, and API_KEY variables appropriately.
-  
+
   // to do put in the email, password, and api key as you want
 
   let { authorization, email } = login(
@@ -89,7 +89,6 @@ export default function main() {
 
   // STEP 3 CREATE JOURNEY
   for (let i = 0; i < 20; i++) {
-
     reporter.setStep("JOURNEY_CREATION");
     reporter.log(`Starting journey creation`);
     reporter.addTimer(
@@ -99,7 +98,10 @@ export default function main() {
     reporter.log(`Posting new journey`);
     //response = httpxWrapper.postOrFail("/api/journeys", '{"name":"test"}');
     let journeyName = "test_" + uuidv4();
-    response = httpxWrapper.postOrFail("/journeys", `{"name": "${journeyName}"}`);
+    response = httpxWrapper.postOrFail(
+      "/journeys",
+      `{"name": "${journeyName}"}`
+    );
     let visualLayout = response.json("visualLayout");
     const JOURNEY_ID = response.json("id");
 
@@ -212,13 +214,9 @@ export default function main() {
       "{}"
     );
     */
-    response = httpxWrapper.patchOrFail(
-      `/journeys/start/${JOURNEY_ID}`,
-      "{}"
-    );
+    response = httpxWrapper.patchOrFail(`/journeys/start/${JOURNEY_ID}`, "{}");
     reporter.report(`Journey started.`);
   }
-
 
   /*
 
@@ -267,7 +265,6 @@ export default function main() {
 
   */
 }
-
 
 /*
 

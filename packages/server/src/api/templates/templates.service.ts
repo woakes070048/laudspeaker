@@ -857,34 +857,32 @@ export class TemplatesService extends QueueEventsHost {
 
   async testWebhookTemplate(testWebhookDto: TestWebhookDto, session: string) {
     //console.log("In test webhook a")
-    
+
     let customer = await this.customerModel.findOne({
       email: testWebhookDto.testCustomerEmail,
     });
-    
+
     //console.log("In test webhook")
 
     if (!customer) {
-      customer = new this.customerModel({
-      })
+      customer = new this.customerModel({});
       //console.log('Using temporary customer');
-    } 
+    }
 
     const { _id, workspaceId, workflows, ...tags } = customer.toObject();
     const filteredTags = cleanTagsForSending(tags);
 
-    const { method } = testWebhookDto.webhookData;
+    const { method, mimeType } = testWebhookDto.webhookData;
 
     //console.log("In test webhook 2")
 
     let { body, headers, url } = testWebhookDto.webhookData;
 
-    
     url = await this.tagEngine.parseAndRender(url, filteredTags || {}, {
       strictVariables: true,
     });
     url = await this.parseTemplateTags(url);
-    
+
     if (
       [
         WebhookMethod.GET,
@@ -920,6 +918,8 @@ export class TemplatesService extends QueueEventsHost {
       )
     );
 
+    headers['content-type'] = mimeType;
+
     //console.log("this is the send test webhook");
 
     /*
@@ -946,7 +946,6 @@ export class TemplatesService extends QueueEventsHost {
     } catch (e) {
       throw new BadRequestException(e);
     }
-    
   }
 
   public async handleApiCall(

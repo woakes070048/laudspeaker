@@ -100,7 +100,6 @@ export class AppController {
   @UseInterceptors(new RavenInterceptor())
   @Get('/webhook-get-test')
   webhookGetTest(@Req() req: Request) {
-
     //console.log("Getting GET");
 
     const session = randomUUID();
@@ -127,8 +126,6 @@ export class AppController {
   @UseInterceptors(new RavenInterceptor())
   @Put('/webhook-put-test')
   webhookPutTest(@Req() req: Request) {
-
-
     const session = randomUUID();
     this.log(JSON.stringify(req.body, null, 2), this.root.name, session);
     this.log(JSON.stringify(req.headers, null, 2), this.root.name, session);

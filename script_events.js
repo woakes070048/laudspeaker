@@ -1,11 +1,11 @@
-import http from 'k6/http';
-import { sleep } from 'k6';
-import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
+import http from "k6/http";
+import { sleep } from "k6";
+import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 export const options = {
   /* Option 0: Smoke test */
-   vus: 5,
-   duration: '5s',
+  vus: 5,
+  duration: "5s",
 
   /* Option 1: Average load test*/
 
@@ -31,7 +31,6 @@ export const options = {
   //   { duration: '5m', target: 0 }, // ramp-down to 0 users
   // ],
 
-
   /* Option 4: Spike test */
 
   // stages: [
@@ -46,20 +45,19 @@ export const options = {
   // stages: [
   //   { duration: '2h', target: 20000 }, // just slowly ramp-up to a HUGE load
   // ],
-
 };
 
 export default function () {
   let data = {
     primary_key: uuidv4(),
     properties: {
-      name: "mahamad"
-    }
-  }
+      name: "mahamad",
+    },
+  };
   let temp_id = uuidv4();
   let res = http.post(
     // 'https://api.laudspeaker.com/customers/upsert',
-    'http://localhost:3001/events/batch',
+    "http://localhost:3001/events/batch",
     `{
       "batch": [
       {
@@ -127,10 +125,11 @@ export default function () {
   }`,
     {
       headers: {
-        'Authorization': 'Api-Key UxLhrWODANbwW8gLDsqfQxqhsno5yB7JFbpROsoh',
-        'Content-Type': 'application/json'
-      }
-    })
+        Authorization: "Api-Key UxLhrWODANbwW8gLDsqfQxqhsno5yB7JFbpROsoh",
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   // console.log(JSON.stringify(res, null, 2))
   // sleep(1);

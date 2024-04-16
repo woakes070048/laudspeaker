@@ -429,11 +429,27 @@ export default function main() {
       target: exit2StepNode.id,
     };
 
-
     let visualLayoutBody = JSON.stringify({
       id: JOURNEY_ID,
-      nodes: [START_STEP_NODE, waitUntilStepNode, email1StepNode, multisplitNode, email2StepNode, email3StepNode, exit1StepNode, exit2StepNode],
-      edges: [START_STEP_EDGE, waitUntilBranch, toMultisplitEdge, multisplitBranch1, multisplitBranch2, toExitEdge1, toExitEdge2],
+      nodes: [
+        START_STEP_NODE,
+        waitUntilStepNode,
+        email1StepNode,
+        multisplitNode,
+        email2StepNode,
+        email3StepNode,
+        exit1StepNode,
+        exit2StepNode,
+      ],
+      edges: [
+        START_STEP_EDGE,
+        waitUntilBranch,
+        toMultisplitEdge,
+        multisplitBranch1,
+        multisplitBranch2,
+        toExitEdge1,
+        toExitEdge2,
+      ],
     });
 
     /*

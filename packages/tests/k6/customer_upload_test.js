@@ -6,13 +6,12 @@ import { Counter } from "k6/metrics";
 import { createAccount } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
-
 /*
- * Depending on how you are testing, you need to change 
+ * Depending on how you are testing, you need to change
  * devOrProdUrl = "" to devOrProdUrl = "/api"
- * 
+ *
  * and use the right upload csv option post call
- * 
+ *
  */
 
 export const options = {
@@ -92,7 +91,7 @@ export default function main() {
   */
   response = httpxWrapper.postOrFail(
     "/customers/attributes/create",
-    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`, 
+    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`,
     devOrProdUrl
   );
   response = httpxWrapper.postOrFail(
@@ -138,7 +137,7 @@ export default function main() {
   );
   */
   // NOT USING httpx because file uploads not working
-  console.log("the upload timeout is", UPLOAD_TIMEOUT )
+  console.log("the upload timeout is", UPLOAD_TIMEOUT);
   response = http.post(
     `${BASE_URL}/customers/uploadCSV`,
     { file: http.file(UPLOAD_FILE, "upload.csv", "text/csv") },
@@ -153,8 +152,11 @@ export default function main() {
   failOnError(response);
 
   //response = httpxWrapper.getOrFail("/api/customers/getLastImportCSV");
-  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", undefined, devOrProdUrl);
-
+  response = httpxWrapper.getOrFail(
+    "/customers/getLastImportCSV",
+    undefined,
+    devOrProdUrl
+  );
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
@@ -610,13 +612,13 @@ export default function main() {
   let prevNumPages = 0;
   let pageRetries = 0;
 
-
-  
   while (numPages < expectedPages) {
     console.log("page retries is", pageRetries);
     sleep(POLLING_MINUTES * 60);
     response = httpxWrapper.getOrFail(
-      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc", null, devOrProdUrl
+      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc",
+      null,
+      devOrProdUrl
     );
     numPages = parseInt(response.json("totalPages"));
 
@@ -628,9 +630,7 @@ export default function main() {
       reporter.log(
         `Customer page count hasn't increased since last poll. Current pages: ${numPages}. number of retries: ${pageRetries}`
       );
-      reporter.log(
-        `Sent count hasn't increased breaking from loop`
-      );
+      reporter.log(`Sent count hasn't increased breaking from loop`);
       break;
       if (pageRetries > 2) {
         reporter.report(
@@ -651,14 +651,13 @@ export default function main() {
     if (numPages < expectedPages) {
       //sleep(30);
       console.log("updating numPages, and prev");
-      prevNumPages = numPages
+      prevNumPages = numPages;
     }
   }
   reporter.report(
     `Customer import process completed. ${numPages} customer pages loaded.`
   );
 
-  
   reporter.removeTimer("startImport");
   reporter.removeTimer("customerImport");
 
@@ -801,7 +800,6 @@ export default function main() {
 
   reporter.setStep(`CLEANUP`);
   */
-
 
   /*
   reporter.log(`Deleting account ${email}`);

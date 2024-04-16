@@ -43,7 +43,8 @@ const WebhookBuilder = () => {
   const bearerTokenRef = useRef<HTMLInputElement>(null);
   const basicUserNameRef = useRef<HTMLInputElement>(null);
   const basicPasswordRef = useRef<HTMLInputElement>(null);
-  const customHeaderRef = useRef<HTMLInputElement>(null);
+  const customHeaderKeyRef = useRef<HTMLInputElement>(null);
+  const customHeaderValueRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const headersRef = useRef<HTMLTextAreaElement>(null);
 
@@ -57,7 +58,7 @@ const WebhookBuilder = () => {
         setTemplateId(data.id);
         setTemplateName(data.name);
         setWebhookState(data.webhookData || webhookState);
-        console.log("this is the data", data)
+        console.log("this is the data", data);
         const { data: attributesData } = await getResources("attributes");
         setPossibleAttributes(
           attributesData.options.map(
@@ -147,7 +148,8 @@ const WebhookBuilder = () => {
         bearerTokenRef={bearerTokenRef}
         basicUserNameRef={basicUserNameRef}
         basicPasswordRef={basicPasswordRef}
-        customHeaderRef={customHeaderRef}
+        customHeaderKeyRef={customHeaderKeyRef}
+        customHeaderValueRef={customHeaderValueRef}
         bodyRef={bodyRef}
         headersRef={headersRef}
         setSelectedRefValueSetter={setSelectedRefValueSetter}

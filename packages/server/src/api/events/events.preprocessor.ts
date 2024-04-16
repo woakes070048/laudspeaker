@@ -175,7 +175,7 @@ export class EventsPreProcessor extends WorkerHost {
           null,
           job.data.event
         );
-        //console.timeEnd(`handleCustom - findOrCreateCustomer ${job.data.session}`)
+      //console.timeEnd(`handleCustom - findOrCreateCustomer ${job.data.session}`)
       //get all the journeys that are active, and pipe events to each journey in case they are listening for event
       //console.time(`handleCustom - find journeys ${job.data.session}`)
       const journeys = await this.journeysRepository.find({

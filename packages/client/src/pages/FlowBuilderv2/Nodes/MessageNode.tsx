@@ -13,7 +13,7 @@ import {
 import { MessageNodeData, Stats } from "./NodeData";
 import { NodeDevModeHighlighter } from "./NodeDevModeHighlighter";
 
-const compatNumberFormatter = Intl.NumberFormat("en", { notation: "compact" });
+const compaсtNumberFormatter = Intl.NumberFormat("en", { notation: "compact" });
 
 export const messageFixtures: Record<
   MessageType,
@@ -34,22 +34,22 @@ export const messageFixtures: Record<
       {
         key: "sent",
         name: "Sent",
-        renderLabel: (value) => compatNumberFormatter.format(value),
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
       },
       {
         key: "delivered",
         name: "Delivered",
-        renderLabel: (value) => compatNumberFormatter.format(value),
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
       },
       {
         key: "openedPercentage",
         name: "Opened",
-        renderLabel: (value) => `${compatNumberFormatter.format(value)}%`,
+        renderLabel: (value) => `${compaсtNumberFormatter.format(value)}%`,
       },
       {
         key: "clickedPercentage",
         name: "Clicked",
-        renderLabel: (value) => `${compatNumberFormatter.format(value)}%`,
+        renderLabel: (value) => `${compaсtNumberFormatter.format(value)}%`,
       },
     ],
   },
@@ -64,17 +64,17 @@ export const messageFixtures: Record<
       {
         key: "sent",
         name: "Sent",
-        renderLabel: (value) => compatNumberFormatter.format(value),
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
       },
       {
         key: "delivered",
         name: "Delivered",
-        renderLabel: (value) => compatNumberFormatter.format(value),
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
       },
       {
         key: "openedPercentage",
         name: "Opened",
-        renderLabel: (value) => `${compatNumberFormatter.format(value)}%`,
+        renderLabel: (value) => `${compaсtNumberFormatter.format(value)}%`,
       },
     ],
   },
@@ -89,18 +89,30 @@ export const messageFixtures: Record<
       {
         key: "sent",
         name: "Sent",
-        renderLabel: (value) => compatNumberFormatter.format(value),
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
       },
       {
         key: "delivered",
         name: "Delivered",
-        renderLabel: (value) => compatNumberFormatter.format(value),
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
       },
     ],
   },
   [MessageType.WEBHOOK]: {
     icon: <WebhookIcon />,
     text: "Webhook",
+    statsToShow: [
+      {
+        key: "wssent",
+        name: "Sent",
+        renderLabel: (value) => compaсtNumberFormatter.format(value),
+      },
+      {
+        key: "failed",
+        name: "Failed",
+        renderLabel: (value) => `${compaсtNumberFormatter.format(value)}%`,
+      },
+    ],
   },
 };
 
