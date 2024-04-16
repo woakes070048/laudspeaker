@@ -15,7 +15,6 @@ describe("Initial testing", () => {
   });
 });
 
-/*
 describe("multisplit event", () => {
   beforeEach(() => {
     cy.request(`${Cypress.env("TESTS_API_BASE_URL")}/tests/reset-tests`);
