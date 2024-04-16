@@ -86,9 +86,10 @@ interface WebhookSettingsProps {
   bearerTokenRef?: RefObject<HTMLInputElement>;
   basicUserNameRef?: RefObject<HTMLInputElement>;
   basicPasswordRef?: RefObject<HTMLInputElement>;
-  customHeaderRef?: RefObject<HTMLInputElement>;
   bodyRef?: RefObject<HTMLTextAreaElement>;
   headersRef?: RefObject<HTMLTextAreaElement>;
+  customHeaderKeyRef?: RefObject<HTMLInputElement>;
+  customHeaderValueRef?: RefObject<HTMLInputElement>;
   selectedRef?: RefObject<HTMLInputElement | HTMLTextAreaElement>;
   setSelectedRefValueSetter?: (setter: {
     set: (value: string) => void;
@@ -107,7 +108,8 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   bearerTokenRef,
   basicUserNameRef,
   basicPasswordRef,
-  customHeaderRef,
+  customHeaderKeyRef,
+  customHeaderValueRef,
   bodyRef,
   selectedRef,
   setSelectedRefValueSetter,
@@ -121,18 +123,42 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const [customHeaders, setCustomHeaders] = useState<
+    { key: string; value: string }[]
+  >(
+    Object.entries(webhookState.headers)
+      .filter(([key]) => key !== "Authorization")
+      .map(([key, value]) => ({ key, value }))
+  );
+
   useEffect(() => {
     if (!username || !password) return;
 
     setWebhookState({
       ...webhookState,
       headers: {
+        ...webhookState.headers,
         Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString(
           "base64"
         )}`,
       },
     });
   }, [username, password]);
+
+  useEffect(() => {
+    const authorizationHeader = webhookState.headers.Authorization;
+
+    setWebhookState({
+      ...webhookState,
+      headers: {
+        ...customHeaders.reduce((acc, el) => {
+          acc[el.key] = el.value;
+          return acc;
+        }, {} as Record<string, string>),
+        Authorization: authorizationHeader || "",
+      },
+    });
+  }, [customHeaders]);
 
   const handleUrl = (value: string) =>
     setWebhookState({ ...webhookState, url: value });
@@ -162,36 +188,6 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   const handleBody = (value: string) =>
     setWebhookState({ ...webhookState, body: value });
 
-  const [headers, setHeaders] = useState<
-    {
-      id: number;
-      value: string;
-    }[]
-  >([]);
-  const customHeaders = headers.reduce(
-    (acc: Record<string, string>, header) => {
-      const [key, value] = header.value.split(":");
-      if (key && value) acc[key.trim()] = value.trim();
-      return acc;
-    },
-    {}
-  );
-
-  const handleAddHeader = () => {
-    setHeaders((prevHeaders) => [
-      ...prevHeaders,
-      { id: Date.now(), value: "" },
-    ]);
-  };
-
-  const handleHeaderChange = (id: number, updatedValue: string) => {
-    setHeaders((prevHeaders) =>
-      prevHeaders.map((header) =>
-        header.id === id ? { ...header, value: updatedValue } : header
-      )
-    );
-  };
-
   const refSetterMap = new Map<
     RefObject<HTMLInputElement | HTMLTextAreaElement> | undefined,
     (value: string) => void
@@ -200,7 +196,6 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
     [bearerTokenRef, handleBearerToken],
     [basicUserNameRef, handleBasicUserName],
     [basicPasswordRef, handleBasicPassword],
-    [customHeaderRef, handleCustomHeader],
     [bodyRef, handleBody],
   ]);
 
@@ -268,7 +263,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
           id="custom-header"
           value={webhookState.headers.Authorization || ""}
           onChange={handleCustomHeader}
-          onFocus={() => setSelectedRef?.(customHeaderRef)}
+          // onFocus={() => setSelectedRef?.(customHeaderRef)}
           placeholder="Header"
         />
       </div>
@@ -341,32 +336,54 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
     ),
     Headers: (
       <>
-        {headers.map(({ id, value }) => (
+        {customHeaders.map(({ key, value }, i) => (
           <div
-            key={id}
+            key={i}
             className="flex items-center bg-gray-200 gap-8 p-2.5 rounded"
           >
-            <div className="text-[16px] font-semibold leading-[24px]">
-              Header
-            </div>
+            <Input
+              wrapperClassName="w-full"
+              className="w-full"
+              name={`custom-header-name-${i}`}
+              id={`custom-header-name-${i}`}
+              value={key || ""}
+              onChange={(e) => {
+                if (!e) {
+                  customHeaders.splice(i, 1);
+                } else {
+                  customHeaders[i].key = e;
+                }
 
+                setCustomHeaders([...customHeaders]);
+              }}
+              onFocus={() => setSelectedRef?.(customHeaderKeyRef)}
+              placeholder="header name"
+            />
+            :
             <Input
               // key={`input-${index}`} // Set a constant key for the Input
               wrapperClassName="w-full"
               className="w-full"
-              name={`custom-header-${id}`}
-              id={`custom-header-${id}`}
+              name={`custom-header-value-${i}`}
+              id={`custom-header-value-${i}`}
               value={value || ""}
-              onChange={(e) => handleHeaderChange(id, e)}
-              onFocus={() => setSelectedRef?.(customHeaderRef)}
-              placeholder="Header"
+              onChange={(e) => {
+                customHeaders[i].value = e;
+                setCustomHeaders([...customHeaders]);
+              }}
+              onFocus={() => setSelectedRef?.(customHeaderValueRef)}
+              placeholder="header value"
             />
           </div>
         ))}
         <Button
           type={ButtonType.SECONDARY}
           className="w-fit"
-          onClick={handleAddHeader}
+          onClick={() => {
+            if (customHeaders.find(({ key }) => key === "")) return;
+
+            setCustomHeaders([...customHeaders, { key: "", value: "" }]);
+          }}
         >
           Add header
         </Button>
@@ -421,7 +438,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
 
   const rawRequest = `${webhookState.method} ${path} HTTP/1.1
     Host: ${host}
-    ${Object.entries({ ...webhookState.headers, ...customHeaders })
+    ${Object.entries({ ...webhookState.headers })
       .map(([key, value]) => `${key || ""}: ${value || ""}`)
       .join("\n")}
     ${
@@ -458,7 +475,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
         options: {
           webhookData: {
             ...webhookState,
-            headers: { ...webhookState.headers, ...customHeaders },
+            headers: { ...webhookState.headers },
           },
           testCustomerEmail: selectedCustomer?.email,
         },
