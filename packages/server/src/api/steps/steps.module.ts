@@ -26,7 +26,8 @@ import { ModalsModule } from '../modals/modals.module';
 import { WebsocketsModule } from '@/websockets/websockets.module';
 import { RedlockModule } from '../redlock/redlock.module';
 import { RedlockService } from '../redlock/redlock.service';
-import { StartProcessor } from '../journeys/start.processor';
+import { StartProcessor } from '../journeys/processors/start.processor';
+import { EnrollmentProcessor } from '../journeys/processors/enrollment.processor';
 import { JourneyLocationsService } from '../journeys/journey-locations.service';
 import { JourneyLocation } from '../journeys/entities/journey-location.entity';
 import { JourneysModule } from '../journeys/journeys.module';
@@ -78,6 +79,7 @@ import { Requeue } from './entities/requeue.entity';
     StartProcessor,
     RedlockService,
     JourneyLocationsService,
+    EnrollmentProcessor,
   ],
   controllers: [StepsController],
   exports: [StepsService],

@@ -125,6 +125,7 @@ const FlowViewerv2 = () => {
         isPaused?: boolean;
         isStopped?: boolean;
         isDeleted?: boolean;
+        isEnrolling?: boolean;
         journeyEntrySettings: JourneyEntrySettings;
         journeySettings: JourneySettings;
       }>({
@@ -218,7 +219,10 @@ const FlowViewerv2 = () => {
 
       let status: JourneyStatus = JourneyStatus.DRAFT;
 
-      if (data.isActive) status = JourneyStatus.ACTIVE;
+      if (data.isActive) {
+        if (data.isEnrolling) status = JourneyStatus.ENROLLING;
+        else status = JourneyStatus.ACTIVE;
+      }
       if (data.isPaused) status = JourneyStatus.PAUSED;
       if (data.isStopped) status = JourneyStatus.STOPPED;
       if (data.isDeleted) status = JourneyStatus.DELETED;

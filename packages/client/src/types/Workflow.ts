@@ -118,6 +118,7 @@ export interface VisualLayout {
 }
 
 export interface Workflow {
+  isEnrolling: any;
   id: string;
   name: string;
   isActive: boolean;

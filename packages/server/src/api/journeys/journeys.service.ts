@@ -86,6 +86,7 @@ import { JourneyLocation } from './entities/journey-location.entity';
 
 export enum JourneyStatus {
   ACTIVE = 'Active',
+  ENROLLING = 'Enrolling',
   PAUSED = 'Paused',
   STOPPED = 'Stopped',
   DELETED = 'Deleted',
@@ -246,7 +247,7 @@ export class JourneysService {
     private readonly journeyLocationsService: JourneyLocationsService,
     @InjectQueue('transition') private readonly transitionQueue: Queue,
     @Inject(RedisService) private redisService: RedisService,
-    @InjectQueue('start') private readonly startQueue: Queue
+    @InjectQueue('enrollment') private readonly enrollmentQueue: Queue
   ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -932,6 +933,7 @@ export class JourneysService {
     try {
       const filterStatusesParts = filterStatusesString.split(',');
       const isActive = filterStatusesParts.includes(JourneyStatus.ACTIVE);
+      const isEnrolling = filterStatusesParts.includes(JourneyStatus.ENROLLING);
       const isPaused = filterStatusesParts.includes(JourneyStatus.PAUSED);
       const isStopped = filterStatusesParts.includes(JourneyStatus.STOPPED);
       const isDeleted = filterStatusesParts.includes(JourneyStatus.DELETED);
@@ -955,12 +957,20 @@ export class JourneysService {
 
       const filterStatuses = {
         isActive,
+        isEnrolling,
         isPaused,
         isStopped,
         isDeleted,
       };
 
-      if (isActive || isPaused || isStopped || isDeleted || isEditable) {
+      if (
+        isActive ||
+        isPaused ||
+        isStopped ||
+        isDeleted ||
+        isEditable ||
+        isEnrolling
+      ) {
         for (const [key, value] of Object.entries(filterStatuses)) {
           if (value)
             whereOrParts.push({
@@ -1356,6 +1366,7 @@ export class JourneysService {
         segments: found.inclusionCriteria,
         isDynamic: found.isDynamic,
         isActive: found.isActive,
+        isEnrolling: found.isEnrolling,
         isPaused: found.isPaused,
         isStopped: found.isStopped,
         isDeleted: found.isDeleted,
@@ -1464,12 +1475,9 @@ export class JourneysService {
   async start(account: Account, journeyID: string, session: string) {
     let journey: Journey;
     let err: any;
-    let triggerStartTasks: {
-      collectionName: string;
-      job: { name: string; data: any };
-    };
+
     const queryRunner = this.dataSource.createQueryRunner();
-    const client = await queryRunner.connect();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
@@ -1536,43 +1544,32 @@ export class JourneysService {
         journey.journeyEntrySettings.entryTiming.type ===
         EntryTiming.WhenPublished
       ) {
-        await queryRunner.manager.save(Journey, {
+        journey = await queryRunner.manager.save(Journey, {
           ...journey,
           enrollment_count: journey.enrollment_count + 1,
           last_enrollment_timestamp: Date.now(),
           isActive: true,
+          isEnrolling: true,
           startedAt: new Date(Date.now()),
         });
-        triggerStartTasks = await this.stepsService.triggerStart(
-          account,
-          journey,
-          journey.inclusionCriteria,
-          journey?.journeySettings?.maxEntries?.enabled &&
-            count > parseInt(journey?.journeySettings?.maxEntries?.maxEntries)
-            ? parseInt(journey?.journeySettings?.maxEntries?.maxEntries)
-            : count,
-          queryRunner,
-          client,
-          session,
-          collectionName
-        );
       } else {
-        await queryRunner.manager.save(Journey, {
+        journey = await queryRunner.manager.save(Journey, {
           ...journey,
+          isEnrolling: true,
           isActive: true,
           startedAt: new Date(Date.now()),
         });
       }
 
       await this.trackChange(account, journeyID, queryRunner);
-
       await queryRunner.commitTransaction();
-      if (triggerStartTasks) {
-        await this.startQueue.add(
-          triggerStartTasks.job.name,
-          triggerStartTasks.job.data
-        );
-      }
+      await this.enrollmentQueue.add('enroll', {
+        account,
+        journey,
+        count,
+        collectionName,
+        session,
+      });
     } catch (e) {
       err = e;
       this.error(e, this.start.name, session, account.email);

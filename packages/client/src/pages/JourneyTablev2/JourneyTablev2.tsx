@@ -25,6 +25,7 @@ enum FilterOption {
   DRAFT,
   PAUSED,
   STOPPED,
+  ENROLLING,
 }
 
 const filterOptionToTextMap: Record<FilterOption, string> = {
@@ -33,6 +34,7 @@ const filterOptionToTextMap: Record<FilterOption, string> = {
   [FilterOption.DRAFT]: "Draft",
   [FilterOption.PAUSED]: "Paused",
   [FilterOption.STOPPED]: "Stopped",
+  [FilterOption.ENROLLING]: "Enrolling",
 };
 
 const filterOptionsToRender: FilterOption[] = [
@@ -41,6 +43,7 @@ const filterOptionsToRender: FilterOption[] = [
   FilterOption.DRAFT,
   FilterOption.PAUSED,
   FilterOption.STOPPED,
+  FilterOption.ENROLLING,
 ];
 
 export type ChosenFilter =
@@ -62,11 +65,13 @@ export enum JourneyStatus {
   STOPPED = "Stopped",
   DELETED = "Deleted",
   DRAFT = "Draft",
+  ENROLLING = "Enrolling",
 }
 
 export const journeyStatusClassName: Record<JourneyStatus, string> = {
   [JourneyStatus.ACTIVE]: "bg-[#DCFCE7] text-[#14532D]",
   [JourneyStatus.DELETED]: "",
+  [JourneyStatus.ENROLLING]: "bg-[#FEF9C3] text-[#713F12]",
   [JourneyStatus.DRAFT]: "bg-[#E0F2FE] text-[#0C4A6E]",
   [JourneyStatus.PAUSED]: "bg-[#FEF9C3] text-[#713F12]",
   [JourneyStatus.STOPPED]: "bg-[#F3F4F6] text-[#6B7280]",
@@ -77,6 +82,7 @@ const filterOptionToJourneyStatusMap: Record<
   JourneyStatus
 > = {
   [FilterOption.ACTIVE]: JourneyStatus.ACTIVE,
+  [FilterOption.ENROLLING]: JourneyStatus.ENROLLING,
   [FilterOption.DRAFT]: JourneyStatus.DRAFT,
   [FilterOption.PAUSED]: JourneyStatus.PAUSED,
   [FilterOption.STOPPED]: JourneyStatus.STOPPED,
@@ -147,7 +153,10 @@ const JourneyTablev2 = () => {
         data.map((workflow) => {
           let status: JourneyStatus = JourneyStatus.DRAFT;
 
-          if (workflow.isActive) status = JourneyStatus.ACTIVE;
+          if (workflow.isActive) {
+            if (workflow.isEnrolling) status = JourneyStatus.ENROLLING;
+            else status = JourneyStatus.ACTIVE;
+          }
           if (workflow.isPaused) status = JourneyStatus.PAUSED;
           if (workflow.isStopped) status = JourneyStatus.STOPPED;
           if (workflow.isDeleted) status = JourneyStatus.DELETED;

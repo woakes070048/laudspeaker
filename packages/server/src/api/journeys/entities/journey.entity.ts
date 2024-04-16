@@ -31,6 +31,9 @@ export class Journey {
   isActive: boolean;
 
   @Column('boolean', { default: false })
+  isEnrolling: boolean;
+
+  @Column('boolean', { default: false })
   isPaused: boolean;
 
   @Column('boolean', { default: false })

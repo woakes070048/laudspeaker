@@ -74,6 +74,7 @@ const FlowBuilderv2 = () => {
         edges: Edge<EdgeData>[];
         segments: SegmentsSettings;
         isDynamic: boolean;
+        isEnrolling: boolean;
         isActive: boolean;
         isPaused: boolean;
         isStopped: boolean;
@@ -112,7 +113,10 @@ const FlowBuilderv2 = () => {
 
       let status: JourneyStatus = JourneyStatus.DRAFT;
 
-      if (data.isActive) status = JourneyStatus.ACTIVE;
+      if (data.isActive) {
+        if (data.isEnrolling) status = JourneyStatus.ENROLLING;
+        else status = JourneyStatus.ACTIVE;
+      }
       if (data.isPaused) status = JourneyStatus.PAUSED;
       if (data.isStopped) status = JourneyStatus.STOPPED;
       if (data.isDeleted) status = JourneyStatus.DELETED;

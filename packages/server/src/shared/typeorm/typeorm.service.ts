@@ -21,7 +21,16 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       autoLoadEntities: true,
       maxQueryExecutionTime: 2000,
       extra: {
-        max: Math.floor(Math.floor(process.env.DATABASE_MAX_CONNECTIONS ? +process.env.DATABASE_MAX_CONNECTIONS : 100 / (process.env.DEPLOY_MAX_REPLICAS ? +process.env.DEPLOY_MAX_REPLICAS : 1)) / os.cpus().length),
+        max: Math.floor(
+          Math.floor(
+            process.env.DATABASE_MAX_CONNECTIONS
+              ? +process.env.DATABASE_MAX_CONNECTIONS
+              : 100 /
+                  (process.env.DEPLOY_MAX_REPLICAS
+                    ? +process.env.DEPLOY_MAX_REPLICAS
+                    : 1)
+          ) / os.cpus().length
+        ),
         options:
           '-c lock_timeout=240000ms -c statement_timeout=240000ms -c idle_in_transaction_session_timeout=240000ms',
       },
