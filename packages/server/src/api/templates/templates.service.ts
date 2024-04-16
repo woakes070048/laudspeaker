@@ -872,7 +872,7 @@ export class TemplatesService extends QueueEventsHost {
     const { _id, workspaceId, workflows, ...tags } = customer.toObject();
     const filteredTags = cleanTagsForSending(tags);
 
-    const { method } = testWebhookDto.webhookData;
+    const { method, mimeType } = testWebhookDto.webhookData;
 
     //console.log("In test webhook 2")
 
@@ -917,6 +917,8 @@ export class TemplatesService extends QueueEventsHost {
         ])
       )
     );
+
+    headers['content-type'] = mimeType;
 
     //console.log("this is the send test webhook");
 
