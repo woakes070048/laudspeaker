@@ -1,10 +1,12 @@
-import { IsNotEmpty, IsObject, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsObject, IsString } from 'class-validator';
 import { WebhookData } from '../entities/template.entity';
 
 export class TestWebhookDto {
-  @IsNotEmpty()
+  
+  @IsOptional()
   @IsString()
   testCustomerEmail: string;
+  
 
   @IsNotEmpty()
   @IsObject()

@@ -853,24 +853,35 @@ export class TemplatesService extends QueueEventsHost {
   }
 
   async testWebhookTemplate(testWebhookDto: TestWebhookDto, session: string) {
-    const customer = await this.customerModel.findOne({
+    //console.log("In test webhook a")
+    
+    let customer = await this.customerModel.findOne({
       email: testWebhookDto.testCustomerEmail,
     });
+    
+    //console.log("In test webhook")
 
-    if (!customer) throw new NotFoundException('Customer not found');
+    if (!customer) {
+      customer = new this.customerModel({
+      })
+      //console.log('Using temporary customer');
+    } 
 
     const { _id, workspaceId, workflows, ...tags } = customer.toObject();
     const filteredTags = cleanTagsForSending(tags);
 
     const { method } = testWebhookDto.webhookData;
 
+    //console.log("In test webhook 2")
+
     let { body, headers, url } = testWebhookDto.webhookData;
 
+    
     url = await this.tagEngine.parseAndRender(url, filteredTags || {}, {
       strictVariables: true,
     });
     url = await this.parseTemplateTags(url);
-
+    
     if (
       [
         WebhookMethod.GET,
@@ -886,6 +897,8 @@ export class TemplatesService extends QueueEventsHost {
         strictVariables: true,
       });
     }
+
+    //console.log("In test webhook 3")
 
     headers = Object.fromEntries(
       await Promise.all(
@@ -904,6 +917,17 @@ export class TemplatesService extends QueueEventsHost {
       )
     );
 
+    //console.log("this is the send test webhook");
+
+    /*
+    console.log('URL:', url);
+    console.log('Method:', method);
+    console.log('Headers:', headers);
+    if (body) {
+      console.log('Body:', body);
+    }
+    */
+
     try {
       const res = await fetch(url, {
         method,
@@ -919,6 +943,7 @@ export class TemplatesService extends QueueEventsHost {
     } catch (e) {
       throw new BadRequestException(e);
     }
+    
   }
 
   public async handleApiCall(
