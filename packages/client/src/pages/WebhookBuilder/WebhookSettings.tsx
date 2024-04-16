@@ -1,5 +1,5 @@
 import Modal from "components/Elements/Modal";
-import React, { FC, ReactNode, RefObject, useEffect, useState } from "react";
+import React, { FC, ReactNode, RefObject, useEffect, useMemo, useState } from "react";
 import ApiService from "services/api.service";
 import { Buffer } from "buffer";
 import { toast } from "react-toastify";
@@ -72,9 +72,13 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
+type SetWebhookStateAction =
+  | WebhookState
+  | ((prevState: WebhookState) => WebhookState);
+
 interface WebhookSettingsProps {
   webhookState: WebhookState;
-  setWebhookState: (state: WebhookState) => void;
+  setWebhookState: (state: SetWebhookStateAction) => void;
   webhookProps?: string;
   setWebhookProps?: (value: string) => void;
   possibleAttributes?: string[];
@@ -121,6 +125,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  /*
   useEffect(() => {
     if (!username || !password) return;
 
@@ -133,6 +138,43 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
       },
     });
   }, [username, password]);
+  */
+
+  const [headers, setHeaders] = useState<
+    {
+      id: number;
+      value: string;
+    }[]
+  >([]);
+
+  interface CustomHeaders {
+    [key: string]: string;
+  }
+
+  const customHeaders = useMemo(() => {
+    return headers.reduce((acc, header) => {
+      const [key, value] = header.value.split(":");
+      if (key && value) {
+        acc[key.trim()] = value.trim();
+      }
+      return acc;
+    }, {} as CustomHeaders);
+  }, [headers]);
+
+  useEffect(() => {
+    console.log('Updating webhookState with custom headers', customHeaders);
+    setWebhookState((prevState) => {
+      const newState = {
+        ...prevState,
+        headers: {
+          ...prevState.headers,
+          ...customHeaders,
+        },
+      };
+      console.log('newState', newState);
+      return newState;
+    });
+  }, [customHeaders]);
 
   const handleUrl = (value: string) =>
     setWebhookState({ ...webhookState, url: value });
@@ -162,20 +204,8 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   const handleBody = (value: string) =>
     setWebhookState({ ...webhookState, body: value });
 
-  const [headers, setHeaders] = useState<
-    {
-      id: number;
-      value: string;
-    }[]
-  >([]);
-  const customHeaders = headers.reduce(
-    (acc: Record<string, string>, header) => {
-      const [key, value] = header.value.split(":");
-      if (key && value) acc[key.trim()] = value.trim();
-      return acc;
-    },
-    {}
-  );
+  
+  
 
   const handleAddHeader = () => {
     setHeaders((prevHeaders) => [
