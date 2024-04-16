@@ -72,9 +72,13 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
+type SetWebhookStateAction =
+  | WebhookState
+  | ((prevState: WebhookState) => WebhookState);
+
 interface WebhookSettingsProps {
   webhookState: WebhookState;
-  setWebhookState: (state: WebhookState) => void;
+  setWebhookState: (state: SetWebhookStateAction) => void;
   webhookProps?: string;
   setWebhookProps?: (value: string) => void;
   possibleAttributes?: string[];

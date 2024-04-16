@@ -1,10 +1,15 @@
 import {
   Controller,
   Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
   HttpException,
   HttpStatus,
   Inject,
   Logger,
+  Req,
   UseInterceptors,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -90,6 +95,62 @@ export class AppController {
     const session = randomUUID();
     this.debug(`GET / `, this.root.name, session);
     throw new HttpException('sentry-online', HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+
+  @UseInterceptors(new RavenInterceptor())
+  @Get('/webhook-get-test')
+  webhookGetTest(@Req() req: Request) {
+    //console.log("Getting GET");
+
+    const session = randomUUID();
+    this.log(JSON.stringify(req.body, null, 2), this.root.name, session);
+    this.log(JSON.stringify(req.headers, null, 2), this.root.name, session);
+
+    this.debug(`GET / `, this.root.name, session);
+    return 'laudspeaker API v 1.0';
+  }
+
+  @UseInterceptors(new RavenInterceptor())
+  @Post('/webhook-post-test')
+  webhookPostTest(@Req() req: Request) {
+    const session = randomUUID();
+
+    //console.log("Getting POST");
+
+    this.log(JSON.stringify(req.body, null, 2), this.root.name, session);
+    this.log(JSON.stringify(req.headers, null, 2), this.root.name, session);
+    this.debug(`POST / `, this.root.name, session);
+    return 'laudspeaker API v 1.0';
+  }
+
+  @UseInterceptors(new RavenInterceptor())
+  @Put('/webhook-put-test')
+  webhookPutTest(@Req() req: Request) {
+    const session = randomUUID();
+    this.log(JSON.stringify(req.body, null, 2), this.root.name, session);
+    this.log(JSON.stringify(req.headers, null, 2), this.root.name, session);
+    this.debug(`PUT / `, this.root.name, session);
+    return 'laudspeaker API v 1.0';
+  }
+
+  @UseInterceptors(new RavenInterceptor())
+  @Patch('/webhook-patch-test')
+  webhookPathTest(@Req() req: Request) {
+    const session = randomUUID();
+    this.log(JSON.stringify(req.body, null, 2), this.root.name, session);
+    this.log(JSON.stringify(req.headers, null, 2), this.root.name, session);
+    this.debug(`PATCH / `, this.root.name, session);
+    return 'laudspeaker API v 1.0';
+  }
+
+  @UseInterceptors(new RavenInterceptor())
+  @Delete('/webhook-delete-test')
+  webhookDeleteTest(@Req() req: Request) {
+    const session = randomUUID();
+    this.log(JSON.stringify(req.body, null, 2), this.root.name, session);
+    this.log(JSON.stringify(req.headers, null, 2), this.root.name, session);
+    this.debug(`DELETE / `, this.root.name, session);
+    return 'laudspeaker API v 1.0';
   }
 
   @UseInterceptors(new RavenInterceptor())

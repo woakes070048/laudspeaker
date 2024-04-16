@@ -22,14 +22,12 @@ const csvData = {};
 if (__ENV.CSV_FILES) {
   const csvFiles = JSON.parse(__ENV.CSV_FILES);
   const csvBasePath = __ENV.CSV_FILEPATH || fail("CSV_FILEPATH required");
-  csvFiles.forEach(file => {
+  csvFiles.forEach((file) => {
     let filePath = csvBasePath + file;
-    console.log("filepath is", filePath)
+    console.log("filepath is", filePath);
     csvData[file] = open(filePath, "b");
   });
 }
-
-
 
 const customersImported = new Counter("customers_imported");
 const customersImportedTime = new Counter("customers_imported_time");
@@ -100,7 +98,7 @@ export default function main() {
   */
   response = httpxWrapper.postOrFail(
     "/customers/attributes/create",
-    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`, 
+    `{"name":"${PRIMARY_KEY_HEADER}","type":"String"}`,
     devOrProdUrl
   );
   response = httpxWrapper.postOrFail(
@@ -129,8 +127,14 @@ export default function main() {
 
   reporter.setStep("UPLOAD");
 
-  Object.keys(csvData).forEach(fileKey => {
-    uploadForFile(csvData[fileKey], httpxWrapper, reporter, devOrProdUrl, authorization);
+  Object.keys(csvData).forEach((fileKey) => {
+    uploadForFile(
+      csvData[fileKey],
+      httpxWrapper,
+      reporter,
+      devOrProdUrl,
+      authorization
+    );
   });
 
   /*
@@ -142,10 +146,15 @@ export default function main() {
   */
 }
 
-function uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl, authorization) {
-
+function uploadForFile(
+  uploadFile,
+  httpxWrapper,
+  reporter,
+  devOrProdUrl,
+  authorization
+) {
   let UPLOADED_FILE_KEY;
-  
+
   reporter.log(`Uploading file and processing`);
 
   let response = http.post(
@@ -162,7 +171,11 @@ function uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl, authori
   failOnError(response);
 
   //response = httpxWrapper.getOrFail("/api/customers/getLastImportCSV");
-  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", undefined, devOrProdUrl);
+  response = httpxWrapper.getOrFail(
+    "/customers/getLastImportCSV",
+    undefined,
+    devOrProdUrl
+  );
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
@@ -621,7 +634,9 @@ function uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl, authori
   while (numPages < expectedPages) {
     sleep(POLLING_MINUTES * 60);
     response = httpxWrapper.getOrFail(
-      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc", null, devOrProdUrl
+      "/customers?take=10&skip=0&searchKey=&searchValue=&orderBy=createdAt&orderType=desc",
+      null,
+      devOrProdUrl
     );
     numPages = parseInt(response.json("totalPages"));
 
@@ -633,9 +648,7 @@ function uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl, authori
       reporter.log(
         `Customer page count hasn't increased since last poll. Current pages: ${numPages}. number of retries: ${pageRetries}`
       );
-      reporter.log(
-        `Sent count hasn't increased breaking from loop`
-      );
+      reporter.log(`Sent count hasn't increased breaking from loop`);
       if (pageRetries > 2) {
         reporter.report(
           `Sent count hasn't increased in 5 retries. Failing test...`
@@ -653,9 +666,9 @@ function uploadForFile(uploadFile, httpxWrapper, reporter, devOrProdUrl, authori
       `Checking status of customer import. ${numPages} pages imported. ${expectedPages} pages expected.`
     );
     if (numPages < expectedPages) {
-        //sleep(30);
-        prevNumPages = numPages
-      }
+      //sleep(30);
+      prevNumPages = numPages;
+    }
   }
   reporter.report(
     `Customer import process completed. ${numPages} customer pages loaded.`

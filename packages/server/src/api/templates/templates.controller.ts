@@ -192,6 +192,7 @@ export class TemplatesController {
   @UseInterceptors(ClassSerializerInterceptor, new RavenInterceptor())
   testWebhookTemplate(@Body() testWebhookDto: TestWebhookDto) {
     const session = randomUUID();
+    //console.log("in test webhook");
     return this.templatesService.testWebhookTemplate(testWebhookDto, session);
   }
 }
