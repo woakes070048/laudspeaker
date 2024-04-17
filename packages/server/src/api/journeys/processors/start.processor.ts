@@ -8,7 +8,7 @@ import {
   InjectQueue,
   OnWorkerEvent,
 } from '@nestjs/bullmq';
-import { Job, Queue } from 'bullmq';
+import { Job, MetricsTime, Queue } from 'bullmq';
 import { DataSource } from 'typeorm';
 import { InjectConnection } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
@@ -24,7 +24,14 @@ import { Step } from '../../steps/entities/step.entity';
 const BATCH_SIZE = +process.env.START_BATCH_SIZE;
 
 @Injectable()
-@Processor('start', { removeOnComplete: { count: 100 }, concurrency: 5 })
+@Processor('start', {
+  metrics: {
+    maxDataPoints: MetricsTime.ONE_WEEK,
+  },
+  concurrency: process.env.START_PROCESSOR_CONCURRENCY
+    ? +process.env.START_PROCESSOR_CONCURRENCY
+    : 1,
+})
 export class StartProcessor extends WorkerHost {
   constructor(
     private dataSource: DataSource,

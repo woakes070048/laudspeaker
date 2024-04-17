@@ -63,11 +63,12 @@ import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity
 
 @Injectable()
 @Processor('transition', {
-  removeOnComplete: { count: 100000 },
   metrics: {
-    maxDataPoints: MetricsTime.ONE_HOUR,
+    maxDataPoints: MetricsTime.ONE_WEEK,
   },
-  concurrency: 5,
+  concurrency: process.env.TRANSITION_PROCESSOR_CONCURRENCY
+    ? +process.env.TRANSITION_PROCESSOR_CONCURRENCY
+    : 1,
 })
 export class TransitionProcessor extends WorkerHost {
   private phClient = new PostHog('RxdBl8vjdTwic7xTzoKTdbmeSC1PCzV6sw-x-FKSB-k');

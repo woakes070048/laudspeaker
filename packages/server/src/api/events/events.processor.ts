@@ -4,7 +4,7 @@ import {
   InjectQueue,
   OnWorkerEvent,
 } from '@nestjs/bullmq';
-import { Job, Queue, UnrecoverableError } from 'bullmq';
+import { Job, MetricsTime, Queue, UnrecoverableError } from 'bullmq';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Account } from '../accounts/entities/accounts.entity';
 import { CustomerDocument } from '../customers/schemas/customer.schema';
@@ -38,7 +38,14 @@ export enum EventType {
 }
 
 @Injectable()
-@Processor('events', { removeOnComplete: { count: 1000 }, concurrency: 5 })
+@Processor('events', {
+  metrics: {
+    maxDataPoints: MetricsTime.ONE_WEEK,
+  },
+  concurrency: process.env.EVENTS_PROCESSOR_CONCURRENCY
+    ? +process.env.EVENTS_PROCESSOR_CONCURRENCY
+    : 1,
+})
 export class EventsProcessor extends WorkerHost {
   private providerMap: Record<
     EventType,
