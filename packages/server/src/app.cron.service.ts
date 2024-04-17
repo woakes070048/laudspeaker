@@ -1401,7 +1401,6 @@ export class CronService {
   }
 }
 
-
 // /*
 // import { Inject, Injectable, LoggerService } from '@nestjs/common';
 // import { InjectConnection, InjectModel } from '@nestjs/mongoose';
@@ -2692,7 +2691,7 @@ export class CronService {
 //         )
 
 //         , step_ids_to_keep AS (
-//             SELECT 
+//             SELECT
 //                 aj.id as journey_id,
 //                 (node->'data'->>'stepId')::uuid as step_id
 //             FROM active_journeys aj
