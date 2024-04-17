@@ -16,6 +16,8 @@ import { Repository } from 'typeorm';
 import { Resend } from 'resend';
 import { MIMEType } from '@/api/templates/entities/template.entity';
 import { randomUUID } from 'crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, Logger } from '@nestjs/common';
 
 export enum MessageType {
   SMS = 'sms',
@@ -40,91 +42,157 @@ export class MessageSender {
     MessageType,
     (job: any) => Promise<ClickHouseMessage[] | void>
   > = {
-    [MessageType.EMAIL]: async (job) => {
-      return await this.handleEmail(
-        job.subject,
-        job.to,
-        job.text,
-        job.tags,
-        job.eventProvider,
-        job.key,
-        job.from,
-        job.stepID,
-        job.customerID,
-        job.templateID,
-        job.accountID,
-        job.email,
-        job.domain,
-        job.trackingEmail,
-        job.cc
-      );
-    },
-    [MessageType.SMS]: async (job) => {
-      return await this.handleSMS(
-        job.from,
-        job.sid,
-        job.token,
-        job.to,
-        job.text,
-        job.tags,
-        job.stepID,
-        job.customerID,
-        job.templateID,
-        job.accountID,
-        job.trackingEmail
-      );
-    },
-    [MessageType.IOS]: async (job) => {
-      return await this.handleIOS(
-        job.trackingEmail,
-        job.firebaseCredentials,
-        job.deviceToken,
-        job.pushText,
-        job.templateID,
-        job.pushTitle,
-        job.customerID,
-        job.stepID,
-        job.filteredTags,
-        job.accountID,
-        job.quietHours
-      );
-    },
-    [MessageType.ANDROID]: async (job) => {
-      return await this.handleAndroid(
-        job.trackingEmail,
-        job.firebaseCredentials,
-        job.deviceToken,
-        job.pushText,
-        job.templateID,
-        job.pushTitle,
-        job.customerID,
-        job.stepID,
-        job.filteredTags,
-        job.accountID,
-        job.quietHours
-      );
-    },
-    [MessageType.SLACK]: async (job) => {
-      return await this.handleSlack(
-        job.templateID,
-        job.accountID,
-        job.stepID,
-        job.methodName,
-        job.args,
-        job.filteredTags,
-        job.customerID,
-        job.trackingEmail
-      );
-    },
-    [MessageType.PUSH]: function (
-      job: any
-    ): Promise<void | ClickHouseMessage[]> {
-      throw new Error('Function not implemented.');
-    },
-  };
+      [MessageType.EMAIL]: async (job) => {
+        return await this.handleEmail(
+          job.subject,
+          job.to,
+          job.text,
+          job.tags,
+          job.eventProvider,
+          job.key,
+          job.from,
+          job.stepID,
+          job.customerID,
+          job.templateID,
+          job.accountID,
+          job.email,
+          job.domain,
+          job.trackingEmail,
+          job.cc,
+          job.session
+        );
+      },
+      [MessageType.SMS]: async (job) => {
+        return await this.handleSMS(
+          job.from,
+          job.sid,
+          job.token,
+          job.to,
+          job.text,
+          job.tags,
+          job.stepID,
+          job.customerID,
+          job.templateID,
+          job.accountID,
+          job.trackingEmail,
+          job.session
+        );
+      },
+      [MessageType.IOS]: async (job) => {
+        return await this.handleIOS(
+          job.trackingEmail,
+          job.firebaseCredentials,
+          job.deviceToken,
+          job.pushText,
+          job.templateID,
+          job.pushTitle,
+          job.customerID,
+          job.stepID,
+          job.filteredTags,
+          job.accountID,
+          job.quietHours,
+          job.session
+        );
+      },
+      [MessageType.ANDROID]: async (job) => {
+        return await this.handleAndroid(
+          job.trackingEmail,
+          job.firebaseCredentials,
+          job.deviceToken,
+          job.pushText,
+          job.templateID,
+          job.pushTitle,
+          job.customerID,
+          job.stepID,
+          job.filteredTags,
+          job.accountID,
+          job.quietHours,
+          job.session
+        );
+      },
+      [MessageType.SLACK]: async (job) => {
+        return await this.handleSlack(
+          job.templateID,
+          job.accountID,
+          job.stepID,
+          job.methodName,
+          job.args,
+          job.filteredTags,
+          job.customerID,
+          job.trackingEmail
+        );
+      },
+      [MessageType.PUSH]: function (
+        job: any
+      ): Promise<void | ClickHouseMessage[]> {
+        throw new Error('Function not implemented.');
+      },
+    };
 
-  constructor(private accountRepository: Repository<Account>) {
+  constructor(
+    private readonly logger: Logger,
+    private accountRepository: Repository<Account>
+  ) {
     this.accountRepository = accountRepository;
+  }
+
+  log(message, method, session, user = 'ANONYMOUS') {
+    this.logger.log(
+      message,
+      JSON.stringify({
+        class: MessageSender.name,
+        method: method,
+        session: session,
+        user: user,
+      })
+    );
+  }
+  debug(message, method, session, user = 'ANONYMOUS') {
+    this.logger.debug(
+      message,
+      JSON.stringify({
+        class: MessageSender.name,
+        method: method,
+        session: session,
+        user: user,
+      })
+    );
+  }
+  warn(message, method, session, user = 'ANONYMOUS') {
+    this.logger.warn(
+      message,
+      JSON.stringify({
+        class: MessageSender.name,
+        method: method,
+        session: session,
+        user: user,
+      })
+    );
+  }
+  error(error, method, session, user = 'ANONYMOUS') {
+    this.logger.error(
+      error.message,
+      error.stack,
+      JSON.stringify({
+        class: MessageSender.name,
+        method: method,
+        session: session,
+        cause: error.cause,
+        name: error.name,
+        user: user,
+      })
+    );
+  }
+  verbose(message, method, session, user = 'ANONYMOUS') {
+    this.logger.verbose(
+      message,
+      JSON.stringify({
+        class: MessageSender.name,
+        method: method,
+        session: session,
+        user: user,
+      })
+    );
   }
 
   async process(job: any): Promise<ClickHouseMessage[]> {
@@ -165,7 +233,8 @@ export class MessageSender {
     email?: string,
     domain?: string,
     trackingEmail?: string,
-    cc?: string[]
+    cc?: string[],
+    session?: string
   ): Promise<ClickHouseMessage[]> {
     if (!to) {
       return;
@@ -231,6 +300,17 @@ export class MessageSender {
             },
           ],
         });
+        this.log(
+          `${JSON.stringify({
+            message: 'Email sent via: ' + eventProvider,
+            result: sendgridMessage,
+            to,
+            subjectWithInsertedTags,
+          })}}`,
+          this.handleEmail.name,
+          session,
+          account.email
+        );
         msg = sendgridMessage;
         ret = [
           {
@@ -273,6 +353,17 @@ export class MessageSender {
             },
           ],
         });
+        this.log(
+          `${JSON.stringify({
+            message: 'Email sent via: ' + eventProvider,
+            result: resendMessage,
+            to,
+            subjectWithInsertedTags,
+          })}}`,
+          this.handleEmail.name,
+          session,
+          account.email
+        );
         msg = resendMessage;
         ret = [
           {
@@ -303,6 +394,17 @@ export class MessageSender {
           'v:templateId': templateID,
           'v:workspaceId': workspace.id,
         });
+        this.log(
+          `${JSON.stringify({
+            message: 'Email sent via: ' + eventProvider,
+            result: mailgun,
+            to,
+            subjectWithInsertedTags,
+          })}}`,
+          this.handleEmail.name,
+          session,
+          account.email
+        );
         msg = mailgunMessage;
         ret = [
           {
@@ -364,7 +466,8 @@ export class MessageSender {
     customerID: string,
     templateID: string,
     accountID: string,
-    trackingEmail: string
+    trackingEmail: string,
+    session: string
   ): Promise<ClickHouseMessage[]> {
     if (!to) {
       return;
@@ -406,6 +509,18 @@ export class MessageSender {
       to: to,
       statusCallback: `${process.env.TWILIO_WEBHOOK_ENDPOINT}?stepId=${stepID}&customerId=${customerID}&templateId=${templateID}`,
     });
+    this.log(
+      `${JSON.stringify({
+        message: 'SMS sent via: Twilio',
+        result: message,
+        from,
+        to,
+        body: textWithInsertedTags?.slice(0, this.MAXIMUM_SMS_LENGTH),
+      })}}`,
+      this.handleSMS.name,
+      session,
+      account.email
+    );
     ret = [
       {
         stepId: stepID,
@@ -459,7 +574,8 @@ export class MessageSender {
     stepID: string,
     filteredTags: any,
     accountID: string,
-    quietHours: any
+    quietHours: any,
+    session: string
   ): Promise<ClickHouseMessage[]> {
     if (!iosDeviceToken) {
       return;
@@ -566,7 +682,18 @@ export class MessageSender {
         },
       },
     });
-
+    this.log(
+      `${JSON.stringify({
+        message: 'iOS Push sent via: Firebase',
+        token: iosDeviceToken,
+        result: messageId,
+        title: titleWithInsertedTags.slice(0, this.MAXIMUM_PUSH_TITLE_LENGTH),
+        body: textWithInsertedTags.slice(0, this.MAXIMUM_PUSH_LENGTH),
+      })}}`,
+      this.handleIOS.name,
+      session,
+      account.email
+    );
     ret = [
       {
         stepId: stepID,
@@ -620,7 +747,8 @@ export class MessageSender {
     stepID: string,
     filteredTags: any,
     accountID: string,
-    quietHours: any
+    quietHours: any,
+    session: string
   ): Promise<ClickHouseMessage[]> {
     if (!androidDeviceToken) {
       return;
@@ -720,6 +848,18 @@ export class MessageSender {
         },
       },
     });
+    this.log(
+      `${JSON.stringify({
+        message: 'Android Push sent via: Firebase',
+        token: androidDeviceToken,
+        result: messageId,
+        title: titleWithInsertedTags.slice(0, this.MAXIMUM_PUSH_TITLE_LENGTH),
+        body: textWithInsertedTags.slice(0, this.MAXIMUM_PUSH_LENGTH),
+      })}}`,
+      this.handleAndroid.name,
+      session,
+      account.email
+    );
     ret = [
       {
         stepId: stepID,

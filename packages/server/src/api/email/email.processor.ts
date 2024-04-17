@@ -48,7 +48,7 @@ export class MessageProcessor extends WorkerHost {
       await this.handleSMS(job);
     },
     [MessageType.PUSH_FIREBASE]: async (job) => {
-      await this.handleFirebase(job);
+      // await this.handleFirebase(job);
     },
   };
 

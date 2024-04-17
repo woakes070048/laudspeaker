@@ -747,7 +747,7 @@ export class TransitionProcessor extends WorkerHost {
 
       const { _id, workspaceId, workflows, journeys, ...tags } = customer;
       const filteredTags = cleanTagsForSending(tags);
-      const sender = new MessageSender(this.accountRepository);
+      const sender = new MessageSender(this.logger, this.accountRepository);
 
       switch (template.type) {
         case TemplateType.EMAIL:
@@ -797,6 +797,7 @@ export class TransitionProcessor extends WorkerHost {
             tags: filteredTags,
             templateID: template.id,
             eventProvider: workspace.emailProvider,
+            session,
           });
           this.debug(
             `${JSON.stringify(ret)}`,
@@ -832,6 +833,7 @@ export class TransitionProcessor extends WorkerHost {
                   quietHours: journey.journeySettings.quietHours.enabled
                     ? journey.journeySettings?.quietHours
                     : undefined,
+                  session,
                 }),
                 session
               );
@@ -851,6 +853,7 @@ export class TransitionProcessor extends WorkerHost {
                   quietHours: journey.journeySettings.quietHours.enabled
                     ? journey.journeySettings?.quietHours
                     : undefined,
+                  session,
                 }),
                 session
               );
@@ -872,6 +875,7 @@ export class TransitionProcessor extends WorkerHost {
                   quietHours: journey.journeySettings.quietHours.enabled
                     ? journey.journeySettings?.quietHours
                     : undefined,
+                  session,
                 }),
                 session
               );
@@ -894,6 +898,7 @@ export class TransitionProcessor extends WorkerHost {
                   quietHours: journey.journeySettings.quietHours.enabled
                     ? journey.journeySettings?.quietHours
                     : undefined,
+                  session,
                 }),
                 session
               );
@@ -931,6 +936,7 @@ export class TransitionProcessor extends WorkerHost {
                   filteredTags
                 ),
               },
+              session,
             }),
             session
           );
@@ -953,6 +959,7 @@ export class TransitionProcessor extends WorkerHost {
               to: customer.phPhoneNumber || customer.phone,
               token: workspace.smsAuthToken,
               trackingEmail: email,
+              session,
             }),
             session
           );
