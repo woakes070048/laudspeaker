@@ -4,7 +4,7 @@ import {
   InjectQueue,
   OnWorkerEvent,
 } from '@nestjs/bullmq';
-import { Job, Queue, UnrecoverableError } from 'bullmq';
+import { Job, MetricsTime, Queue, UnrecoverableError } from 'bullmq';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Correlation, CustomersService } from '../customers/customers.service';
 import { DataSource, Repository } from 'typeorm';
