@@ -3,11 +3,13 @@ import ApiConfig from "constants/api";
 import { useEffect, useState } from "react";
 import { useDebounce } from "react-use";
 import ApiService from "services/api.service";
+import { useAppSelector } from "store/hooks";
 
 export interface CustomerResponse {
   id: string;
   email: string;
   phone: string;
+  [key: string | number]: string;
 }
 
 type CustomerResponseKey = keyof CustomerResponse;
@@ -38,6 +40,7 @@ export const SearchUser = ({
   const [search, setSearch] = useState("");
   const [skip, setSkip] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const pk = useAppSelector((store) => store.auth.userData.pk);
 
   const handleSearchForTest = async () => {
     setIsLoading(true);
@@ -74,8 +77,8 @@ export const SearchUser = ({
   );
 
   const getTitle = (customer: CustomerResponse) =>
-    `${previewFieldKey === "id" ? "ID" : capitalizeString(previewFieldKey)}: ${
-      customer[previewFieldKey]
+    `${pk?.key && customer?.[pk?.key] ? capitalizeString(pk.key) : "ID"}: ${
+      pk?.key && customer?.[pk?.key] ? customer[pk.key] : customer.id
     }`;
 
   return (

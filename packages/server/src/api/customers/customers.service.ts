@@ -5197,7 +5197,7 @@ export class CustomersService {
     search = '',
     isWebhook = false
   ): Promise<{
-    data: { id: string; email: string; phone: string }[];
+    data: { id: string; email: string; phone: string; [key: string]: string }[];
     totalPages: number;
   }> {
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
@@ -5253,6 +5253,10 @@ export class CustomersService {
         info['id'] = cust['_id'].toString();
         info['email'] = cust['email']?.toString() || '';
         info['phone'] = cust['phone']?.toString() || '';
+        if (pk?.key) {
+          info[pk.key] = cust[pk.key]?.toString() || '';
+        }
+
         return info;
       }),
       totalPages,
