@@ -19,6 +19,7 @@ interface SearchUserProps {
   >;
   previewFieldKey?: CustomerResponseKey;
   buttonClassName?: string;
+  isWebhook?: boolean;
 }
 
 const capitalizeString = (str: string) => {
@@ -30,6 +31,7 @@ export const SearchUser = ({
   setSelectedCustomer,
   previewFieldKey = "id",
   buttonClassName = "",
+  isWebhook,
 }: SearchUserProps) => {
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +46,11 @@ export const SearchUser = ({
         data: CustomerResponse[];
         totalPages: number;
       }>({
-        url: `${ApiConfig.searchCustomersForTest}?take=10&skip=${skip}&search=${search}`,
+        url: `${
+          isWebhook
+            ? ApiConfig.searchCustomersForWebhookTest
+            : ApiConfig.searchCustomersForTest
+        }?take=10&skip=${skip}&search=${search}`,
       });
       if (skip === 0) setCustomers(ResData.data);
       else setCustomers((prev) => [...prev, ...ResData.data]);

@@ -32,6 +32,8 @@ const WebhookBuilder = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [isWebhookTesting, setIsWebhookTesting] = useState(false);
+
   const [possibleAttributes, setPossibleAttributes] = useState<string[]>([]);
   const [selectedRef, setSelectedRef] =
     useState<RefObject<HTMLInputElement | HTMLTextAreaElement>>();
@@ -137,6 +139,8 @@ const WebhookBuilder = () => {
         loading={isSaving}
         templateName={templateName}
         handleTemplateNameChange={(e) => setTemplateName(e.target.value)}
+        isWebhookTesting={isWebhookTesting}
+        setIsWebhookTesting={setIsWebhookTesting}
       />
       <WebhookSettings
         webhookState={webhookState}
@@ -155,6 +159,7 @@ const WebhookBuilder = () => {
         setSelectedRefValueSetter={setSelectedRefValueSetter}
         selectedRef={selectedRef}
         className="h-full w-full overflow-x-scroll"
+        isTesting={isWebhookTesting}
       />
     </div>
   );

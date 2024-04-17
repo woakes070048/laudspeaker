@@ -5194,7 +5194,8 @@ export class CustomersService {
     account: Account,
     take = 100,
     skip = 0,
-    search = ''
+    search = '',
+    isWebhook = false
   ): Promise<{
     data: { id: string; email: string; phone: string }[];
     totalPages: number;
@@ -5228,9 +5229,9 @@ export class CustomersService {
         ],
       };
 
-      query['$and'] = [deviceTokenConditions, searchConditions];
+      if (!isWebhook) query['$and'] = [deviceTokenConditions, searchConditions];
     } else {
-      query['$or'] = deviceTokenConditions['$or'];
+      if (!isWebhook) query['$or'] = deviceTokenConditions['$or'];
     }
 
     const totalCustomers = await this.CustomerModel.count(query).exec();
