@@ -859,7 +859,7 @@ export class TemplatesService extends QueueEventsHost {
     //console.log("In test webhook a")
 
     let customer = await this.customerModel.findOne({
-      email: testWebhookDto.testCustomerEmail,
+      _id: testWebhookDto.testCustomerId,
     });
 
     //console.log("In test webhook")

@@ -505,7 +505,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
             ...webhookState,
             headers: { ...webhookState.headers },
           },
-          testCustomerEmail: selectedCustomer?.email,
+          testCustomerId: selectedCustomer?.id,
         },
       });
       setTestResponseData(data);
