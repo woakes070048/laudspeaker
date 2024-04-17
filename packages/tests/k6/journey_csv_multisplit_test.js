@@ -7,13 +7,12 @@ import { createAccount } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
 /*
- * Depending on how you are testing, you need to change 
+ * Depending on how you are testing, you need to change
  * devOrProdUrl = "" to devOrProdUrl = "/api"
- * 
+ *
  * and use the right upload csv option post call
- * 
+ *
  */
-
 
 export const options = {
   scenarios: {
@@ -44,7 +43,6 @@ const credit_score = "credit_score";
 const credit_score_date = "credit_score_date";
 
 const NUM_CUSTOMERS = __ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
-
 
 let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
 if (BASE_URL.at(-1) === "/") {
@@ -120,7 +118,11 @@ export default function main() {
 
   failOnError(response);
 
-  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", null, devOrProdUrl);
+  response = httpxWrapper.getOrFail(
+    "/customers/getLastImportCSV",
+    null,
+    devOrProdUrl
+  );
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
@@ -634,7 +636,7 @@ export default function main() {
         reporter.report(
           `Sent count hasn't increased in 5 retries. Failing test...`
         );
-        break; 
+        break;
         fail(
           `Import customers has failed after ${numPages} imported, but ${expectedPages} pages expected.`
         );
@@ -664,152 +666,47 @@ export default function main() {
   );
   reporter.log(`Posting new journey`);
   let journeyName = "[test]simple_waituntil" + uuidv4();
-    response = httpxWrapper.postOrFail(
-      "/journeys",
-      `{"name": "${journeyName}"}`,
-      devOrProdUrl
-    );
-    let visualLayout = response.json("visualLayout");
-    const JOURNEY_ID = response.json("id");
+  response = httpxWrapper.postOrFail(
+    "/journeys",
+    `{"name": "${journeyName}"}`,
+    devOrProdUrl
+  );
+  let visualLayout = response.json("visualLayout");
+  const JOURNEY_ID = response.json("id");
 
-    reporter.log(`Journey created with id: ${JOURNEY_ID}`);
+  reporter.log(`Journey created with id: ${JOURNEY_ID}`);
 
-    /*
+  /*
     response = httpxWrapper.postOrFail(
       "/api/steps",
       `{"type":"message","journeyID":"${JOURNEY_ID}"}`
     );
     */
-    response = httpxWrapper.postOrFail(
-      "/steps",
-      `{"type":"multisplit","journeyID":"${JOURNEY_ID}"}`,
-      devOrProdUrl
-    );
+  response = httpxWrapper.postOrFail(
+    "/steps",
+    `{"type":"multisplit","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
+  );
 
-    let START_STEP_NODE = visualLayout.nodes[0];
-    START_STEP_NODE["selected"] = false;
-    let START_STEP_EDGE = visualLayout.edges[0];
-    //START_STEP_NODE["target"] = false;
+  let START_STEP_NODE = visualLayout.nodes[0];
+  START_STEP_NODE["selected"] = false;
+  let START_STEP_EDGE = visualLayout.edges[0];
+  //START_STEP_NODE["target"] = false;
 
   // to do
   const MULTISPLIT_STEP_ID = response.json("id");
-    const MULTISPLIT_NODE_ID = uuidv4();
-    START_STEP_EDGE["target"] = MULTISPLIT_NODE_ID;
-    const MULTISPLIT_BRANCH1_ID = uuidv4();
-    const MULTISPLIT_BRANCH2_ID = uuidv4();
+  const MULTISPLIT_NODE_ID = uuidv4();
+  START_STEP_EDGE["target"] = MULTISPLIT_NODE_ID;
+  const MULTISPLIT_BRANCH1_ID = uuidv4();
+  const MULTISPLIT_BRANCH2_ID = uuidv4();
 
-    const multisplitNode = {
-      id: MULTISPLIT_NODE_ID,
-      data: {
-        type: "multisplit",
-        stepId: MULTISPLIT_STEP_ID,
-        branches: [
-          {
-            id: MULTISPLIT_BRANCH1_ID,
-            type: "multisplit",
-            conditions: {
-              type: "conditional",
-              query: {
-                type: "all",
-                statements: [
-                  {
-                    type: "Attribute",
-                    key: "mkt_agree",
-                    comparisonType: "is equal to",
-                    subComparisonType: "exist",
-                    subComparisonValue: "",
-                    valueType: "Boolean",
-                    value: true,
-                    dateComparisonType: "absolute"
-                  },
-                ],
-              },
-            },
-          },
-          {
-            id: MULTISPLIT_BRANCH2_ID,
-            type: "multisplit",
-            isOthers: true,
-          },
-        ],
-        showErrors: true,
-      },
+  const multisplitNode = {
+    id: MULTISPLIT_NODE_ID,
+    data: {
       type: "multisplit",
-      position: {
-        x: 0,
-        y: 114,
-      },
-      selected: false,
-    };
-
-    response = httpxWrapper.postOrFail(
-      "/steps",
-      `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
-      devOrProdUrl
-    );
-
-    const MESSAGE2_STEP_ID = response.json("id");
-    const MESSAGE2_NODE_ID = uuidv4();
-
-    response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
-    const TEMPLATE_ONE = response.json("data")[0];
-    const TEMPLATE_TWO = response.json("data")[1];
-    const TEMPLATE_THREE = response.json("data")[2];
-
-    const email2StepNode = {
-      id: MESSAGE2_NODE_ID,
-      data: {
-        type: "message",
-        stepId: MESSAGE2_STEP_ID,
-        template: {
-          type: "email",
-          selected: { id: TEMPLATE_TWO.id, name: TEMPLATE_TWO.name },
-        },
-        customName: "Email 1",
-        showErrors: true,
-      },
-      type: "message",
-      position: {
-        x: -260,
-        y: 326,
-      },
-      selected: false,
-    };
-
-    response = httpxWrapper.postOrFail(
-      "/steps",
-      `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
-      devOrProdUrl
-    );
-
-    const MESSAGE3_STEP_ID = response.json("id");
-    const MESSAGE3_NODE_ID = uuidv4();
-
-    const email3StepNode = {
-      id: MESSAGE3_NODE_ID,
-      data: {
-        type: "message",
-        stepId: MESSAGE3_STEP_ID,
-        template: {
-          type: "email",
-          selected: { id: TEMPLATE_THREE.id, name: TEMPLATE_THREE.name },
-        },
-        customName: "Email 2",
-        showErrors: true,
-      },
-      type: "message",
-      position: {
-        x: 260,
-        y: 324,
-      },
-      selected: false,
-    };
-
-    const multisplitBranch1 = {
-      id: `b${MULTISPLIT_BRANCH1_ID}`,
-      data: {
-        type: "branch",
-        branch: {
+      stepId: MULTISPLIT_STEP_ID,
+      branches: [
+        {
           id: MULTISPLIT_BRANCH1_ID,
           type: "multisplit",
           conditions: {
@@ -825,101 +722,218 @@ export default function main() {
                   subComparisonValue: "",
                   valueType: "Boolean",
                   value: true,
-                  dateComparisonType: "absolute"
+                  dateComparisonType: "absolute",
                 },
               ],
             },
           },
         },
-      },
-      type: "branch",
-      source: MULTISPLIT_NODE_ID,
-      target: MESSAGE2_NODE_ID,
-    };
-
-    const multisplitBranch2 = {
-      id: `b${MULTISPLIT_BRANCH2_ID}`,
-      data: {
-        type: "branch",
-        branch: {
+        {
           id: MULTISPLIT_BRANCH2_ID,
           type: "multisplit",
           isOthers: true,
         },
+      ],
+      showErrors: true,
+    },
+    type: "multisplit",
+    position: {
+      x: 0,
+      y: 114,
+    },
+    selected: false,
+  };
+
+  response = httpxWrapper.postOrFail(
+    "/steps",
+    `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
+  );
+
+  const MESSAGE2_STEP_ID = response.json("id");
+  const MESSAGE2_NODE_ID = uuidv4();
+
+  response = httpxWrapper.getOrFail("/templates", {}, devOrProdUrl);
+  const TEMPLATE_ONE = response.json("data")[0];
+  const TEMPLATE_TWO = response.json("data")[1];
+  const TEMPLATE_THREE = response.json("data")[2];
+
+  const email2StepNode = {
+    id: MESSAGE2_NODE_ID,
+    data: {
+      type: "message",
+      stepId: MESSAGE2_STEP_ID,
+      template: {
+        type: "email",
+        selected: { id: TEMPLATE_TWO.id, name: TEMPLATE_TWO.name },
       },
+      customName: "Email 1",
+      showErrors: true,
+    },
+    type: "message",
+    position: {
+      x: -260,
+      y: 326,
+    },
+    selected: false,
+  };
+
+  response = httpxWrapper.postOrFail(
+    "/steps",
+    `{"type":"message","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
+  );
+
+  const MESSAGE3_STEP_ID = response.json("id");
+  const MESSAGE3_NODE_ID = uuidv4();
+
+  const email3StepNode = {
+    id: MESSAGE3_NODE_ID,
+    data: {
+      type: "message",
+      stepId: MESSAGE3_STEP_ID,
+      template: {
+        type: "email",
+        selected: { id: TEMPLATE_THREE.id, name: TEMPLATE_THREE.name },
+      },
+      customName: "Email 2",
+      showErrors: true,
+    },
+    type: "message",
+    position: {
+      x: 260,
+      y: 324,
+    },
+    selected: false,
+  };
+
+  const multisplitBranch1 = {
+    id: `b${MULTISPLIT_BRANCH1_ID}`,
+    data: {
       type: "branch",
-      source: MULTISPLIT_NODE_ID,
-      target: MESSAGE3_NODE_ID,
-    };
-
-    response = httpxWrapper.postOrFail(
-      "/steps",
-      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
-      devOrProdUrl
-    );
-
-    const EXIT1_STEP_ID = response.json("id");
-    const EXIT1_STEP_NODE_ID = uuidv4();
-
-    const exit1StepNode = {
-      id: EXIT1_STEP_NODE_ID,
-      data: {
-        stepId: EXIT1_STEP_ID,
-        showErrors: true,
+      branch: {
+        id: MULTISPLIT_BRANCH1_ID,
+        type: "multisplit",
+        conditions: {
+          type: "conditional",
+          query: {
+            type: "all",
+            statements: [
+              {
+                type: "Attribute",
+                key: "mkt_agree",
+                comparisonType: "is equal to",
+                subComparisonType: "exist",
+                subComparisonValue: "",
+                valueType: "Boolean",
+                value: true,
+                dateComparisonType: "absolute",
+              },
+            ],
+          },
+        },
       },
-      type: "exit",
-      position: {
-        x: -260,
-        y: 440,
+    },
+    type: "branch",
+    source: MULTISPLIT_NODE_ID,
+    target: MESSAGE2_NODE_ID,
+  };
+
+  const multisplitBranch2 = {
+    id: `b${MULTISPLIT_BRANCH2_ID}`,
+    data: {
+      type: "branch",
+      branch: {
+        id: MULTISPLIT_BRANCH2_ID,
+        type: "multisplit",
+        isOthers: true,
       },
-      selected: false,
-    };
+    },
+    type: "branch",
+    source: MULTISPLIT_NODE_ID,
+    target: MESSAGE3_NODE_ID,
+  };
 
-    const toExitEdge1 = {
-      id: `e${email2StepNode.id}-${exit1StepNode.id}`,
-      type: "primary",
-      source: email2StepNode.id,
-      target: exit1StepNode.id,
-    };
+  response = httpxWrapper.postOrFail(
+    "/steps",
+    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
+  );
 
-    response = httpxWrapper.postOrFail(
-      "/steps",
-      `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
-      devOrProdUrl
-    );
+  const EXIT1_STEP_ID = response.json("id");
+  const EXIT1_STEP_NODE_ID = uuidv4();
 
-    const EXIT2_STEP_ID = response.json("id");
-    const EXIT2_STEP_NODE_ID = uuidv4();
+  const exit1StepNode = {
+    id: EXIT1_STEP_NODE_ID,
+    data: {
+      stepId: EXIT1_STEP_ID,
+      showErrors: true,
+    },
+    type: "exit",
+    position: {
+      x: -260,
+      y: 440,
+    },
+    selected: false,
+  };
 
-    const exit2StepNode = {
-      id: EXIT2_STEP_NODE_ID,
-      data: {
-        stepId: EXIT2_STEP_ID,
-        showErrors: true,
-      },
-      type: "exit",
-      position: {
-        x: 260,
-        y: 440,
-      },
-      selected: false,
-    };
+  const toExitEdge1 = {
+    id: `e${email2StepNode.id}-${exit1StepNode.id}`,
+    type: "primary",
+    source: email2StepNode.id,
+    target: exit1StepNode.id,
+  };
 
-    const toExitEdge2 = {
-      id: `e${email3StepNode.id}-${exit2StepNode.id}`,
-      type: "primary",
-      source: email3StepNode.id,
-      target: exit2StepNode.id,
-    };
+  response = httpxWrapper.postOrFail(
+    "/steps",
+    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`,
+    devOrProdUrl
+  );
 
+  const EXIT2_STEP_ID = response.json("id");
+  const EXIT2_STEP_NODE_ID = uuidv4();
 
-    let visualLayoutBody = JSON.stringify({
-      id: JOURNEY_ID,
-      nodes: [START_STEP_NODE, multisplitNode, email2StepNode, email3StepNode, exit1StepNode, exit2StepNode],
-      edges: [START_STEP_EDGE, multisplitBranch1, multisplitBranch2, toExitEdge1, toExitEdge2],
-    });
+  const exit2StepNode = {
+    id: EXIT2_STEP_NODE_ID,
+    data: {
+      stepId: EXIT2_STEP_ID,
+      showErrors: true,
+    },
+    type: "exit",
+    position: {
+      x: 260,
+      y: 440,
+    },
+    selected: false,
+  };
 
-    /*
+  const toExitEdge2 = {
+    id: `e${email3StepNode.id}-${exit2StepNode.id}`,
+    type: "primary",
+    source: email3StepNode.id,
+    target: exit2StepNode.id,
+  };
+
+  let visualLayoutBody = JSON.stringify({
+    id: JOURNEY_ID,
+    nodes: [
+      START_STEP_NODE,
+      multisplitNode,
+      email2StepNode,
+      email3StepNode,
+      exit1StepNode,
+      exit2StepNode,
+    ],
+    edges: [
+      START_STEP_EDGE,
+      multisplitBranch1,
+      multisplitBranch2,
+      toExitEdge1,
+      toExitEdge2,
+    ],
+  });
+
+  /*
     response = httpxWrapper.patchOrFail(
       "/api/journeys/visual-layout",
       visualLayoutBody
@@ -931,13 +945,13 @@ export default function main() {
     );
     */
 
-    reporter.report(visualLayoutBody);
+  reporter.report(visualLayoutBody);
 
-    response = httpxWrapper.patchOrFail(
-      "/journeys/visual-layout",
-      visualLayoutBody,
-      devOrProdUrl
-    );
+  response = httpxWrapper.patchOrFail(
+    "/journeys/visual-layout",
+    visualLayoutBody,
+    devOrProdUrl
+  );
 
   // to do
 

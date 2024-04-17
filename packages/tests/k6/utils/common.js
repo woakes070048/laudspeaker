@@ -67,36 +67,36 @@ export class HttpxWrapper {
   }
 
   // Helper method to prepare the URL
-  prepareUrl(url, devOrProdUrl = '') {
+  prepareUrl(url, devOrProdUrl = "") {
     return `${devOrProdUrl}${url}`;
   }
 
-  getOrFail(url, params = undefined, devOrProdUrl = '') {
+  getOrFail(url, params = undefined, devOrProdUrl = "") {
     url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.get(url, params);
     failOnError(response);
     return response;
   }
-  postOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+  postOrFail(url, body = undefined, params = undefined, devOrProdUrl = "") {
     url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.post(url, body, params);
     failOnError(response);
     return response;
   }
 
-  putOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+  putOrFail(url, body = undefined, params = undefined, devOrProdUrl = "") {
     url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.put(url, body, params);
     failOnError(response);
     return response;
   }
-  patchOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+  patchOrFail(url, body = undefined, params = undefined, devOrProdUrl = "") {
     url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.patch(url, body, params);
     failOnError(response);
     return response;
   }
-  deleteOrFail(url, body = undefined, params = undefined, devOrProdUrl = '') {
+  deleteOrFail(url, body = undefined, params = undefined, devOrProdUrl = "") {
     url = this.prepareUrl(url, devOrProdUrl);
     let response = this.session.delete(url, body, params);
     failOnError(response);

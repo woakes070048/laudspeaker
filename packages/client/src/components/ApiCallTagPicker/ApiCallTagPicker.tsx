@@ -3,6 +3,7 @@ import React, { FC, RefObject, useEffect, useRef, useState } from "react";
 import { Buffer } from "buffer";
 import WebhookSettings, {
   FallBackAction,
+  MIMEType,
   WebhookMethod,
   WebhookState,
 } from "pages/WebhookBuilder/WebhookSettings";
@@ -25,6 +26,7 @@ const ApiCallTagPicker: FC<ApiCallTagPickerProps> = ({
   let initialWebhookState: WebhookState = {
     url: "https://jsonplaceholder.typicode.com/posts",
     body: "{}",
+    mimeType: MIMEType.JSON,
     method: WebhookMethod.GET,
     headers: { Authorization: "" },
     retries: 5,
@@ -52,7 +54,8 @@ const ApiCallTagPicker: FC<ApiCallTagPickerProps> = ({
   const bearerTokenRef = useRef<HTMLInputElement>(null);
   const basicUserNameRef = useRef<HTMLInputElement>(null);
   const basicPasswordRef = useRef<HTMLInputElement>(null);
-  const customHeaderRef = useRef<HTMLInputElement>(null);
+  const customHeaderKeyRef = useRef<HTMLInputElement>(null);
+  const customHeaderValueRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const headersRef = useRef<HTMLTextAreaElement>(null);
 
@@ -125,7 +128,8 @@ const ApiCallTagPicker: FC<ApiCallTagPickerProps> = ({
               bearerTokenRef={bearerTokenRef}
               basicUserNameRef={basicUserNameRef}
               basicPasswordRef={basicPasswordRef}
-              customHeaderRef={customHeaderRef}
+              customHeaderKeyRef={customHeaderKeyRef}
+              customHeaderValueRef={customHeaderValueRef}
               bodyRef={bodyRef}
               headersRef={headersRef}
               setSelectedRef={setSelectedRef}

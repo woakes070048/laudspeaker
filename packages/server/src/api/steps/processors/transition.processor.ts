@@ -699,9 +699,15 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
 
+    let template: Template = await this.cacheManager.get(
+      `template:${step.metadata.template}`
+    );
+
     if (
       messageSendType === 'SEND' &&
-      process.env.MOCK_MESSAGE_SEND === 'true'
+      process.env.MOCK_MESSAGE_SEND === 'true' &&
+      template &&
+      !template.webhookData
     ) {
       // 3. CHECK IF MESSAGE SEND SHOULD BE MOCKED
       messageSendType = 'MOCK_SEND';
@@ -709,9 +715,7 @@ export class TransitionProcessor extends WorkerHost {
 
     if (messageSendType === 'SEND') {
       //send message here
-      let template: Template = await this.cacheManager.get(
-        `template:${step.metadata.template}`
-      );
+
       if (!template) {
         template = await this.templatesService.lazyFindByID(
           step.metadata.template

@@ -7,13 +7,12 @@ import { createAccount } from "./utils/accounts.js";
 import { Reporter, HttpxWrapper, failOnError } from "./utils/common.js";
 
 /*
- * Depending on how you are testing, you need to change 
+ * Depending on how you are testing, you need to change
  * devOrProdUrl = "" to devOrProdUrl = "/api"
- * 
+ *
  * and use the right upload csv option post call
- * 
+ *
  */
-
 
 export const options = {
   scenarios: {
@@ -44,7 +43,6 @@ const credit_score = "credit_score";
 const credit_score_date = "credit_score_date";
 
 const NUM_CUSTOMERS = __ENV.NUM_CUSTOMERS || fail("NUM_CUSTOMERS required");
-
 
 let BASE_URL = __ENV.BASE_URL || fail("BASE_URL required");
 if (BASE_URL.at(-1) === "/") {
@@ -120,7 +118,11 @@ export default function main() {
 
   failOnError(response);
 
-  response = httpxWrapper.getOrFail("/customers/getLastImportCSV", null, devOrProdUrl);
+  response = httpxWrapper.getOrFail(
+    "/customers/getLastImportCSV",
+    null,
+    devOrProdUrl
+  );
 
   UPLOADED_FILE_KEY = response.json("fileKey");
   reporter.report(`CSV upload finished with fileKey: ${UPLOADED_FILE_KEY}`);
@@ -634,7 +636,7 @@ export default function main() {
         reporter.report(
           `Sent count hasn't increased in 5 retries. Failing test...`
         );
-        break; 
+        break;
         fail(
           `Import customers has failed after ${numPages} imported, but ${expectedPages} pages expected.`
         );
@@ -663,7 +665,11 @@ export default function main() {
     "Time elapsed to create a simple journey"
   );
   reporter.log(`Posting new journey`);
-  response = httpxWrapper.postOrFail("/journeys", '{"name":"test"}', devOrProdUrl);
+  response = httpxWrapper.postOrFail(
+    "/journeys",
+    '{"name":"test"}',
+    devOrProdUrl
+  );
   const JOURNEY_ID = response.json("id");
   reporter.log(`Journey created with id: ${JOURNEY_ID}`);
   let START_STEP_NODE = response.json("visualLayout.nodes.0");

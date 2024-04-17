@@ -14,6 +14,7 @@ import { WebClient } from '@slack/web-api';
 import { Account } from '@/api/accounts/entities/accounts.entity';
 import { Repository } from 'typeorm';
 import { Resend } from 'resend';
+import { MIMEType } from '@/api/templates/entities/template.entity';
 import { randomUUID } from 'crypto';
 
 export enum MessageType {
@@ -818,10 +819,15 @@ export class MessageSender {
    * @param filteredTags
    * @returns
    */
-  // async handleWebhook(webhookData: any, filteredTags: any): Promise<ClickHouseMessage[]> {
+  // async handleWebhook(
+  //   webhookData: any,
+  //   filteredTags: any
+  // ): Promise<ClickHouseMessage[]> {
   //   const { method, retries, fallBackAction } = webhookData;
 
-  //   let { body, headers, url } = webhookData;
+  //   let { body, headers, url, mimeType } = webhookData;
+
+  //   mimeType ||= MIMEType.JSON;
 
   //   url = await this.tagEngine.parseAndRender(url, filteredTags || {}, {
   //     strictVariables: true,
@@ -860,6 +866,8 @@ export class MessageSender {
   //       ])
   //     )
   //   );
+
+  //   if (body) headers['Content-Type'] = mimeType;
 
   //   let retriesCount = 0;
   //   let success = false;
@@ -902,8 +910,7 @@ export class MessageSender {
   //           processed: false,
   //         },
   //       ]);
-  //     } catch (e) {
-  //     }
+  //     } catch (e) {}
 
   //     throw new Error(error);
   //   } else {
@@ -921,8 +928,7 @@ export class MessageSender {
   //           processed: false,
   //         },
   //       ]);
-  //     } catch (e) {
-  //     }
+  //     } catch (e) {}
   //   }
 
   //   return { url, body, headers };
