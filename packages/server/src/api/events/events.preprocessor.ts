@@ -41,7 +41,14 @@ export enum ProviderType {
 }
 
 @Injectable()
-@Processor('events_pre', { removeOnComplete: { count: 1000 }, concurrency: 10 })
+@Processor('events_pre', {
+  metrics: {
+    maxDataPoints: MetricsTime.ONE_WEEK,
+  },
+  concurrency: process.env.EVENTS_PRE_PROCESSOR_CONCURRENCY
+    ? +process.env.EVENTS_PRE_PROCESSOR_CONCURRENCY
+    : 1,
+})
 export class EventsPreProcessor extends WorkerHost {
   private providerMap: Record<
     ProviderType,
