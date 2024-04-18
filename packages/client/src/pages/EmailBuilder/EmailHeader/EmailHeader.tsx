@@ -102,7 +102,7 @@ const EmailHeader = (props: IEmailHeaderProps) => {
           >
             Personalize
           </GenericButton>
-          {onAddApiCallClick && (
+          {/* {onAddApiCallClick && (
             <GenericButton
               onClick={onAddApiCallClick}
               customClasses="ml-[10px]"
@@ -115,7 +115,7 @@ const EmailHeader = (props: IEmailHeaderProps) => {
             >
               Add Api Call
             </GenericButton>
-          )}
+          )} */}
         </div>
       </div>
     </div>

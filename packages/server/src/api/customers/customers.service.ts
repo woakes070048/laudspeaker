@@ -5194,9 +5194,10 @@ export class CustomersService {
     account: Account,
     take = 100,
     skip = 0,
-    search = ''
+    search = '',
+    isWebhook = false
   ): Promise<{
-    data: { id: string; email: string; phone: string }[];
+    data: { id: string; email: string; phone: string; [key: string]: string }[];
     totalPages: number;
   }> {
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
@@ -5228,9 +5229,9 @@ export class CustomersService {
         ],
       };
 
-      query['$and'] = [deviceTokenConditions, searchConditions];
+      if (!isWebhook) query['$and'] = [deviceTokenConditions, searchConditions];
     } else {
-      query['$or'] = deviceTokenConditions['$or'];
+      if (!isWebhook) query['$or'] = deviceTokenConditions['$or'];
     }
 
     const totalCustomers = await this.CustomerModel.count(query).exec();
@@ -5252,6 +5253,10 @@ export class CustomersService {
         info['id'] = cust['_id'].toString();
         info['email'] = cust['email']?.toString() || '';
         info['phone'] = cust['phone']?.toString() || '';
+        if (pk?.key) {
+          info[pk.key] = cust[pk.key]?.toString() || '';
+        }
+
         return info;
       }),
       totalPages,

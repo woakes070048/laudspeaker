@@ -107,6 +107,7 @@ interface WebhookSettingsProps {
     set: (value: string) => void;
   }) => void;
   className?: string;
+  isTesting?: boolean;
 }
 
 const WebhookSettings: FC<WebhookSettingsProps> = ({
@@ -126,6 +127,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
   selectedRef,
   setSelectedRefValueSetter,
   className,
+  isTesting,
 }) => {
   const [authType, setAuthType] = useState<AuthType>(AuthType.CUSTOM);
   const [bodyType, setBodyType] = useState(
@@ -136,8 +138,6 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
-  const [isTesting, setIsTesting] = useState(false);
 
   const [customHeaders, setCustomHeaders] = useState<
     { key: string; value: string }[]
@@ -505,7 +505,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
             ...webhookState,
             headers: { ...webhookState.headers },
           },
-          testCustomerEmail: selectedCustomer?.email,
+          testCustomerId: selectedCustomer?.id,
         },
       });
       setTestResponseData(data);
@@ -536,29 +536,6 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
         <div className="w-full h-full bg-white order-1 md:order-2">
           <div className="px-5 flex w-full flex-col gap-2.5">
             <div className="w-full flex flex-col gap-2.5">
-              <div className="flex items-center justify-center gap-5 font-inter text-[14px] leading-[24px] font-normal">
-                <div
-                  className={`py-2.5 cursor-pointer border-b-[4px] ${
-                    isTesting
-                      ? "border-transparent text-[#9CA3AF]"
-                      : "border-[#6366F1] text-[#6366F1]"
-                  }`}
-                  onClick={() => setIsTesting(false)}
-                >
-                  Edit
-                </div>
-                <div
-                  className={`py-2.5 cursor-pointer border-b-[4px] ${
-                    isTesting
-                      ? "border-[#6366F1] text-[#6366F1]"
-                      : "border-transparent text-[#9CA3AF]"
-                  }`}
-                  onClick={() => setIsTesting(true)}
-                >
-                  Test
-                </div>
-              </div>
-
               {!isTesting && (
                 <>
                   <p className="text-[16px] font-semibold pt-[20px] leading-[24px]">
@@ -695,6 +672,7 @@ const WebhookSettings: FC<WebhookSettingsProps> = ({
                     setSelectedCustomer={setSelectedCustomer}
                     previewFieldKey="email"
                     buttonClassName="w-full"
+                    isWebhook
                   />
                 </div>
               </div>

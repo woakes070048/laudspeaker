@@ -11,10 +11,19 @@ export interface IEmailHeaderProps {
   templateName?: string;
   handleTemplateNameChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   loading?: boolean;
+  isWebhookTesting?: boolean;
+  setIsWebhookTesting?: (value: boolean) => void;
 }
 
 const SlackTemplateHeader = (props: IEmailHeaderProps) => {
-  const { templateName, handleTemplateNameChange, onSave, loading } = props;
+  const {
+    templateName,
+    handleTemplateNameChange,
+    onSave,
+    loading,
+    isWebhookTesting,
+    setIsWebhookTesting,
+  } = props;
   const [titleEdit, setTitleEdit] = useState<boolean>(false);
 
   const handleTitleEdit = () => {
@@ -79,6 +88,32 @@ const SlackTemplateHeader = (props: IEmailHeaderProps) => {
                   }}
                 />
               )}
+
+              {isWebhookTesting !== undefined && setIsWebhookTesting && (
+                <div className="flex items-center justify-center gap-5 font-inter text-[14px] leading-[24px] font-normal">
+                  <div
+                    className={`py-2.5 cursor-pointer border-b-[4px] ${
+                      isWebhookTesting
+                        ? "border-transparent text-[#9CA3AF]"
+                        : "border-[#6366F1] text-[#6366F1]"
+                    }`}
+                    onClick={() => setIsWebhookTesting(false)}
+                  >
+                    Edit
+                  </div>
+                  <div
+                    className={`py-2.5 cursor-pointer border-b-[4px] ${
+                      isWebhookTesting
+                        ? "border-[#6366F1] text-[#6366F1]"
+                        : "border-transparent text-[#9CA3AF]"
+                    }`}
+                    onClick={() => setIsWebhookTesting(true)}
+                  >
+                    Test
+                  </div>
+                </div>
+              )}
+
               {onSave && (
                 <div>
                   <Button
