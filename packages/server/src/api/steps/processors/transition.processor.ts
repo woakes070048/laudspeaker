@@ -703,6 +703,17 @@ export class TransitionProcessor extends WorkerHost {
       `template:${step.metadata.template}`
     );
 
+    if (!template) {
+      template = await this.templatesService.lazyFindByID(
+        step.metadata.template
+      );
+      await this.cacheManager.set(
+        `template:${step.metadata.destination}`,
+        template,
+        5000
+      );
+    }
+
     if (
       messageSendType === 'SEND' &&
       process.env.MOCK_MESSAGE_SEND === 'true' &&
