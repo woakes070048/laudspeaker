@@ -42,92 +42,94 @@ export class MessageSender {
     MessageType,
     (job: any) => Promise<ClickHouseMessage[] | void>
   > = {
-      [MessageType.EMAIL]: async (job) => {
-        return await this.handleEmail(
-          job.subject,
-          job.to,
-          job.text,
-          job.tags,
-          job.eventProvider,
-          job.key,
-          job.from,
-          job.stepID,
-          job.customerID,
-          job.templateID,
-          job.accountID,
-          job.email,
-          job.domain,
-          job.trackingEmail,
-          job.cc,
-          job.session
-        );
-      },
-      [MessageType.SMS]: async (job) => {
-        return await this.handleSMS(
-          job.from,
-          job.sid,
-          job.token,
-          job.to,
-          job.text,
-          job.tags,
-          job.stepID,
-          job.customerID,
-          job.templateID,
-          job.accountID,
-          job.trackingEmail,
-          job.session
-        );
-      },
-      [MessageType.IOS]: async (job) => {
-        return await this.handleIOS(
-          job.trackingEmail,
-          job.firebaseCredentials,
-          job.deviceToken,
-          job.pushText,
-          job.templateID,
-          job.pushTitle,
-          job.customerID,
-          job.stepID,
-          job.filteredTags,
-          job.accountID,
-          job.quietHours,
-          job.session
-        );
-      },
-      [MessageType.ANDROID]: async (job) => {
-        return await this.handleAndroid(
-          job.trackingEmail,
-          job.firebaseCredentials,
-          job.deviceToken,
-          job.pushText,
-          job.templateID,
-          job.pushTitle,
-          job.customerID,
-          job.stepID,
-          job.filteredTags,
-          job.accountID,
-          job.quietHours,
-          job.session
-        );
-      },
-      [MessageType.SLACK]: async (job) => {
-        return await this.handleSlack(
-          job.templateID,
-          job.accountID,
-          job.stepID,
-          job.methodName,
-          job.args,
-          job.filteredTags,
-          job.customerID,
-          job.trackingEmail
-        );
-      },
-      [MessageType.PUSH]: function (
-        job: any
-      ): Promise<void | ClickHouseMessage[]> {
-        throw new Error('Function not implemented.');
-      },
-    };
+    [MessageType.EMAIL]: async (job) => {
+      return await this.handleEmail(
+        job.subject,
+        job.to,
+        job.text,
+        job.tags,
+        job.eventProvider,
+        job.key,
+        job.from,
+        job.stepID,
+        job.customerID,
+        job.templateID,
+        job.accountID,
+        job.email,
+        job.domain,
+        job.trackingEmail,
+        job.cc,
+        job.session
+      );
+    },
+    [MessageType.SMS]: async (job) => {
+      return await this.handleSMS(
+        job.from,
+        job.sid,
+        job.token,
+        job.to,
+        job.text,
+        job.tags,
+        job.stepID,
+        job.customerID,
+        job.templateID,
+        job.accountID,
+        job.trackingEmail,
+        job.session
+      );
+    },
+    [MessageType.IOS]: async (job) => {
+      return await this.handleIOS(
+        job.trackingEmail,
+        job.firebaseCredentials,
+        job.deviceToken,
+        job.pushText,
+        job.templateID,
+        job.pushTitle,
+        job.customerID,
+        job.stepID,
+        job.filteredTags,
+        job.accountID,
+        job.quietHours,
+        job.kvPairs,
+        job.session
+      );
+    },
+    [MessageType.ANDROID]: async (job) => {
+      return await this.handleAndroid(
+        job.trackingEmail,
+        job.firebaseCredentials,
+        job.deviceToken,
+        job.pushText,
+        job.templateID,
+        job.pushTitle,
+        job.customerID,
+        job.stepID,
+        job.filteredTags,
+        job.accountID,
+        job.quietHours,
+        job.kvPairs,
+        job.session
+      );
+    },
+    [MessageType.SLACK]: async (job) => {
+      return await this.handleSlack(
+        job.templateID,
+        job.accountID,
+        job.stepID,
+        job.methodName,
+        job.args,
+        job.filteredTags,
+        job.customerID,
+        job.trackingEmail
+      );
+    },
+    [MessageType.PUSH]: function (
+      job: any
+    ): Promise<void | ClickHouseMessage[]> {
+      throw new Error('Function not implemented.');
+    },
+  };
 
   constructor(
     private readonly logger: Logger,
@@ -575,6 +577,7 @@ export class MessageSender {
     filteredTags: any,
     accountID: string,
     quietHours: any,
+    kvPairs: { key: string; value: string }[],
     session: string
   ): Promise<ClickHouseMessage[]> {
     if (!iosDeviceToken) {
@@ -653,7 +656,9 @@ export class MessageSender {
       templateID: templateID.toString(),
       workspaceID: workspace.id,
     };
-
+    for (const kvPair of kvPairs) {
+      data[kvPair.key] = kvPair.value;
+    }
     if (quietHours) data['quietHours'] = JSON.stringify(quietHours);
 
     const messageId = await messaging.send({
@@ -748,6 +753,7 @@ export class MessageSender {
     filteredTags: any,
     accountID: string,
     quietHours: any,
+    kvPairs: { key: string; value: string }[],
     session: string
   ): Promise<ClickHouseMessage[]> {
     if (!androidDeviceToken) {
@@ -827,6 +833,9 @@ export class MessageSender {
       messageID: randomUUID(),
       sound: 'default',
     };
+    for (const kvPair of kvPairs) {
+      data[kvPair.key] = kvPair.value;
+    }
 
     if (quietHours) data['quietHours'] = JSON.stringify(quietHours);
 
