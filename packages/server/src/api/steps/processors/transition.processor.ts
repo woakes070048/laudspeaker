@@ -1094,17 +1094,21 @@ export class TransitionProcessor extends WorkerHost {
       return;
     }
 
-    let nextStep: Step = await this.cacheManager.get(
-      `step:${step.metadata.destination}`
-    );
-    if (!nextStep) {
-      nextStep = await this.stepsService.lazyFindByID(
-        step.metadata.destination
+    let nextStep: Step;
+
+    if(step.metadata.destination) {
+      nextStep = await this.cacheManager.get(
+        `step:${step.metadata.destination}`
       );
-      await this.cacheManager.set(
-        `step:${step.metadata.destination}`,
-        nextStep
-      );
+      if (!nextStep) {
+        nextStep = await this.stepsService.lazyFindByID(
+          step.metadata.destination
+        );
+        await this.cacheManager.set(
+          `step:${step.metadata.destination}`,
+          nextStep
+        );
+      }
     }
 
     if (nextStep) {
