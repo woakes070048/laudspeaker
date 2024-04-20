@@ -727,15 +727,6 @@ export class TransitionProcessor extends WorkerHost {
     if (messageSendType === 'SEND') {
       //send message here
 
-      if (!template) {
-        template = await this.templatesService.lazyFindByID(
-          step.metadata.template
-        );
-        await this.cacheManager.set(
-          `template:${step.metadata.destination}`,
-          template
-        );
-      }
       const { email } = owner;
 
       const {
