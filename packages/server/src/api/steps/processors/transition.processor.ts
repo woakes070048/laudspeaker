@@ -975,7 +975,7 @@ export class TransitionProcessor extends WorkerHost {
             await this.webhooksQueue.add('whapicall', {
               template,
               filteredTags,
-              audienceId: step.id,
+              stepId: step.id,
               customerId: customer._id,
               accountId: owner.id,
             });
