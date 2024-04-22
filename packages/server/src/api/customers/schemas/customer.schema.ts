@@ -10,7 +10,7 @@ export class Customer {
   @Prop()
   _id: string;
 
-  @Prop()
+  @Prop({ index: true })
   other_ids: string[];
 
   @Prop()

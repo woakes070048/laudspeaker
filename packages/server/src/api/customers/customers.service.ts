@@ -234,6 +234,7 @@ export class CustomersService {
       try {
         const collection = this.connection.db.collection('customers');
         await collection.createIndex('workspaceId');
+        await collection.createIndex({ other_ids: 1, workspaceId: 1 });
         await collection.createIndex(
           { __posthog__id: 1, workspaceId: 1 },
           {
