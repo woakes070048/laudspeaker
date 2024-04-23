@@ -51,15 +51,9 @@ export class EventsProcessor extends WorkerHost {
     EventType,
     (job: Job<any, any, string>) => Promise<void>
   > = {
-    [EventType.EVENT]: async (job) => {
-      await this.handleEvent(job);
-    },
-    [EventType.ATTRIBUTE]: async (job) => {
-      await this.handleAttributeChange(job);
-    },
-    [EventType.MESSAGE]: async (job) => {
-      await this.handleMessage(job);
-    },
+    [EventType.EVENT]: this.handleEvent,
+    [EventType.ATTRIBUTE]: this.handleAttributeChange,
+    [EventType.MESSAGE]: this.handleMessage
   };
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -141,7 +135,12 @@ export class EventsProcessor extends WorkerHost {
   async process(job: Job<any, any, string>): Promise<any> {
     let err: any;
     try {
-      await this.providerMap[job.name](job);
+      const fn = this.providerMap[job.name];
+      const that = this;
+      
+      return Sentry.startSpan({ name: `EventsProcessor.${fn.name}` }, async () => {
+        await fn.call(that, job);
+      });
     } catch (e) {
       this.error(e, this.process.name, job.data.session);
       err = e;

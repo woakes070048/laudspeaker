@@ -54,15 +54,9 @@ export class EventsPreProcessor extends WorkerHost {
     ProviderType,
     (job: Job<any, any, string>) => Promise<void>
   > = {
-    [ProviderType.LAUDSPEAKER]: async (job) => {
-      await this.handleCustom(job);
-    },
-    [ProviderType.MESSAGE]: async (job) => {
-      await this.handleMessage(job);
-    },
-    [ProviderType.WU_ATTRIBUTE]: async (job) => {
-      await this.handleAttributeChange(job);
-    },
+    [ProviderType.LAUDSPEAKER]: this.handleCustom,
+    [ProviderType.MESSAGE]: this.handleMessage,
+    [ProviderType.WU_ATTRIBUTE]: this.handleAttributeChange,
   };
 
   constructor(
@@ -150,7 +144,12 @@ export class EventsPreProcessor extends WorkerHost {
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
-    await this.providerMap[job.name](job);
+    const fn = this.providerMap[job.name];
+    const that = this;
+
+    return Sentry.startSpan({ name: `EventsPreProcessor.${fn.name}` }, async () => {
+      await fn.call(that, job);
+    });
   }
 
   async handleCustom(

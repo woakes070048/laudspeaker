@@ -184,117 +184,137 @@ export class TransitionProcessor extends WorkerHost {
     try {
       switch (job.data.step.type) {
         case StepType.START:
-          await this.handleStart(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({ name: "TransitionProcessor.handleStart" }, async () => {
+            await this.handleStart(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         case StepType.EXIT:
-          await this.handleExit(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleExit"}, async () => {
+            await this.handleExit(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location
+            );
+          });
           break;
         case StepType.MESSAGE:
-          await this.handleMessage(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleMessage"}, async () => {
+            await this.handleMessage(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         case StepType.LOOP:
-          await this.handleLoop(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleLoop"}, async () => {
+            await this.handleLoop(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         case StepType.AB_TEST:
           break;
         case StepType.MULTISPLIT:
-          await this.handleMultisplit(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleMultisplit"}, async () => {
+            await this.handleMultisplit(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         case StepType.TRACKER:
-          //   await this.handleCustomComponent(
-          //     job.data.owner,
-          //     job.data.journey,
-          //     job.data.step,
-          //     job.data.session,
-          //     job.data.customerID,
-          //     queryRunner,
-          //     transactionSession,
-          //     job.data.event
-          //   );
+          return Sentry.startSpan({name: "TransitionProcessor.handleCustomComponent"}, async () => {
+            //   await this.handleCustomComponent(
+            //     job.data.owner,
+            //     job.data.journey,
+            //     job.data.step,
+            //     job.data.session,
+            //     job.data.customerID,
+            //     queryRunner,
+            //     transactionSession,
+            //     job.data.event
+            //   );
+          });
           break;
         case StepType.TIME_DELAY:
-          await this.handleTimeDelay(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleTimeDelay"}, async () => {
+            await this.handleTimeDelay(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         case StepType.TIME_WINDOW:
-          await this.handleTimeWindow(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleTimeWindow"}, async () => {
+            await this.handleTimeWindow(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         case StepType.WAIT_UNTIL_BRANCH:
-          await this.handleWaitUntil(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event,
-            job.data.branch
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleWaitUntil"}, async () => {
+            await this.handleWaitUntil(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event,
+              job.data.branch
+            );
+          });
           break;
         case StepType.EXPERIMENT:
-          await this.handleExperiment(
-            job.data.owner,
-            job.data.journey,
-            job.data.step,
-            job.data.session,
-            job.data.customer,
-            job.data.location,
-            job.data.event
-          );
+          return Sentry.startSpan({name: "TransitionProcessor.handleExperiment"}, async () => {
+            await this.handleExperiment(
+              job.data.owner,
+              job.data.journey,
+              job.data.step,
+              job.data.session,
+              job.data.customer,
+              job.data.location,
+              job.data.event
+            );
+          });
           break;
         default:
           break;
