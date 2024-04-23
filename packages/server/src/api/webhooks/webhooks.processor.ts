@@ -5,6 +5,7 @@ import { Inject, Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Liquid } from 'liquidjs';
+import { format, parseISO } from 'date-fns';
 import {
   ClickHouseEventProvider,
   WebhooksService,
@@ -36,6 +37,19 @@ export class WebhooksProcessor extends WorkerHost {
     private accountRepository: Repository<Account>
   ) {
     super();
+
+    this.tagEngine.registerFilter('date', (input, formatString) => {
+      const date = input === 'now' ? new Date() : parseISO(input);
+      // Adjust the formatString to fit JavaScript's date formatting if necessary
+      const adjustedFormatString = formatString.replace(/%Y/g, 'yyyy')
+                                               .replace(/%m/g, 'MM')
+                                               .replace(/%d/g, 'dd')
+                                               .replace(/%H/g, 'HH')
+                                               .replace(/%M/g, 'mm')
+                                               .replace(/%S/g, 'ss');
+      return format(date, adjustedFormatString);
+  });
+
   }
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -98,6 +112,7 @@ export class WebhooksProcessor extends WorkerHost {
   }
 
   async process(job: Job<{ template: Template; [key: string]: any }>) {
+    console.log("in process")
     const { template, filteredTags } = job.data;
 
     const { method, retries, fallBackAction } = template.webhookData;
@@ -120,9 +135,24 @@ export class WebhooksProcessor extends WorkerHost {
       body = undefined;
     } else {
       body = await this.templatesService.parseTemplateTags(body);
+
+      console.log("body is after 1", body);
+
+      /*
+      const now = new Date(); // Get current date and time
+      const context = {
+          currentTime: now,
+          formattedCurrentTime: now.toLocaleString() // Optionally pre-format the date/time
+      };
+      const template = "The current time is: {{ currentTime | date: '%Y-%m-%d %H:%M:%S' }}";
+      //const output = await this.tagEngine.parseAndRender(template, context);
+      */
+      
       body = await this.tagEngine.parseAndRender(body, filteredTags || {}, {
         strictVariables: true,
       });
+
+      console.log("body is after 2", body);
     }
 
     headers = Object.fromEntries(
