@@ -23,7 +23,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Account } from '../accounts/entities/accounts.entity';
 import { Repository } from 'typeorm';
 
-@Processor('webhooks', { removeOnComplete: { age: 0, count: 0 } })
+@Processor('webhooks')
 @Injectable()
 export class WebhooksProcessor extends WorkerHost {
   private tagEngine = new Liquid();
@@ -112,7 +112,6 @@ export class WebhooksProcessor extends WorkerHost {
   }
 
   async process(job: Job<{ template: Template; [key: string]: any }>) {
-    console.log("in process")
     const { template, filteredTags } = job.data;
 
     const { method, retries, fallBackAction } = template.webhookData;
@@ -135,24 +134,9 @@ export class WebhooksProcessor extends WorkerHost {
       body = undefined;
     } else {
       body = await this.templatesService.parseTemplateTags(body);
-
-      console.log("body is after 1", body);
-
-      /*
-      const now = new Date(); // Get current date and time
-      const context = {
-          currentTime: now,
-          formattedCurrentTime: now.toLocaleString() // Optionally pre-format the date/time
-      };
-      const template = "The current time is: {{ currentTime | date: '%Y-%m-%d %H:%M:%S' }}";
-      //const output = await this.tagEngine.parseAndRender(template, context);
-      */
-      
       body = await this.tagEngine.parseAndRender(body, filteredTags || {}, {
         strictVariables: true,
       });
-
-      console.log("body is after 2", body);
     }
 
     headers = Object.fromEntries(

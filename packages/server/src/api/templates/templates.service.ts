@@ -868,17 +868,14 @@ export class TemplatesService extends QueueEventsHost {
   }
 
   async testWebhookTemplate(testWebhookDto: TestWebhookDto, session: string) {
-    //console.log("In test webhook a")
 
     let customer = await this.customerModel.findOne({
       _id: testWebhookDto.testCustomerId,
     });
 
-    //console.log("In test webhook")
 
     if (!customer) {
       customer = new this.customerModel({});
-      //console.log('Using temporary customer');
     }
 
     const { _id, workspaceId, workflows, ...tags } = customer.toObject();
@@ -886,7 +883,6 @@ export class TemplatesService extends QueueEventsHost {
 
     const { method, mimeType } = testWebhookDto.webhookData;
 
-    //console.log("In test webhook 2")
 
     let { body, headers, url } = testWebhookDto.webhookData;
 
@@ -905,15 +901,11 @@ export class TemplatesService extends QueueEventsHost {
     ) {
       body = undefined;
     } else {
-      console.log("body is before ", body);
       body = await this.parseTemplateTags(body);
       body = await this.tagEngine.parseAndRender(body, filteredTags || {}, {
         strictVariables: true,
       });
-      console.log("the body is after", body );
     }
-
-    //console.log("In test webhook 3")
 
     headers = Object.fromEntries(
       await Promise.all(
@@ -933,17 +925,6 @@ export class TemplatesService extends QueueEventsHost {
     );
 
     headers['content-type'] = mimeType;
-
-    //console.log("this is the send test webhook");
-
-    /*
-    console.log('URL:', url);
-    console.log('Method:', method);
-    console.log('Headers:', headers);
-    if (body) {
-      console.log('Body:', body);
-    }
-    */
 
     try {
       const res = await fetch(url, {
