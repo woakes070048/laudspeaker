@@ -5,11 +5,17 @@ export type EventDocument = Event & Document;
 
 @Schema({ strict: false })
 export class Event {
-  @Prop()
+  @Prop({ index: true })
   workspaceId: string;
 
-  @Prop()
+  @Prop({ index: true })
   event: string;
+
+  @Prop({ index: true })
+  correlationKey: string;
+
+  @Prop({ index: true })
+  correlationValue: string;
 
   @Prop({ type: Object })
   payload: Record<string, unknown>;
