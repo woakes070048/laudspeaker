@@ -5,6 +5,7 @@ import { Inject, Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Liquid } from 'liquidjs';
+import { format, parseISO } from 'date-fns';
 import {
   ClickHouseEventProvider,
   WebhooksService,
@@ -22,7 +23,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Account } from '../accounts/entities/accounts.entity';
 import { Repository } from 'typeorm';
 
-@Processor('webhooks', { removeOnComplete: { age: 0, count: 0 } })
+@Processor('webhooks')
 @Injectable()
 export class WebhooksProcessor extends WorkerHost {
   private tagEngine = new Liquid();
@@ -36,6 +37,19 @@ export class WebhooksProcessor extends WorkerHost {
     private accountRepository: Repository<Account>
   ) {
     super();
+
+    this.tagEngine.registerFilter('date', (input, formatString) => {
+      const date = input === 'now' ? new Date() : parseISO(input);
+      // Adjust the formatString to fit JavaScript's date formatting if necessary
+      const adjustedFormatString = formatString.replace(/%Y/g, 'yyyy')
+                                               .replace(/%m/g, 'MM')
+                                               .replace(/%d/g, 'dd')
+                                               .replace(/%H/g, 'HH')
+                                               .replace(/%M/g, 'mm')
+                                               .replace(/%S/g, 'ss');
+      return format(date, adjustedFormatString);
+  });
+
   }
 
   log(message, method, session, user = 'ANONYMOUS') {

@@ -42,6 +42,7 @@ import { MessageType } from '../email/email.processor';
 import { Response, fetch } from 'undici';
 import { Model } from 'mongoose';
 import { Liquid } from 'liquidjs';
+import { format, parseISO } from 'date-fns';
 import { TestWebhookDto } from './dto/test-webhook.dto';
 import wait from '../../utils/wait';
 import { ModalsService } from '../modals/modals.service';
@@ -69,6 +70,17 @@ export class TemplatesService extends QueueEventsHost {
     @InjectQueue('slack') private readonly slackQueue: Queue
   ) {
     super();
+    this.tagEngine.registerFilter('date', (input, formatString) => {
+      const date = input === 'now' ? new Date() : parseISO(input);
+      // Adjust the formatString to fit JavaScript's date formatting if necessary
+      const adjustedFormatString = formatString.replace(/%Y/g, 'yyyy')
+                                               .replace(/%m/g, 'MM')
+                                               .replace(/%d/g, 'dd')
+                                               .replace(/%H/g, 'HH')
+                                               .replace(/%M/g, 'mm')
+                                               .replace(/%S/g, 'ss');
+      return format(date, adjustedFormatString);
+  });
   }
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -856,17 +868,14 @@ export class TemplatesService extends QueueEventsHost {
   }
 
   async testWebhookTemplate(testWebhookDto: TestWebhookDto, session: string) {
-    //console.log("In test webhook a")
 
     let customer = await this.customerModel.findOne({
       _id: testWebhookDto.testCustomerId,
     });
 
-    //console.log("In test webhook")
 
     if (!customer) {
       customer = new this.customerModel({});
-      //console.log('Using temporary customer');
     }
 
     const { _id, workspaceId, workflows, ...tags } = customer.toObject();
@@ -874,7 +883,6 @@ export class TemplatesService extends QueueEventsHost {
 
     const { method, mimeType } = testWebhookDto.webhookData;
 
-    //console.log("In test webhook 2")
 
     let { body, headers, url } = testWebhookDto.webhookData;
 
@@ -899,8 +907,6 @@ export class TemplatesService extends QueueEventsHost {
       });
     }
 
-    //console.log("In test webhook 3")
-
     headers = Object.fromEntries(
       await Promise.all(
         Object.entries(headers).map(async ([key, value]) => [
@@ -919,17 +925,6 @@ export class TemplatesService extends QueueEventsHost {
     );
 
     headers['content-type'] = mimeType;
-
-    //console.log("this is the send test webhook");
-
-    /*
-    console.log('URL:', url);
-    console.log('Method:', method);
-    console.log('Headers:', headers);
-    if (body) {
-      console.log('Body:', body);
-    }
-    */
 
     try {
       const res = await fetch(url, {
