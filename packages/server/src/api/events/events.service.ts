@@ -73,6 +73,7 @@ import {
 } from '../webhooks/webhooks.service';
 import { Liquid } from 'liquidjs';
 import { cleanTagsForSending } from '@/shared/utils/helpers';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class EventsService {
@@ -110,6 +111,17 @@ export class EventsService {
     @Inject(forwardRef(() => JourneysService))
     private readonly journeysService: JourneysService
   ) {
+    const session = randomUUID();
+    (async () => {
+      try {
+        const collection = this.connection.db.collection('events');
+        await collection.createIndex({ event: 1, workspaceId: 1 });
+        await collection.createIndex({ correlationKey: 1, workspaceId: 1 });
+        await collection.createIndex({ correlationValue: 1, workspaceId: 1 });
+      } catch (e) {
+        this.error(e, EventsService.name, session);
+      }
+    })();
     for (const { name, property_type } of defaultEventKeys) {
       if (name && property_type) {
         this.EventKeysModel.updateOne(
