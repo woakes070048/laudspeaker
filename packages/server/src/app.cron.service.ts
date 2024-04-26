@@ -614,8 +614,10 @@ export class CronService {
   }
 
   @Cron(CronExpression.EVERY_HOUR)
-  async handleEventKeysCron() {
+  async handleEventKeysCron() {    
     return Sentry.startSpan({ name: "CronService.handleEventKeysCron" }, async () => {
+      if(process.env.ENABLE_HANDLEEVENTKEYSCRON !== 'true')
+        return;
       const session = randomUUID();
       try {
         let current = 0;
