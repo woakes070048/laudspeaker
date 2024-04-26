@@ -136,6 +136,38 @@ export class MessageSender {
     private accountRepository: Repository<Account>
   ) {
     this.accountRepository = accountRepository;
+
+    this.tagEngine.registerTag('api_call', {
+      parse(token) {
+        this.items = token.args.split(' ');
+      },
+      async render(ctx) {
+        const url = this.liquid.parseAndRenderSync(
+          this.items[0],
+          ctx.getAll(),
+          ctx.opts
+        );
+
+        try {
+          const res = await fetch(url, { method: 'GET' });
+
+          if (res.status !== 200)
+            throw new Error('Error while processing api_call tag');
+
+          const data = res.headers
+            .get('Content-Type')
+            .includes('application/json')
+            ? await res.json()
+            : await res.text();
+
+          if (this.items[1] === ':save' && this.items[2]) {
+            ctx.push({ [this.items[2]]: data });
+          }
+        } catch (e) {
+          throw new Error('Error while processing api_call tag');
+        }
+      },
+    });
   }
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -657,7 +689,17 @@ export class MessageSender {
       workspaceID: workspace.id,
     };
     for (const kvPair of kvPairs) {
-      data[kvPair.key] = kvPair.value;
+      data[
+        await this.tagEngine.parseAndRender(kvPair.key, filteredTags || {}, {
+          strictVariables: true,
+        })
+      ] = await this.tagEngine.parseAndRender(
+        kvPair.value,
+        filteredTags || {},
+        {
+          strictVariables: true,
+        }
+      );
     }
     if (quietHours) data['quietHours'] = JSON.stringify(quietHours);
 
@@ -834,7 +876,17 @@ export class MessageSender {
       sound: 'default',
     };
     for (const kvPair of kvPairs) {
-      data[kvPair.key] = kvPair.value;
+      data[
+        await this.tagEngine.parseAndRender(kvPair.key, filteredTags || {}, {
+          strictVariables: true,
+        })
+      ] = await this.tagEngine.parseAndRender(
+        kvPair.value,
+        filteredTags || {},
+        {
+          strictVariables: true,
+        }
+      );
     }
 
     if (quietHours) data['quietHours'] = JSON.stringify(quietHours);

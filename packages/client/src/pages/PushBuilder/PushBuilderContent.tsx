@@ -93,14 +93,69 @@ const platformIcons = {
   ),
 };
 
+const stripTemplateTags = (text: string) => {
+  return text.replace(/\{%.*?%\}/g, "");
+};
+
+// This function finds all the template sections in the title and returns an array of their lengths and positions.
+const findTemplateSections = (text: string) => {
+  let result;
+  const regex = /\{%.*?%\}/g;
+  const templateSections = [];
+
+  while ((result = regex.exec(text)) !== null) {
+    templateSections.push({ length: result[0].length, index: result.index });
+  }
+
+  return templateSections;
+};
+
 const PushBuilderContent = ({ data, onChange }: PushBuilderContentProps) => {
   const handleChangeData =
     (platforms: PushPlatforms[]) => (settings: PlatformSettings) => {
       const newData = { ...data };
       platforms.forEach((el) => {
+        // Identify template sections in the title.
+        const templateSections = findTemplateSections(settings.title);
+
+        // We'll rebuild the title considering template sections.
+        let rebuiltTitle = "";
+        let nonTemplateCharacterCount = 0;
+
+        // Track the last index we processed up to.
+        let lastIndex = 0;
+
+        templateSections.forEach((section) => {
+          // Add non-template characters up to the section.
+          const nonTemplatePart = settings.title
+            .slice(lastIndex, section.index)
+            .slice(0, 65 - nonTemplateCharacterCount);
+          rebuiltTitle += nonTemplatePart;
+          nonTemplateCharacterCount += nonTemplatePart.length;
+
+          // If we haven't exceeded the character limit, add the template section.
+          if (nonTemplateCharacterCount < 65) {
+            rebuiltTitle += settings.title.slice(
+              section.index,
+              section.index + section.length
+            );
+          }
+
+          // Update the lastIndex to the end of the current template section.
+          lastIndex = section.index + section.length;
+        });
+
+        // Add any remaining non-template characters after the last template section.
+        if (nonTemplateCharacterCount < 65) {
+          rebuiltTitle += settings.title.slice(
+            lastIndex,
+            lastIndex + (65 - nonTemplateCharacterCount)
+          );
+        }
+
         newData.settings[el] = {
           ...settings,
-          title: settings.title.slice(0, 65),
+          title: rebuiltTitle,
           description: settings.description.slice(
             0,
             el === PushPlatforms.IOS ? 178 : 240

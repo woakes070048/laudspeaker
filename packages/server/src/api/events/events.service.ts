@@ -5,6 +5,7 @@ import {
   HttpException,
   forwardRef,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { Correlation, CustomersService } from '../customers/customers.service';
 import { CustomerDocument } from '../customers/schemas/customer.schema';
@@ -111,6 +112,38 @@ export class EventsService {
     @Inject(forwardRef(() => JourneysService))
     private readonly journeysService: JourneysService
   ) {
+    this.tagEngine.registerTag('api_call', {
+      parse(token) {
+        this.items = token.args.split(' ');
+      },
+      async render(ctx) {
+        const url = this.liquid.parseAndRenderSync(
+          this.items[0],
+          ctx.getAll(),
+          ctx.opts
+        );
+
+        try {
+          const res = await fetch(url, { method: 'GET' });
+
+          if (res.status !== 200)
+            throw new Error('Error while processing api_call tag');
+
+          const data = res.headers
+            .get('Content-Type')
+            .includes('application/json')
+            ? await res.json()
+            : await res.text();
+
+          if (this.items[1] === ':save' && this.items[2]) {
+            ctx.push({ [this.items[2]]: data });
+          }
+        } catch (e) {
+          throw new Error('Error while processing api_call tag');
+        }
+      },
+    });
+
     const session = randomUUID();
     (async () => {
       try {
@@ -933,58 +966,64 @@ export class EventsService {
 
           const messaging = admin.messaging(firebaseApp);
 
-          await messaging.send({
-            token:
-              platform === PushPlatforms.ANDROID
-                ? customer.androidDeviceToken
-                : customer.iosDeviceToken,
-            notification: {
-              title: await this.tagEngine.parseAndRender(
-                settings.title,
-                filteredTags || {},
-                {
-                  strictVariables: true,
-                }
-              ),
-              body: await this.tagEngine.parseAndRender(
-                settings.description,
-                filteredTags || {},
-                {
-                  strictVariables: true,
-                }
-              ),
-            },
-            android:
-              platform === PushPlatforms.ANDROID
-                ? {
-                    notification: {
-                      sound: 'default',
-                      imageUrl: settings?.image?.imageSrc,
-                    },
+          try {
+            await messaging.send({
+              token:
+                platform === PushPlatforms.ANDROID
+                  ? customer.androidDeviceToken
+                  : customer.iosDeviceToken,
+              notification: {
+                title: await this.tagEngine.parseAndRender(
+                  settings.title,
+                  filteredTags || {},
+                  {
+                    strictVariables: true,
                   }
-                : undefined,
-            apns:
-              platform === PushPlatforms.IOS
-                ? {
-                    payload: {
-                      aps: {
-                        badge: 1,
+                ),
+                body: await this.tagEngine.parseAndRender(
+                  settings.description,
+                  filteredTags || {},
+                  {
+                    strictVariables: true,
+                  }
+                ),
+              },
+              android:
+                platform === PushPlatforms.ANDROID
+                  ? {
+                      notification: {
                         sound: 'default',
-                        category: settings.clickBehavior?.type,
-                        contentAvailable: true,
-                        mutableContent: true,
+                        imageUrl: settings?.image?.imageSrc,
                       },
-                    },
-                    fcmOptions: {
-                      imageUrl: settings?.image?.imageSrc,
-                    },
-                  }
-                : undefined,
-            data: body.pushObject.fields.reduce((acc, field) => {
-              acc[field.key] = field.value;
-              return acc;
-            }, {}),
-          });
+                    }
+                  : undefined,
+              apns:
+                platform === PushPlatforms.IOS
+                  ? {
+                      payload: {
+                        aps: {
+                          badge: 1,
+                          sound: 'default',
+                          category: settings.clickBehavior?.type,
+                          contentAvailable: true,
+                          mutableContent: true,
+                        },
+                      },
+                      fcmOptions: {
+                        imageUrl: settings?.image?.imageSrc,
+                      },
+                    }
+                  : undefined,
+              data: body.pushObject.fields.reduce((acc, field) => {
+                acc[field.key] = field.value;
+                return acc;
+              }, {}),
+            });
+          } catch (e) {
+            if (e instanceof Error) {
+              throw new BadRequestException(e.message);
+            }
+          }
         })
     );
   }

@@ -591,7 +591,7 @@ const RouteComponent: React.FC = () => {
                 <DrawerLayout
                   crumbs={[
                     { text: "Message Template", link: "/templates" },
-                    { text: "Create a Push" },
+                    { text: "Create a SMS" },
                   ]}
                 >
                   <SmsBuilder />
@@ -640,7 +640,7 @@ const RouteComponent: React.FC = () => {
                   expandable
                   crumbs={[
                     { text: "Message template", link: "/templates" },
-                    { text: "Create a push" },
+                    { text: "Create a webhook" },
                   ]}
                 >
                   <WebhookBuilder />

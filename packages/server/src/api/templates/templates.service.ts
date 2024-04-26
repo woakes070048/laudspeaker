@@ -73,14 +73,46 @@ export class TemplatesService extends QueueEventsHost {
     this.tagEngine.registerFilter('date', (input, formatString) => {
       const date = input === 'now' ? new Date() : parseISO(input);
       // Adjust the formatString to fit JavaScript's date formatting if necessary
-      const adjustedFormatString = formatString.replace(/%Y/g, 'yyyy')
-                                               .replace(/%m/g, 'MM')
-                                               .replace(/%d/g, 'dd')
-                                               .replace(/%H/g, 'HH')
-                                               .replace(/%M/g, 'mm')
-                                               .replace(/%S/g, 'ss');
+      const adjustedFormatString = formatString
+        .replace(/%Y/g, 'yyyy')
+        .replace(/%m/g, 'MM')
+        .replace(/%d/g, 'dd')
+        .replace(/%H/g, 'HH')
+        .replace(/%M/g, 'mm')
+        .replace(/%S/g, 'ss');
       return format(date, adjustedFormatString);
-  });
+    });
+    this.tagEngine.registerTag('api_call', {
+      parse(token) {
+        this.items = token.args.split(' ');
+      },
+      async render(ctx) {
+        const url = this.liquid.parseAndRenderSync(
+          this.items[0],
+          ctx.getAll(),
+          ctx.opts
+        );
+
+        try {
+          const res = await fetch(url, { method: 'GET' });
+
+          if (res.status !== 200)
+            throw new Error('Error while processing api_call tag');
+
+          const data = res.headers
+            .get('Content-Type')
+            .includes('application/json')
+            ? await res.json()
+            : await res.text();
+
+          if (this.items[1] === ':save' && this.items[2]) {
+            ctx.push({ [this.items[2]]: data });
+          }
+        } catch (e) {
+          throw new Error('Error while processing api_call tag');
+        }
+      },
+    });
   }
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -868,11 +900,9 @@ export class TemplatesService extends QueueEventsHost {
   }
 
   async testWebhookTemplate(testWebhookDto: TestWebhookDto, session: string) {
-
     let customer = await this.customerModel.findOne({
       _id: testWebhookDto.testCustomerId,
     });
-
 
     if (!customer) {
       customer = new this.customerModel({});
@@ -883,46 +913,52 @@ export class TemplatesService extends QueueEventsHost {
 
     const { method, mimeType } = testWebhookDto.webhookData;
 
-
     let { body, headers, url } = testWebhookDto.webhookData;
 
-    url = await this.tagEngine.parseAndRender(url, filteredTags || {}, {
-      strictVariables: true,
-    });
-    url = await this.parseTemplateTags(url);
-
-    if (
-      [
-        WebhookMethod.GET,
-        WebhookMethod.HEAD,
-        WebhookMethod.DELETE,
-        WebhookMethod.OPTIONS,
-      ].includes(method)
-    ) {
-      body = undefined;
-    } else {
-      body = await this.parseTemplateTags(body);
-      body = await this.tagEngine.parseAndRender(body, filteredTags || {}, {
+    try {
+      url = await this.tagEngine.parseAndRender(url, filteredTags || {}, {
         strictVariables: true,
       });
-    }
 
-    headers = Object.fromEntries(
-      await Promise.all(
-        Object.entries(headers).map(async ([key, value]) => [
-          await this.parseTemplateTags(
-            await this.tagEngine.parseAndRender(key, filteredTags || {}, {
-              strictVariables: true,
-            })
-          ),
-          await this.parseTemplateTags(
-            await this.tagEngine.parseAndRender(value, filteredTags || {}, {
-              strictVariables: true,
-            })
-          ),
-        ])
-      )
-    );
+      url = await this.parseTemplateTags(url);
+
+      if (
+        [
+          WebhookMethod.GET,
+          WebhookMethod.HEAD,
+          WebhookMethod.DELETE,
+          WebhookMethod.OPTIONS,
+        ].includes(method)
+      ) {
+        body = undefined;
+      } else {
+        body = await this.parseTemplateTags(body);
+        body = await this.tagEngine.parseAndRender(body, filteredTags || {}, {
+          strictVariables: true,
+        });
+      }
+
+      headers = Object.fromEntries(
+        await Promise.all(
+          Object.entries(headers).map(async ([key, value]) => [
+            await this.parseTemplateTags(
+              await this.tagEngine.parseAndRender(key, filteredTags || {}, {
+                strictVariables: true,
+              })
+            ),
+            await this.parseTemplateTags(
+              await this.tagEngine.parseAndRender(value, filteredTags || {}, {
+                strictVariables: true,
+              })
+            ),
+          ])
+        )
+      );
+    } catch (e) {
+      if (e instanceof Error) {
+        throw new BadRequestException(e.message);
+      }
+    }
 
     headers['content-type'] = mimeType;
 

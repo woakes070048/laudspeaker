@@ -1283,6 +1283,20 @@ export class CronService {
     });
   }
 
+  /*
+   * Helper for clean up
+   */
+  async deleteCollectionIfNeeded(collectionName) {
+    if (collectionName.includes('_FullDetails')) {
+        // Remove '_FullDetails' from the collection name
+        const modifiedCollectionName = collectionName.replace('_FullDetails', '');
+        await this.segmentsService.deleteCollectionsWithPrefix(modifiedCollectionName);
+    } else {
+        // If '_FullDetails' is not part of the name, use the original collection name
+        await this.segmentsService.deleteCollectionsWithPrefix(collectionName);
+    }
+}
+
   @Cron(CronExpression.EVERY_MINUTE)
   async handleEntryTiming() {
     return Sentry.startSpan({ name: "CronService.handleEntryTiming" }, async () => {
@@ -1393,8 +1407,10 @@ export class CronService {
               session,
               collectionName
             );
-            // if (triggerStartTasks.collectionName)
-            //   collectionNames.push(triggerStartTasks.collectionName);
+            // drop the collections after adding customer segments
+            await this.deleteCollectionIfNeeded(
+              collectionName
+            );
           }
         }
         await queryRunner.commitTransaction();
