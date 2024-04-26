@@ -18,6 +18,7 @@ import { CustomersService } from '../customers/customers.service';
 import { Journey } from '../journeys/entities/journey.entity';
 import { InjectConnection } from '@nestjs/mongoose';
 import mongoose, { ClientSession } from 'mongoose';
+import * as Sentry from '@sentry/node';
 
 @Injectable()
 export class StepsService {
@@ -157,68 +158,70 @@ export class StepsService {
     session?: string,
     collectionName?: string
   ): Promise<{ collectionName: string; job: { name: string; data: any } }> {
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    return Sentry.startSpan({ name: "StepsService.triggerStart" }, async () => {
+      const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-    const startStep = await queryRunner.manager.find(Step, {
-      where: {
-        workspace: { id: workspace.id },
-        journey: { id: journey.id },
-        type: StepType.START,
-      },
-    });
-
-    if (startStep.length !== 1)
-      throw new Error('Can only have one start step per journey.');
-
-    const CUSTOMERS_PER_BATCH = 50000;
-    let batch = 0;
-
-    while (batch * CUSTOMERS_PER_BATCH <= audienceSize) {
-      const customers = await this.customersService.find(
-        account,
-        query,
-        session,
-        null,
-        batch * CUSTOMERS_PER_BATCH,
-        CUSTOMERS_PER_BATCH,
-        collectionName
-      );
-      this.log(
-        `Skip ${batch * CUSTOMERS_PER_BATCH}, limit: ${CUSTOMERS_PER_BATCH}`,
-        this.triggerStart.name,
-        session
-      );
-      batch++;
-
-      await this.journeyLocationsService.createAndLockBulk(
-        journey.id,
-        customers.map((document) => {
-          return document._id.toString();
-        }),
-        startStep[0],
-        session,
-        account,
-        queryRunner,
-        client
-      );
-    }
-
-    return {
-      collectionName,
-      job: {
-        name: 'start',
-        data: {
-          owner: account,
-          step: startStep[0],
-          journey,
-          session: session,
-          query,
-          skip: 0,
-          limit: audienceSize,
-          collectionName,
+      const startStep = await queryRunner.manager.find(Step, {
+        where: {
+          workspace: { id: workspace.id },
+          journey: { id: journey.id },
+          type: StepType.START,
         },
-      },
-    };
+      });
+
+      if (startStep.length !== 1)
+        throw new Error('Can only have one start step per journey.');
+
+      const CUSTOMERS_PER_BATCH = 50000;
+      let batch = 0;
+
+      while (batch * CUSTOMERS_PER_BATCH <= audienceSize) {
+        const customers = await this.customersService.find(
+          account,
+          query,
+          session,
+          null,
+          batch * CUSTOMERS_PER_BATCH,
+          CUSTOMERS_PER_BATCH,
+          collectionName
+        );
+        this.log(
+          `Skip ${batch * CUSTOMERS_PER_BATCH}, limit: ${CUSTOMERS_PER_BATCH}`,
+          this.triggerStart.name,
+          session
+        );
+        batch++;
+
+        await this.journeyLocationsService.createAndLockBulk(
+          journey.id,
+          customers.map((document) => {
+            return document._id.toString();
+          }),
+          startStep[0],
+          session,
+          account,
+          queryRunner,
+          client
+        );
+      }
+
+      return {
+        collectionName,
+        job: {
+          name: 'start',
+          data: {
+            owner: account,
+            step: startStep[0],
+            journey,
+            session: session,
+            query,
+            skip: 0,
+            limit: audienceSize,
+            collectionName,
+          },
+        },
+      };
+    });
   }
 
   /**
