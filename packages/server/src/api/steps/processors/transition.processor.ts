@@ -758,7 +758,7 @@ export class TransitionProcessor extends WorkerHost {
         step.metadata.template
       );
       await this.cacheManager.set(
-        `template:${step.metadata.destination}`,
+        `template:${step.metadata.template}`,
         template,
         5000
       );
