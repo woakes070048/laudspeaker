@@ -66,6 +66,7 @@ import { SegmentsService } from './api/segments/segments.service';
 import { CustomersService } from './api/customers/customers.service';
 import { Temporal } from '@js-temporal/polyfill';
 import * as os from 'os';
+import * as Sentry from '@sentry/node';
 
 const BATCH_SIZE = 500;
 
@@ -264,82 +265,138 @@ export class CronService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async minuteTasks() {
-    const session = randomUUID();
-    // Time based steps
-    let timeBasedErr: any;
-    let queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    const timeBasedJobs: any[] = [];
-    try {
-      const journeys = await this.journeysService.allActiveTransactional(
-        queryRunner
-      );
-      for (
-        let journeyIndex = 0;
-        journeyIndex < journeys.length;
-        journeyIndex++
-      ) {
-        const locations =
-          await this.journeyLocationsService.findAllStaticCustomersInTimeBasedSteps(
-            journeys[journeyIndex],
-            session,
-            queryRunner
-          );
+    return Sentry.startSpan({ name: "CronService.minuteTasks" }, async () => {
+      const session = randomUUID();
+      // Time based steps
+      let timeBasedErr: any;
+      let queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      const timeBasedJobs: any[] = [];
+      try {
+        const journeys = await this.journeysService.allActiveTransactional(
+          queryRunner
+        );
         for (
-          let locationsIndex = 0;
-          locationsIndex < locations.length;
-          locationsIndex++
+          let journeyIndex = 0;
+          journeyIndex < journeys.length;
+          journeyIndex++
         ) {
-          const step = await this.stepsService.findByID(
-            String(locations[locationsIndex].step),
-            session,
-            null,
-            queryRunner
-          );
-          let branch;
-          // Set branch to -1 for wait until
-          if (step.type === StepType.WAIT_UNTIL_BRANCH) {
-            //Wait until time branch isnt set, continue
-            if (!step.metadata.timeBranch) {
-              continue;
+          const locations =
+            await this.journeyLocationsService.findAllStaticCustomersInTimeBasedSteps(
+              journeys[journeyIndex],
+              session,
+              queryRunner
+            );
+          for (
+            let locationsIndex = 0;
+            locationsIndex < locations.length;
+            locationsIndex++
+          ) {
+            const step = await this.stepsService.findByID(
+              String(locations[locationsIndex].step),
+              session,
+              null,
+              queryRunner
+            );
+            let branch;
+            // Set branch to -1 for wait until
+            if (step.type === StepType.WAIT_UNTIL_BRANCH) {
+              //Wait until time branch isnt set, continue
+              if (!step.metadata.timeBranch) {
+                continue;
+              }
+              branch = -1;
             }
-            branch = -1;
-          }
-          // Checking if enough time has elapsed to add step
-          switch (step.type) {
-            case StepType.WAIT_UNTIL_BRANCH:
-              if (step.metadata.timeBranch.delay) {
-                if (
-                  Date.now() - locations[locationsIndex].stepEntry <
-                  Temporal.Duration.from(step.metadata.timeBranch.delay).total({
-                    unit: 'millisecond',
-                  })
-                ) {
-                  continue;
+            // Checking if enough time has elapsed to add step
+            switch (step.type) {
+              case StepType.WAIT_UNTIL_BRANCH:
+                if (step.metadata.timeBranch.delay) {
+                  if (
+                    Date.now() - locations[locationsIndex].stepEntry <
+                    Temporal.Duration.from(step.metadata.timeBranch.delay).total({
+                      unit: 'millisecond',
+                    })
+                  ) {
+                    continue;
+                  }
+                } else if (step.metadata.timeBranch.window) {
+                  // Case 1: days of the week/time of day
+                  if (step.metadata.timeBranch.window.onDays) {
+                    const now = new Date();
+
+                    const startTime = new Date(now.getTime());
+                    startTime.setHours(
+                      step.metadata.timeBranch.window.fromTime.split(':')[0]
+                    );
+                    startTime.setMinutes(
+                      step.metadata.timeBranch.window.fromTime.split(':')[1]
+                    );
+
+                    const endTime = new Date(now.getTime());
+                    endTime.setHours(
+                      step.metadata.timeBranch.window.toTime.split(':')[0]
+                    );
+                    endTime.setMinutes(
+                      step.metadata.timeBranch.window.toTime.split(':')[1]
+                    );
+
+                    const day = now.getDay();
+
+                    if (
+                      !(
+                        startTime < now &&
+                        endTime > now &&
+                        step.metadata.window.onDays[day] === 1
+                      )
+                    ) {
+                      continue;
+                    }
+                  }
+                  // Case2: Date and time of window
+                  else {
+                    if (
+                      !(
+                        new Date(
+                          Temporal.Instant.from(
+                            step.metadata.timeBranch.window.from
+                          ).epochMilliseconds
+                        ).getTime() < Date.now() &&
+                        Date.now() <
+                          new Date(
+                            Temporal.Instant.from(
+                              step.metadata.timeBranch.window.to
+                            ).epochMilliseconds
+                          ).getTime()
+                      )
+                    ) {
+                      continue;
+                    }
+                  }
                 }
-              } else if (step.metadata.timeBranch.window) {
-                // Case 1: days of the week/time of day
-                if (step.metadata.timeBranch.window.onDays) {
+                break;
+              case StepType.TIME_WINDOW:
+                // Case 1: Specific days of the week
+                if (step.metadata.window.onDays) {
                   const now = new Date();
 
                   const startTime = new Date(now.getTime());
-                  startTime.setHours(
-                    step.metadata.timeBranch.window.fromTime.split(':')[0]
-                  );
+                  startTime.setHours(step.metadata.window.fromTime.split(':')[0]);
                   startTime.setMinutes(
-                    step.metadata.timeBranch.window.fromTime.split(':')[1]
+                    step.metadata.window.fromTime.split(':')[1]
                   );
 
                   const endTime = new Date(now.getTime());
-                  endTime.setHours(
-                    step.metadata.timeBranch.window.toTime.split(':')[0]
-                  );
-                  endTime.setMinutes(
-                    step.metadata.timeBranch.window.toTime.split(':')[1]
-                  );
+                  endTime.setHours(step.metadata.window.toTime.split(':')[0]);
+                  endTime.setMinutes(step.metadata.window.toTime.split(':')[1]);
 
                   const day = now.getDay();
+
+                  this.warn(
+                    JSON.stringify({ day, startTime, endTime, now, step }),
+                    this.minuteTasks.name,
+                    session
+                  );
 
                   if (
                     !(
@@ -357,13 +414,13 @@ export class CronService {
                     !(
                       new Date(
                         Temporal.Instant.from(
-                          step.metadata.timeBranch.window.from
+                          step.metadata.window.from
                         ).epochMilliseconds
                       ).getTime() < Date.now() &&
                       Date.now() <
                         new Date(
                           Temporal.Instant.from(
-                            step.metadata.timeBranch.window.to
+                            step.metadata.window.to
                           ).epochMilliseconds
                         ).getTime()
                     )
@@ -371,223 +428,169 @@ export class CronService {
                     continue;
                   }
                 }
-              }
-              break;
-            case StepType.TIME_WINDOW:
-              // Case 1: Specific days of the week
-              if (step.metadata.window.onDays) {
-                const now = new Date();
-
-                const startTime = new Date(now.getTime());
-                startTime.setHours(step.metadata.window.fromTime.split(':')[0]);
-                startTime.setMinutes(
-                  step.metadata.window.fromTime.split(':')[1]
-                );
-
-                const endTime = new Date(now.getTime());
-                endTime.setHours(step.metadata.window.toTime.split(':')[0]);
-                endTime.setMinutes(step.metadata.window.toTime.split(':')[1]);
-
-                const day = now.getDay();
-
-                this.warn(
-                  JSON.stringify({ day, startTime, endTime, now, step }),
-                  this.minuteTasks.name,
-                  session
-                );
-
+                break;
+              case StepType.TIME_DELAY:
                 if (
-                  !(
-                    startTime < now &&
-                    endTime > now &&
-                    step.metadata.window.onDays[day] === 1
-                  )
+                  Date.now() - locations[locationsIndex].stepEntry <
+                  Temporal.Duration.from(step.metadata.delay).total({
+                    unit: 'millisecond',
+                  })
                 ) {
                   continue;
                 }
-              }
-              // Case2: Date and time of window
-              else {
-                if (
-                  !(
-                    new Date(
-                      Temporal.Instant.from(
-                        step.metadata.window.from
-                      ).epochMilliseconds
-                    ).getTime() < Date.now() &&
-                    Date.now() <
-                      new Date(
-                        Temporal.Instant.from(
-                          step.metadata.window.to
-                        ).epochMilliseconds
-                      ).getTime()
-                  )
-                ) {
-                  continue;
-                }
-              }
-              break;
-            case StepType.TIME_DELAY:
-              if (
-                Date.now() - locations[locationsIndex].stepEntry <
-                Temporal.Duration.from(step.metadata.delay).total({
-                  unit: 'millisecond',
-                })
-              ) {
-                continue;
-              }
-              break;
-            default:
-              break;
-          }
-          try {
-            await this.journeyLocationsService.lock(
-              locations[locationsIndex],
-              session,
-              undefined,
-              queryRunner
-            );
-            timeBasedJobs.push({
-              name: String(step.type),
-              data: {
-                step: step,
-                owner:
-                  await this.accountsService.findOrganizationOwnerByWorkspaceId(
-                    step.workspace.id,
-                    session
-                  ),
-                session: session,
-                journey: journeys[journeyIndex],
-                customer: await this.customerModel
-                  .findById(locations[locationsIndex].customer)
-                  .exec(),
-                location: locations[locationsIndex],
-                branch,
-              },
-              opts: {
-                jobId: generateUniqueJobId({
+                break;
+              default:
+                break;
+            }
+            try {
+              await this.journeyLocationsService.lock(
+                locations[locationsIndex],
+                session,
+                undefined,
+                queryRunner
+              );
+              timeBasedJobs.push({
+                name: String(step.type),
+                data: {
                   step: step,
-                  ownerID: step.workspace.organization.owner.id,
-                  journeyID: journeys[journeyIndex].id,
-                  customerID: locations[locationsIndex].customer,
-                }),
-              },
-            });
-          } catch (e) {
-            this.warn(
-              `Encountered error handling time based steps`,
-              this.minuteTasks.name,
-              session
-            );
-            this.error(e, this.minuteTasks.name, session);
+                  owner:
+                    await this.accountsService.findOrganizationOwnerByWorkspaceId(
+                      step.workspace.id,
+                      session
+                    ),
+                  session: session,
+                  journey: journeys[journeyIndex],
+                  customer: await this.customerModel
+                    .findById(locations[locationsIndex].customer)
+                    .exec(),
+                  location: locations[locationsIndex],
+                  branch,
+                },
+                opts: {
+                  jobId: generateUniqueJobId({
+                    step: step,
+                    ownerID: step.workspace.organization.owner.id,
+                    journeyID: journeys[journeyIndex].id,
+                    customerID: locations[locationsIndex].customer,
+                  }),
+                },
+              });
+            } catch (e) {
+              this.warn(
+                `Encountered error handling time based steps`,
+                this.minuteTasks.name,
+                session
+              );
+              this.error(e, this.minuteTasks.name, session);
+            }
           }
         }
-      }
-      await queryRunner.commitTransaction();
-    } catch (e) {
-      timeBasedErr = e;
-      this.warn(
-        `Encountered error handling time based steps`,
-        this.minuteTasks.name,
-        session
-      );
-      this.error(e, this.minuteTasks.name, session);
-      await queryRunner.rollbackTransaction();
-    } finally {
-      await queryRunner.release();
-    }
-    if (!timeBasedErr) await this.transitionQueue.addBulk(timeBasedJobs);
-
-    // Handle expiry of recovery emails
-    let recoveryErr: any;
-    try {
-      await this.recoveryRepository
-        .createQueryBuilder()
-        .where(`now() > recovery."createdAt"::TIMESTAMP + INTERVAL '1 HOUR'`)
-        .delete()
-        .execute();
-    } catch (e) {
-      recoveryErr = e;
-      this.warn(
-        `Encountered error handling expiry of recovery emails`,
-        this.minuteTasks.name,
-        session
-      );
-      this.error(e, this.minuteTasks.name, session);
-    }
-
-    // Handle organization invte expiry
-    let orgInviteErr: any;
-    try {
-      await this.organizationInvitesRepository
-        .createQueryBuilder()
-        .where(
-          `now() > organization_invites."createdAt"::TIMESTAMP + INTERVAL '1 DAY'`
-        )
-        .delete()
-        .execute();
-    } catch (e) {
-      orgInviteErr = e;
-      this.warn(
-        `Encountered error handling expiry of organization invites`,
-        this.minuteTasks.name,
-        session
-      );
-      this.error(e, this.minuteTasks.name, session);
-    }
-
-    // Handle requeueing messages for quiet hours/rate limiting
-    let requeueErr: any;
-    queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const requeuedMessages = await this.stepsService.getRequeuedMessages(
-        session,
-        queryRunner
-      );
-      const bulkJobs: { name: string; data: any }[] = [];
-      for (const requeue of requeuedMessages) {
-        // THIS MIGHT BE SLOWER THAN WE WANT querying for the customer from mongo.
-        // findAndLock only uses customer.id, but the function currently
-        // only accepts the whole customer document. Consider changing
-        const customer = await this.customersService.findByCustomerId(
-          requeue.customerId,
-          undefined
+        await queryRunner.commitTransaction();
+      } catch (e) {
+        timeBasedErr = e;
+        this.warn(
+          `Encountered error handling time based steps`,
+          this.minuteTasks.name,
+          session
         );
-        await this.journeyLocationsService.findAndLock(
-          requeue.step.journey,
-          customer,
+        this.error(e, this.minuteTasks.name, session);
+        await queryRunner.rollbackTransaction();
+      } finally {
+        await queryRunner.release();
+      }
+      if (!timeBasedErr) await this.transitionQueue.addBulk(timeBasedJobs);
+
+      // Handle expiry of recovery emails
+      let recoveryErr: any;
+      try {
+        await this.recoveryRepository
+          .createQueryBuilder()
+          .where(`now() > recovery."createdAt"::TIMESTAMP + INTERVAL '1 HOUR'`)
+          .delete()
+          .execute();
+      } catch (e) {
+        recoveryErr = e;
+        this.warn(
+          `Encountered error handling expiry of recovery emails`,
+          this.minuteTasks.name,
+          session
+        );
+        this.error(e, this.minuteTasks.name, session);
+      }
+
+      // Handle organization invte expiry
+      let orgInviteErr: any;
+      try {
+        await this.organizationInvitesRepository
+          .createQueryBuilder()
+          .where(
+            `now() > organization_invites."createdAt"::TIMESTAMP + INTERVAL '1 DAY'`
+          )
+          .delete()
+          .execute();
+      } catch (e) {
+        orgInviteErr = e;
+        this.warn(
+          `Encountered error handling expiry of organization invites`,
+          this.minuteTasks.name,
+          session
+        );
+        this.error(e, this.minuteTasks.name, session);
+      }
+
+      // Handle requeueing messages for quiet hours/rate limiting
+      let requeueErr: any;
+      queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        const requeuedMessages = await this.stepsService.getRequeuedMessages(
           session,
-          requeue?.workspace?.organization?.owner,
           queryRunner
         );
-        await bulkJobs.push({
-          name: StepType.MESSAGE,
-          data: {
-            owner: requeue.workspace?.organization?.owner,
-            journey: requeue.step.journey,
-            step: requeue.step,
+        const bulkJobs: { name: string; data: any }[] = [];
+        for (const requeue of requeuedMessages) {
+          // THIS MIGHT BE SLOWER THAN WE WANT querying for the customer from mongo.
+          // findAndLock only uses customer.id, but the function currently
+          // only accepts the whole customer document. Consider changing
+          const customer = await this.customersService.findByCustomerId(
+            requeue.customerId,
+            undefined
+          );
+          await this.journeyLocationsService.findAndLock(
+            requeue.step.journey,
+            customer,
             session,
-            customerID: requeue.customerId,
-          },
-        });
-        await queryRunner.manager.remove(requeue);
+            requeue?.workspace?.organization?.owner,
+            queryRunner
+          );
+          await bulkJobs.push({
+            name: StepType.MESSAGE,
+            data: {
+              owner: requeue.workspace?.organization?.owner,
+              journey: requeue.step.journey,
+              step: requeue.step,
+              session,
+              customerID: requeue.customerId,
+            },
+          });
+          await queryRunner.manager.remove(requeue);
+        }
+        await this.transitionQueue.addBulk(bulkJobs);
+        await queryRunner.commitTransaction();
+      } catch (e) {
+        requeueErr = e;
+        this.warn(
+          `Encountered error requeueing messages`,
+          this.minuteTasks.name,
+          session
+        );
+        this.error(e, this.minuteTasks.name, session);
+        await queryRunner.rollbackTransaction();
+      } finally {
+        await queryRunner.release();
       }
-      await this.transitionQueue.addBulk(bulkJobs);
-      await queryRunner.commitTransaction();
-    } catch (e) {
-      requeueErr = e;
-      this.warn(
-        `Encountered error requeueing messages`,
-        this.minuteTasks.name,
-        session
-      );
-      this.error(e, this.minuteTasks.name, session);
-      await queryRunner.rollbackTransaction();
-    } finally {
-      await queryRunner.release();
-    }
+    });
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -612,124 +615,130 @@ export class CronService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleEventKeysCron() {
-    const session = randomUUID();
-    try {
-      let current = 0;
-      const documentsCount = await this.eventModel
-        .estimatedDocumentCount()
-        .exec();
-
-      const keys: Record<string, { value: any; workspaceId: string }[]> = {};
-
-      while (current < documentsCount) {
-        const batch = await this.eventModel
-          .find()
-          .skip(current)
-          .limit(BATCH_SIZE)
+    return Sentry.startSpan({ name: "CronService.handleEventKeysCron" }, async () => {
+      const session = randomUUID();
+      try {
+        let current = 0;
+        const documentsCount = await this.eventModel
+          .estimatedDocumentCount()
           .exec();
 
-        batch.forEach((event) => {
-          const workspaceId = event.workspaceId;
-          const obj = (event.toObject() as any)?.event || {};
-          for (const key of Object.keys(obj)) {
-            if (KEYS_TO_SKIP.includes(key)) continue;
+        const keys: Record<string, { value: any; workspaceId: string }[]> = {};
 
-            if (keys[key]) {
-              keys[key].push({ value: obj[key], workspaceId });
-              continue;
-            }
-
-            keys[key] = [{ value: obj[key], workspaceId }];
-          }
-        });
-
-        current += BATCH_SIZE;
-      }
-
-      for (const key of Object.keys(keys)) {
-        const validItems = keys[key].filter(
-          (item) =>
-            item.value !== '' && item.value !== undefined && item.value !== null
-        );
-
-        if (!validItems.length) continue;
-
-        let batchToSave = [];
-        for (const validItem of validItems) {
-          const keyType = getType(validItem.value);
-          const isArray = keyType.isArray();
-          let type = isArray ? getType(validItem.value[0]).name : keyType.name;
-
-          if (type === 'String') {
-            if (isEmail(validItem.value)) type = 'Email';
-            if (isDateString(validItem.value)) type = 'Date';
-          }
-
-          const eventKey = {
-            key,
-            type,
-            isArray,
-            workspaceId: validItem.workspaceId,
-          };
-
-          const foundEventKey = await this.eventKeysModel
-            .findOne(eventKey)
+        while (current < documentsCount) {
+          const batch = await this.eventModel
+            .find()
+            .skip(current)
+            .limit(BATCH_SIZE)
             .exec();
 
-          if (!foundEventKey) {
-            batchToSave.push(eventKey);
-          }
+          batch.forEach((event) => {
+            const workspaceId = event.workspaceId;
+            const obj = (event.toObject() as any)?.event || {};
+            for (const key of Object.keys(obj)) {
+              if (KEYS_TO_SKIP.includes(key)) continue;
 
-          if (batchToSave.length > BATCH_SIZE) {
-            await this.eventKeysModel.insertMany(batchToSave);
-            batchToSave = [];
-          }
+              if (keys[key]) {
+                keys[key].push({ value: obj[key], workspaceId });
+                continue;
+              }
+
+              keys[key] = [{ value: obj[key], workspaceId }];
+            }
+          });
+
+          current += BATCH_SIZE;
         }
-        await this.eventKeysModel.insertMany(batchToSave);
+
+        for (const key of Object.keys(keys)) {
+          const validItems = keys[key].filter(
+            (item) =>
+              item.value !== '' && item.value !== undefined && item.value !== null
+          );
+
+          if (!validItems.length) continue;
+
+          let batchToSave = [];
+          for (const validItem of validItems) {
+            const keyType = getType(validItem.value);
+            const isArray = keyType.isArray();
+            let type = isArray ? getType(validItem.value[0]).name : keyType.name;
+
+            if (type === 'String') {
+              if (isEmail(validItem.value)) type = 'Email';
+              if (isDateString(validItem.value)) type = 'Date';
+            }
+
+            const eventKey = {
+              key,
+              type,
+              isArray,
+              workspaceId: validItem.workspaceId,
+            };
+
+            const foundEventKey = await this.eventKeysModel
+              .findOne(eventKey)
+              .exec();
+
+            if (!foundEventKey) {
+              batchToSave.push(eventKey);
+            }
+
+            if (batchToSave.length > BATCH_SIZE) {
+              await this.eventKeysModel.insertMany(batchToSave);
+              batchToSave = [];
+            }
+          }
+          await this.eventKeysModel.insertMany(batchToSave);
+        }
+      } catch (e) {
+        this.error(e, this.handleEventKeysCron.name, session);
       }
-    } catch (e) {
-      this.error(e, this.handleEventKeysCron.name, session);
-    }
+    });
   }
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleVerificationCheck() {
-    const session = randomUUID();
-    try {
-      await this.verificationRepository
-        .createQueryBuilder()
-        .where(
-          `verification.status = 'sent' AND now() > verification."createdAt"::TIMESTAMP + INTERVAL '1 HOUR'`
-        )
-        .update({ status: 'expired' })
-        .execute();
-    } catch (e) {
-      this.error(e, this.handleVerificationCheck.name, session);
-    }
+    return Sentry.startSpan({ name: "CronService.handleVerificationCheck" }, async () => {
+      const session = randomUUID();
+      try {
+        await this.verificationRepository
+          .createQueryBuilder()
+          .where(
+            `verification.status = 'sent' AND now() > verification."createdAt"::TIMESTAMP + INTERVAL '1 HOUR'`
+          )
+          .update({ status: 'expired' })
+          .execute();
+      } catch (e) {
+        this.error(e, this.handleVerificationCheck.name, session);
+      }
+    });
   }
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleIntegrations() {
-    const integrationsNumber = await this.integrationsRepository.countBy({
-      status: IntegrationStatus.ACTIVE,
-    });
-
-    let offset = 0;
-
-    while (offset < integrationsNumber) {
-      const integrationsBatch = await this.integrationsRepository.find({
-        where: { status: IntegrationStatus.ACTIVE },
-        relations: ['database', 'owner'],
-        take: BATCH_SIZE,
-        skip: offset,
+    return Sentry.startSpan({ name: "CronService.handleIntegrations" }, async () => {
+      const integrationsNumber = await this.integrationsRepository.countBy({
+        status: IntegrationStatus.ACTIVE,
       });
 
-      for (const integration of integrationsBatch) {
-        await this.integrationsService.handleIntegration(integration);
-      }
+      let offset = 0;
 
-      offset += BATCH_SIZE;
-    }
+      while (offset < integrationsNumber) {
+        const integrationsBatch = await this.integrationsRepository.find({
+          where: { status: IntegrationStatus.ACTIVE },
+          relations: ['database', 'owner'],
+          take: BATCH_SIZE,
+          skip: offset,
+        });
+
+        for (const integration of integrationsBatch) {
+          await this.integrationsService.handleIntegration(integration);
+        }
+
+        offset += BATCH_SIZE;
+      }
+    });
   }
 
   /*
@@ -766,117 +775,119 @@ export class CronService {
    */
   @Cron(CronExpression.EVERY_10_MINUTES)
   async updateStatementsWithMessageEvents() {
-    const session = randomUUID();
-    let err;
-    //console.log("about to run updateStatementsWithMessageEvents");
-    // for each organization, get all segments
-    // to do change this to organisations rather than
-    const accounts = await this.accountsService.findAll();
-    for (let j = 0; j < accounts.length; j++) {
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-      const segmentPrefixes: string[] = [];
-      //we keep for logging
-      let segmentError: string;
-      try {
-        const segments = await this.segmentsService.getSegments(
-          accounts[j],
-          undefined,
-          queryRunner
-        );
-        // for each segment check if it has a message component
-        for (const segment of segments) {
-          if (!segment.inclusionCriteria || !segment.inclusionCriteria.query) {
-            continue; // Skip to the next iteration of the loop
-          }
-
-          const doInclude = this.checkSegmentHasMessageFilters(
-            segment.inclusionCriteria.query,
-            accounts[j].id,
-            session
+    return Sentry.startSpan({ name: "CronService.updateStatementsWithMessageEvents" }, async () => {
+      const session = randomUUID();
+      let err;
+      //console.log("about to run updateStatementsWithMessageEvents");
+      // for each organization, get all segments
+      // to do change this to organisations rather than
+      const accounts = await this.accountsService.findAll();
+      for (let j = 0; j < accounts.length; j++) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        const segmentPrefixes: string[] = [];
+        //we keep for logging
+        let segmentError: string;
+        try {
+          const segments = await this.segmentsService.getSegments(
+            accounts[j],
+            undefined,
+            queryRunner
           );
+          // for each segment check if it has a message component
+          for (const segment of segments) {
+            if (!segment.inclusionCriteria || !segment.inclusionCriteria.query) {
+              continue; // Skip to the next iteration of the loop
+            }
+
+            const doInclude = this.checkSegmentHasMessageFilters(
+              segment.inclusionCriteria.query,
+              accounts[j].id,
+              session
+            );
+            this.debug(
+              `we updated doInclude: ${doInclude}`,
+              this.updateStatementsWithMessageEvents.name,
+              session,
+              accounts[j].id
+            );
+            if (doInclude) {
+              // If segment includes message filters recalculate which customers should be in the segment
+              const collectionPrefix =
+                this.segmentsService.generateRandomString();
+              segmentError = segment.name;
+              this.debug(
+                `segment is: ${segment}`,
+                this.updateStatementsWithMessageEvents.name,
+                session,
+                accounts[j].id
+              );
+              this.debug(
+                `chron prefix for segment is: ${collectionPrefix}`,
+                this.updateStatementsWithMessageEvents.name,
+                session,
+                accounts[j].id
+              );
+              segmentPrefixes.push(collectionPrefix);
+              const customersInSegment =
+                await this.customersService.getSegmentCustomersFromQuery(
+                  segment.inclusionCriteria.query,
+                  accounts[j],
+                  session,
+                  true,
+                  0,
+                  collectionPrefix
+                );
+
+              this.debug(
+                `we have customersInSegment: ${customersInSegment}`,
+                this.updateStatementsWithMessageEvents.name,
+                session,
+                accounts[j].id
+              );
+              // update the segment customer table
+              //try {
+              //collectionName: string,account: Account,segmentId: string,session: string,queryRunner: QueryRunner,batchSize: number = 500 //
+              await this.segmentsService.updateSegmentCustomersBatched(
+                customersInSegment,
+                accounts[j],
+                segment.id,
+                session,
+                queryRunner,
+                500
+              );
+              // drop the collections after adding customer segments
+              await this.segmentsService.deleteCollectionsWithPrefix(
+                collectionPrefix
+              );
+            }
+          }
+          await queryRunner.commitTransaction();
+        } catch (error) {
           this.debug(
-            `we updated doInclude: ${doInclude}`,
+            `error updating segment: ${segmentError}`,
             this.updateStatementsWithMessageEvents.name,
             session,
             accounts[j].id
           );
-          if (doInclude) {
-            // If segment includes message filters recalculate which customers should be in the segment
-            const collectionPrefix =
-              this.segmentsService.generateRandomString();
-            segmentError = segment.name;
-            this.debug(
-              `segment is: ${segment}`,
-              this.updateStatementsWithMessageEvents.name,
-              session,
-              accounts[j].id
-            );
-            this.debug(
-              `chron prefix for segment is: ${collectionPrefix}`,
-              this.updateStatementsWithMessageEvents.name,
-              session,
-              accounts[j].id
-            );
-            segmentPrefixes.push(collectionPrefix);
-            const customersInSegment =
-              await this.customersService.getSegmentCustomersFromQuery(
-                segment.inclusionCriteria.query,
-                accounts[j],
-                session,
-                true,
-                0,
-                collectionPrefix
-              );
-
-            this.debug(
-              `we have customersInSegment: ${customersInSegment}`,
-              this.updateStatementsWithMessageEvents.name,
-              session,
-              accounts[j].id
-            );
-            // update the segment customer table
-            //try {
-            //collectionName: string,account: Account,segmentId: string,session: string,queryRunner: QueryRunner,batchSize: number = 500 //
-            await this.segmentsService.updateSegmentCustomersBatched(
-              customersInSegment,
-              accounts[j],
-              segment.id,
-              session,
-              queryRunner,
-              500
-            );
-            // drop the collections after adding customer segments
-            await this.segmentsService.deleteCollectionsWithPrefix(
-              collectionPrefix
-            );
+          this.error(
+            error,
+            this.updateStatementsWithMessageEvents.name,
+            session,
+            accounts[j].id
+          );
+          //drop extraneous collections in case of error
+          for (const prefix of segmentPrefixes) {
+            await this.segmentsService.deleteCollectionsWithPrefix(prefix);
           }
+          await queryRunner.rollbackTransaction();
+          err = error;
+        } finally {
+          await queryRunner.release();
         }
-        await queryRunner.commitTransaction();
-      } catch (error) {
-        this.debug(
-          `error updating segment: ${segmentError}`,
-          this.updateStatementsWithMessageEvents.name,
-          session,
-          accounts[j].id
-        );
-        this.error(
-          error,
-          this.updateStatementsWithMessageEvents.name,
-          session,
-          accounts[j].id
-        );
-        //drop extraneous collections in case of error
-        for (const prefix of segmentPrefixes) {
-          await this.segmentsService.deleteCollectionsWithPrefix(prefix);
-        }
-        await queryRunner.rollbackTransaction();
-        err = error;
-      } finally {
-        await queryRunner.release();
       }
-    }
+    });
   }
 
   // @Cron(CronExpression.EVERY_DAY_AT_NOON)
@@ -1230,174 +1241,178 @@ export class CronService {
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async cleanTrashSteps() {
-    const session = randomUUID();
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    this.log('Start cleaning unused steps', this.cleanTrashSteps.name, session);
-    try {
-      const data = await queryRunner.query(`
-          WITH active_journeys AS (
-            SELECT id, "visualLayout"
-            FROM journey
-            WHERE "isActive" = true or "isPaused" = true or "isStopped" = true or "isDeleted" = true
-        )
+    return Sentry.startSpan({ name: "CronService.cleanTrashSteps" }, async () => {
+      const session = randomUUID();
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      this.log('Start cleaning unused steps', this.cleanTrashSteps.name, session);
+      try {
+        const data = await queryRunner.query(`
+            WITH active_journeys AS (
+              SELECT id, "visualLayout"
+              FROM journey
+              WHERE "isActive" = true or "isPaused" = true or "isStopped" = true or "isDeleted" = true
+          )
 
-        , step_ids_to_keep AS (
-            SELECT 
-                aj.id as journey_id,
-                (node->'data'->>'stepId')::uuid as step_id
-            FROM active_journeys aj
-            CROSS JOIN LATERAL jsonb_array_elements("visualLayout"->'nodes') as node
-            WHERE node->'data' ? 'stepId'
-        )
+          , step_ids_to_keep AS (
+              SELECT 
+                  aj.id as journey_id,
+                  (node->'data'->>'stepId')::uuid as step_id
+              FROM active_journeys aj
+              CROSS JOIN LATERAL jsonb_array_elements("visualLayout"->'nodes') as node
+              WHERE node->'data' ? 'stepId'
+          )
 
-        DELETE FROM step s
-        WHERE s."journeyId" IN (SELECT id FROM active_journeys)
-        AND (s."journeyId", s.id) NOT IN (SELECT journey_id, step_id FROM step_ids_to_keep);
-      `);
-      await queryRunner.commitTransaction();
-      this.log(
-        `Finish cleaning unused steps, removed: ${data[1]}`,
-        this.cleanTrashSteps.name,
-        session
-      );
-    } catch (e) {
-      await queryRunner.rollbackTransaction();
-      this.error(e, this.cleanTrashSteps.name, session);
-    } finally {
-      await queryRunner.release();
-    }
+          DELETE FROM step s
+          WHERE s."journeyId" IN (SELECT id FROM active_journeys)
+          AND (s."journeyId", s.id) NOT IN (SELECT journey_id, step_id FROM step_ids_to_keep);
+        `);
+        await queryRunner.commitTransaction();
+        this.log(
+          `Finish cleaning unused steps, removed: ${data[1]}`,
+          this.cleanTrashSteps.name,
+          session
+        );
+      } catch (e) {
+        await queryRunner.rollbackTransaction();
+        this.error(e, this.cleanTrashSteps.name, session);
+      } finally {
+        await queryRunner.release();
+      }
+    });
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleEntryTiming() {
-    const session = randomUUID();
-    let triggerStartTasks;
-    const queryRunner = this.dataSource.createQueryRunner();
-    const client = await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      // Step 1: Find all journeys that are delayed
-      const delayedJourneys = await queryRunner.manager
-        .createQueryBuilder(Journey, 'journey')
-        .leftJoinAndSelect('journey.workspace', 'workspace') // Assuming 'owner' is the relation property in the Journey entity
-        .leftJoinAndSelect('workspace.organization', 'organization') // Assuming 'owner' is the relation property in the Journey entity
-        .leftJoinAndSelect('organization.owner', 'account') // Assuming 'owner' is the relation property in the Journey entity
-        .leftJoinAndSelect('account.teams', 'teams') // Assuming 'owner' is the relation property in the Journey entity
-        .leftJoinAndSelect('teams.organization', 'organization_two') // Assuming 'owner' is the relation property in the Journey entity
-        .leftJoinAndSelect('organization_two.workspaces', 'workspaces') // Assuming 'owner' is the relation property in the Journey entity
-        .where(
-          'journey."journeyEntrySettings"->\'entryTiming\'->>\'type\' = :type AND journey."isActive" = true',
-          {
-            type: EntryTiming.SpecificTime,
-          }
-        )
-        .getMany();
-      // Step 2: Filter all journeys that are eligible to be re-enrolled
-      for (
-        let journeysIndex = 0;
-        journeysIndex < delayedJourneys.length;
-        journeysIndex++
-      ) {
-        let enroll = false;
-        if (
-          delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
-            .frequency === EntryTimingFrequency.Once
+    return Sentry.startSpan({ name: "CronService.handleEntryTiming" }, async () => {
+      const session = randomUUID();
+      let triggerStartTasks;
+      const queryRunner = this.dataSource.createQueryRunner();
+      const client = await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        // Step 1: Find all journeys that are delayed
+        const delayedJourneys = await queryRunner.manager
+          .createQueryBuilder(Journey, 'journey')
+          .leftJoinAndSelect('journey.workspace', 'workspace') // Assuming 'owner' is the relation property in the Journey entity
+          .leftJoinAndSelect('workspace.organization', 'organization') // Assuming 'owner' is the relation property in the Journey entity
+          .leftJoinAndSelect('organization.owner', 'account') // Assuming 'owner' is the relation property in the Journey entity
+          .leftJoinAndSelect('account.teams', 'teams') // Assuming 'owner' is the relation property in the Journey entity
+          .leftJoinAndSelect('teams.organization', 'organization_two') // Assuming 'owner' is the relation property in the Journey entity
+          .leftJoinAndSelect('organization_two.workspaces', 'workspaces') // Assuming 'owner' is the relation property in the Journey entity
+          .where(
+            'journey."journeyEntrySettings"->\'entryTiming\'->>\'type\' = :type AND journey."isActive" = true',
+            {
+              type: EntryTiming.SpecificTime,
+            }
+          )
+          .getMany();
+        // Step 2: Filter all journeys that are eligible to be re-enrolled
+        for (
+          let journeysIndex = 0;
+          journeysIndex < delayedJourneys.length;
+          journeysIndex++
         ) {
+          let enroll = false;
           if (
+            delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
+              .frequency === EntryTimingFrequency.Once
+          ) {
+            if (
+              new Date(
+                delayedJourneys[
+                  journeysIndex
+                ].journeyEntrySettings?.entryTiming.time.startDate
+              ).getTime() < Date.now() &&
+              +delayedJourneys[journeysIndex].enrollment_count === 0
+            ) {
+              enroll = true;
+            }
+          } else if (
+            delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
+              .recurrence.endsOn === RecurrenceEndsOptions.After &&
+            +delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
+              .recurrence.endAdditionalValue <=
+              delayedJourneys[journeysIndex].enrollment_count - 1
+          ) {
+            continue;
+          } else if (
+            delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
+              .recurrence.endsOn === RecurrenceEndsOptions.SpecificDate &&
             new Date(
               delayedJourneys[
                 journeysIndex
-              ].journeyEntrySettings?.entryTiming.time.startDate
-            ).getTime() < Date.now() &&
-            +delayedJourneys[journeysIndex].enrollment_count === 0
+              ].journeyEntrySettings?.entryTiming.time.recurrence.endAdditionalValue
+            ).getTime() <= Date.now()
           ) {
-            enroll = true;
+            continue;
+          } else {
+            // TODO: Recurring enrollment
           }
-        } else if (
-          delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
-            .recurrence.endsOn === RecurrenceEndsOptions.After &&
-          +delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
-            .recurrence.endAdditionalValue <=
-            delayedJourneys[journeysIndex].enrollment_count - 1
-        ) {
-          continue;
-        } else if (
-          delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming.time
-            .recurrence.endsOn === RecurrenceEndsOptions.SpecificDate &&
-          new Date(
-            delayedJourneys[
-              journeysIndex
-            ].journeyEntrySettings?.entryTiming.time.recurrence.endAdditionalValue
-          ).getTime() <= Date.now()
-        ) {
-          continue;
-        } else {
-          // TODO: Recurring enrollment
-        }
-        if (enroll) {
-          this.log(
-            `Starting enrollment for journey ${delayedJourneys[journeysIndex].id}`,
-            this.handleEntryTiming.name,
-            session
-          );
-          const { collectionName, count } =
-            await this.customersService.getAudienceSize(
-              delayedJourneys[journeysIndex].workspace.organization.owner,
-              delayedJourneys[journeysIndex].inclusionCriteria,
-              session,
-              null
+          if (enroll) {
+            this.log(
+              `Starting enrollment for journey ${delayedJourneys[journeysIndex].id}`,
+              this.handleEntryTiming.name,
+              session
             );
-          // if (collectionName) collectionNames.push(collectionName);
-          // Step 3: Edit journey details
-          await queryRunner.manager.save(Journey, {
-            ...delayedJourneys[journeysIndex],
-            enrollment_count:
-              delayedJourneys[journeysIndex].enrollment_count + 1,
-            last_enrollment_timestamp: Date.now(),
-          });
-          // Step 4: Reenroll customers that have been unenrolled
-          triggerStartTasks = await this.stepsService.triggerStart(
-            delayedJourneys[journeysIndex].workspace.organization.owner,
-            delayedJourneys[journeysIndex],
-            delayedJourneys[journeysIndex].inclusionCriteria,
-            delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
-              ?.enabled &&
-              count >
-                parseInt(
-                  delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
-                    ?.maxEntries
-                )
-              ? parseInt(
-                  delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
-                    ?.maxEntries
-                )
-              : count,
-            queryRunner,
-            client,
-            session,
-            collectionName
-          );
-          // if (triggerStartTasks.collectionName)
-          //   collectionNames.push(triggerStartTasks.collectionName);
+            const { collectionName, count } =
+              await this.customersService.getAudienceSize(
+                delayedJourneys[journeysIndex].workspace.organization.owner,
+                delayedJourneys[journeysIndex].inclusionCriteria,
+                session,
+                null
+              );
+            // if (collectionName) collectionNames.push(collectionName);
+            // Step 3: Edit journey details
+            await queryRunner.manager.save(Journey, {
+              ...delayedJourneys[journeysIndex],
+              enrollment_count:
+                delayedJourneys[journeysIndex].enrollment_count + 1,
+              last_enrollment_timestamp: Date.now(),
+            });
+            // Step 4: Reenroll customers that have been unenrolled
+            triggerStartTasks = await this.stepsService.triggerStart(
+              delayedJourneys[journeysIndex].workspace.organization.owner,
+              delayedJourneys[journeysIndex],
+              delayedJourneys[journeysIndex].inclusionCriteria,
+              delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
+                ?.enabled &&
+                count >
+                  parseInt(
+                    delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
+                      ?.maxEntries
+                  )
+                ? parseInt(
+                    delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
+                      ?.maxEntries
+                  )
+                : count,
+              queryRunner,
+              client,
+              session,
+              collectionName
+            );
+            // if (triggerStartTasks.collectionName)
+            //   collectionNames.push(triggerStartTasks.collectionName);
+          }
         }
+        await queryRunner.commitTransaction();
+        // for (const collection of collectionNames) {
+        //   await this.connection.dropCollection(collection);
+        // }
+        if (triggerStartTasks?.job)
+          await this.startQueue.add(
+            triggerStartTasks.job.name,
+            triggerStartTasks.job.data
+          );
+      } catch (e) {
+        this.error(e, this.handleEntryTiming.name, session);
+        await queryRunner.rollbackTransaction();
+      } finally {
+        await queryRunner.release();
       }
-      await queryRunner.commitTransaction();
-      // for (const collection of collectionNames) {
-      //   await this.connection.dropCollection(collection);
-      // }
-      if (triggerStartTasks?.job)
-        await this.startQueue.add(
-          triggerStartTasks.job.name,
-          triggerStartTasks.job.data
-        );
-    } catch (e) {
-      this.error(e, this.handleEntryTiming.name, session);
-      await queryRunner.rollbackTransaction();
-    } finally {
-      await queryRunner.release();
-    }
+    });
   }
 }
 
