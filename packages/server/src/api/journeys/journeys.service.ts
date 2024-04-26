@@ -83,6 +83,8 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { JourneyChange } from './entities/journey-change.entity';
 import isObjectDeepEqual from '@/utils/isObjectDeepEqual';
 import { JourneyLocation } from './entities/journey-location.entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 export enum JourneyStatus {
   ACTIVE = 'Active',
@@ -247,7 +249,8 @@ export class JourneysService {
     private readonly journeyLocationsService: JourneyLocationsService,
     @InjectQueue('transition') private readonly transitionQueue: Queue,
     @Inject(RedisService) private redisService: RedisService,
-    @InjectQueue('enrollment') private readonly enrollmentQueue: Queue
+    @InjectQueue('enrollment') private readonly enrollmentQueue: Queue,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache
   ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -1408,6 +1411,12 @@ export class JourneysService {
         }
       );
       await this.trackChange(account, id);
+
+      // invalidate journeys cache entry set in eventPreprocessor
+      if(workspace) {
+        await this.cacheManager.del(`journeys:${workspace.id}`);
+      }
+
       return result;
     } catch (err) {
       this.error(err, this.markDeleted.name, session, account.email);
@@ -1457,6 +1466,11 @@ export class JourneysService {
 
       await this.trackChange(account, journeyResult.id);
 
+      // invalidate journeys cache entry set in eventPreprocessor
+      if(workspace) {
+        await this.cacheManager.del(`journeys:${workspace.id}`);
+      }
+      
       return journeyResult;
     } catch (error) {
       this.error(error, this.setPaused.name, session, account.email);
@@ -1502,6 +1516,11 @@ export class JourneysService {
 
       if (!journey.inclusionCriteria)
         throw new Error('To start journey a filter should be defined');
+
+      // invalidate journeys cache entry set in eventPreprocessor
+      if(workspace) {
+        await this.cacheManager.del(`journeys:${workspace.id}`);
+      }
 
       const graph = new Graph();
       const steps = await this.stepsService.transactionalfindByJourneyID(
@@ -1607,6 +1626,11 @@ export class JourneysService {
       });
 
       await this.trackChange(account, journeyResult.id);
+
+      // invalidate journeys cache entry set in eventPreprocessor
+      if(workspace) {
+        await this.cacheManager.del(`journeys:${workspace.id}`);
+      }
     } catch (err) {
       this.error(err, this.stop.name, session, account.email);
       throw err;
