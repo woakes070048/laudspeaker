@@ -57,9 +57,8 @@ import { StepsService } from '../steps.service';
 import { Journey } from '@/api/journeys/entities/journey.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Workspaces } from '@/api/workspaces/entities/workspaces.entity';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity';
+import { CacheService } from '@/common/services/cache.service';
 
 @Injectable()
 @Processor('transition', {
@@ -100,7 +99,7 @@ export class TransitionProcessor extends WorkerHost {
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,
     @Inject(StepsService) private stepsService: StepsService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache
+    @Inject(CacheService) private cacheService: CacheService
   ) {
     super();
   }
@@ -749,20 +748,9 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
 
-    let template: Template = await this.cacheManager.get(
-      `template:${step.metadata.template}`
-    );
-
-    if (!template) {
-      template = await this.templatesService.lazyFindByID(
-        step.metadata.template
-      );
-      await this.cacheManager.set(
-        `template:${step.metadata.template}`,
-        template,
-        5000
-      );
-    }
+    let template: Template = await this.cacheService.getIgnoreError(Template, step.metadata.template, async () => {
+      return await this.templatesService.lazyFindByID(step.metadata.template);
+    });
 
     if (
       messageSendType === 'SEND' &&
@@ -1144,22 +1132,9 @@ export class TransitionProcessor extends WorkerHost {
       return;
     }
 
-    let nextStep: Step;
-
-    if (step.metadata.destination) {
-      nextStep = await this.cacheManager.get(
-        `step:${step.metadata.destination}`
-      );
-      if (!nextStep) {
-        nextStep = await this.stepsService.lazyFindByID(
-          step.metadata.destination
-        );
-        await this.cacheManager.set(
-          `step:${step.metadata.destination}`,
-          nextStep
-        );
-      }
-    }
+    let nextStep: Step = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
+      return await this.stepsService.lazyFindByID(step.metadata.destination);
+    });
 
     if (nextStep) {
       if (
@@ -1209,18 +1184,10 @@ export class TransitionProcessor extends WorkerHost {
     event?: string
   ) {
     let job;
-    let nextStep: Step = await this.cacheManager.get(
-      `step:${step.metadata.destination}`
-    );
-    if (!nextStep) {
-      nextStep = await this.stepsService.lazyFindByID(
-        step.metadata.destination
-      );
-      await this.cacheManager.set(
-        `step:${step.metadata.destination}`,
-        nextStep
-      );
-    }
+
+    let nextStep: Step = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
+      return await this.stepsService.lazyFindByID(step.metadata.destination);
+    });
 
     if (nextStep) {
       if (
@@ -1295,18 +1262,11 @@ export class TransitionProcessor extends WorkerHost {
         unit: 'millisecond',
       })
     ) {
-      nextStep = await this.cacheManager.get(
-        `step:${step.metadata.destination}`
-      );
-      if (!nextStep) {
-        nextStep = await this.stepsService.lazyFindByID(
-          step.metadata.destination
-        );
-        await this.cacheManager.set(
-          `step:${step.metadata.destination}`,
-          nextStep
-        );
-      }
+
+      nextStep = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
+        return await this.stepsService.lazyFindByID(step.metadata.destination);
+      });
+
       if (nextStep) {
         if (
           nextStep.type !== StepType.TIME_DELAY &&
@@ -1397,18 +1357,10 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
     if (moveCustomer) {
-      nextStep = await this.cacheManager.get(
-        `step:${step.metadata.destination}`
-      );
-      if (!nextStep) {
-        nextStep = await this.stepsService.lazyFindByID(
-          step.metadata.destination
-        );
-        await this.cacheManager.set(
-          `step:${step.metadata.destination}`,
-          nextStep
-        );
-      }
+      nextStep = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
+        return await this.stepsService.lazyFindByID(step.metadata.destination);
+      });
+
       if (nextStep) {
         if (
           nextStep.type !== StepType.TIME_DELAY &&
@@ -1544,18 +1496,10 @@ export class TransitionProcessor extends WorkerHost {
         }
       }
       if (moveCustomer) {
-        nextStep = await this.cacheManager.get(
-          `step:${step.metadata.timeBranch?.destination}`
-        );
-        if (!nextStep) {
-          nextStep = await this.stepsService.lazyFindByID(
-            step.metadata.timeBranch?.destination
-          );
-          await this.cacheManager.set(
-            `step:${step.metadata.timeBranch?.destination}`,
-            nextStep
-          );
-        }
+        nextStep = await this.cacheService.getIgnoreError(Step, step.metadata.timeBranch?.destination, async () => {
+          return await this.stepsService.lazyFindByID(step.metadata.timeBranch?.destination);
+        });
+
         if (nextStep) {
           if (
             nextStep.type !== StepType.TIME_DELAY &&
@@ -1587,28 +1531,14 @@ export class TransitionProcessor extends WorkerHost {
         await this.journeyLocationsService.unlock(location, step);
       }
     } else if (branch > -1 && step.metadata.branches.length > 0) {
-      nextStep = await this.cacheManager.get(
-        `step:${
-          step.metadata.branches.filter((branchItem) => {
-            return branchItem.index === branch;
-          })[0].destination
-        }`
-      );
-      if (!nextStep) {
-        nextStep = await this.stepsService.lazyFindByID(
-          step.metadata.branches.filter((branchItem) => {
-            return branchItem.index === branch;
-          })[0].destination
-        );
-        await this.cacheManager.set(
-          `step:${
-            step.metadata.branches.filter((branchItem) => {
-              return branchItem.index === branch;
-            })[0].destination
-          }`,
-          nextStep
-        );
-      }
+      let nextStepId = step.metadata.branches.filter((branchItem) => {
+        return branchItem.index === branch;
+      })[0].destination;
+
+      nextStep = await this.cacheService.getIgnoreError(Step, nextStepId, async () => {
+        return await this.stepsService.lazyFindByID(nextStepId);
+      });
+
       if (nextStep) {
         if (
           nextStep.type !== StepType.TIME_DELAY &&
@@ -1686,11 +1616,9 @@ export class TransitionProcessor extends WorkerHost {
     }
     if (!matches) nextStepId = step.metadata.allOthers;
 
-    nextStep = await this.cacheManager.get(`step:${nextStepId}`);
-    if (!nextStep) {
-      nextStep = await this.stepsService.lazyFindByID(nextStepId);
-      await this.cacheManager.set(`step:${nextStepId}`, nextStep);
-    }
+    nextStep = await this.cacheService.getIgnoreError(Step, nextStepId, async () => {
+      return await this.stepsService.lazyFindByID(nextStepId);
+    });
 
     if (nextStep) {
       if (
@@ -1737,18 +1665,10 @@ export class TransitionProcessor extends WorkerHost {
     event?: string
   ) {
     let job;
-    let nextStep: Step = await this.cacheManager.get(
-      `step:${step.metadata.destination}`
-    );
-    if (!nextStep) {
-      nextStep = await this.stepsService.lazyFindByID(
-        step.metadata.destination
-      );
-      await this.cacheManager.set(
-        `step:${step.metadata.destination}`,
-        nextStep
-      );
-    }
+
+    let nextStep: Step = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
+      return await this.stepsService.lazyFindByID(step.metadata.destination);
+    });
 
     if (nextStep) {
       if (
@@ -1801,12 +1721,9 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
 
-    nextStep = await this.cacheManager.get(`step:${nextBranch.destination}`);
-    if (!nextStep) {
-      nextStep = await this.stepsService.lazyFindByID(nextBranch.destination);
-      if (nextStep)
-        await this.cacheManager.set(`step:${nextBranch.destination}`, nextStep);
-    }
+    nextStep = await this.cacheService.getIgnoreError(Step, nextBranch.destination, async () => {
+      return await this.stepsService.lazyFindByID(nextBranch.destination);
+    });
 
     if (nextStep) {
       if (
