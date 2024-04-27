@@ -27,50 +27,151 @@ const recursivelyDeleteKeysFromObject = (
   }
 };
 
+const dumpString = (key: string, client: ReturnType<typeof createClient>) => {
+  return client.get(key);
+};
+
+const dumpHash = async (
+  key: string,
+  client: ReturnType<typeof createClient>
+) => {
+  const object = await client.hGetAll(key);
+
+  if (object.data) {
+    object.data = JSON.parse(object.data);
+
+    recursivelyDeleteKeysFromObject(object, KEYS_TO_DELETE_FROM_DATA);
+
+    object.data = JSON.stringify(object.data);
+  }
+
+  return object;
+};
+
+const dumpList = (key: string, client: ReturnType<typeof createClient>) => {
+  return client.lRange(key, 0, -1);
+};
+
+const dumpZSet = (key: string, client: ReturnType<typeof createClient>) => {
+  return client.zRangeWithScores(key, 0, -1);
+};
+
+const dumpStream = (key: string, client: ReturnType<typeof createClient>) => {
+  return client.xRange(key, '-', '+');
+};
+
 const dumpData = async (
   client: ReturnType<typeof createClient>,
   target: string
 ) => {
   const dump = {};
 
-  const { keys } = await client.scan(0, { MATCH: '*' });
+  let cursor = 0;
 
-  for (const key of keys) {
-    const type = await client.type(key);
+  do {
+    const res = await client.scan(cursor, { MATCH: '*' });
+    cursor = res.cursor;
 
-    if (type === 'string') {
-      const value = await client.get(key);
+    for (const key of res.keys) {
+      const type = await client.type(key);
 
-      dump[key] = value;
-    } else if (type === 'hash') {
-      const object = await client.hGetAll(key);
+      dump[key] = { type };
 
-      if (object.data) {
-        object.data = JSON.parse(object.data);
-
-        recursivelyDeleteKeysFromObject(object, KEYS_TO_DELETE_FROM_DATA);
-
-        object.data = JSON.stringify(object.data);
+      switch (type) {
+        case 'string':
+          dump[key].value = await dumpString(key, client);
+          break;
+        case 'hash':
+          dump[key].value = await dumpHash(key, client);
+          break;
+        case 'list':
+          dump[key].value = await dumpList(key, client);
+          break;
+        case 'zset':
+          dump[key].value = await dumpZSet(key, client);
+          break;
+        case 'stream':
+          dump[key].value = await dumpStream(key, client);
+          break;
+        default:
+          break;
       }
-
-      dump[key] = object;
     }
-  }
+  } while (cursor !== 0);
 
   fs.writeFileSync(target, JSON.stringify(dump, null, 2));
   console.log(`Data dumped successfully to ${target}`);
 };
+
+const uploadString = async (
+  key: string,
+  value: any,
+  client: ReturnType<typeof createClient>
+) => {
+  await client.set(key, value);
+};
+
+const uploadHash = async (
+  key: string,
+  value: any,
+  client: ReturnType<typeof createClient>
+) => {
+  await client.hSet(key, value);
+};
+
+const uploadList = async (
+  key: string,
+  value: any,
+  client: ReturnType<typeof createClient>
+) => {
+  await client.rPush(key, value);
+};
+
+const uploadZSet = async (
+  key: string,
+  value: any,
+  client: ReturnType<typeof createClient>
+) => {
+  await client.zAdd(key, value);
+};
+
+const uploadStream = async (
+  key: string,
+  value: any,
+  client: ReturnType<typeof createClient>
+) => {
+  for (const { id, message } of value) {
+    await client.xAdd(key, id, message);
+  }
+};
+
 const uploadData = async (
   client: ReturnType<typeof createClient>,
   target: string
 ) => {
   const dump = JSON.parse(fs.readFileSync(target).toString());
 
-  for (const [key, value] of Object.entries(dump)) {
-    if (typeof value === 'object') {
-      await client.hSet(key, value as any);
-    } else {
-      await client.set(key, value as any);
+  for (const [key, data] of Object.entries(dump)) {
+    const { type, value } = data as { type: string; value: unknown };
+
+    switch (type) {
+      case 'string':
+        await uploadString(key, value, client);
+        break;
+      case 'hash':
+        await uploadHash(key, value, client);
+        break;
+      case 'list':
+        await uploadList(key, value, client);
+        break;
+      case 'zset':
+        await uploadZSet(key, value, client);
+        break;
+      case 'stream':
+        await uploadStream(key, value, client);
+        break;
+      default:
+        break;
     }
   }
 
