@@ -12,8 +12,6 @@ export class CacheServiceInvalidValueError extends Error {
 
 @Injectable()
 export class CacheService {
-
-	readonly DEFAULT_EXPIRY = 5000;
 	
 	@Inject(CACHE_MANAGER) private cacheManager: Cache
 	constructor() {}
@@ -26,7 +24,7 @@ export class CacheService {
 	 * }, 10000);
 	 * let nextStep2 = await this.cacheService.get(Step, step.id);
 	 */
-	async get(klass: any, id: string, callbackFn?: () => any, expiry: number = this.DEFAULT_EXPIRY): Promise<any> {
+	async get(klass: any, id: string, callbackFn?: () => any, expiry?: number): Promise<any> {
 		const cacheKey = this.getCacheKey(klass, id);
 
 		const result = await this.getRaw(cacheKey, callbackFn, expiry);
@@ -34,7 +32,7 @@ export class CacheService {
 		return result;
 	}
 
-	async getIgnoreError(klass: any, id: string, callbackFn?: () => any, expiry: number = this.DEFAULT_EXPIRY): Promise<any> {
+	async getIgnoreError(klass: any, id: string, callbackFn?: () => any, expiry?: number): Promise<any> {
 		let cacheKey: string;
 
 		try {
@@ -59,7 +57,7 @@ export class CacheService {
 	 * });
 	 * let value = await this.cacheService.getRaw("some-cache-key");
 	 */
-	async getRaw(cacheKey: string, callbackFn?: () => any, expiry: number = this.DEFAULT_EXPIRY): Promise<any> {
+	async getRaw(cacheKey: string, callbackFn?: () => any, expiry?: number): Promise<any> {
 		this.assertValue(cacheKey);
 
 		const cachedValue: string = await this.cacheManager.get(cacheKey);
@@ -83,7 +81,7 @@ export class CacheService {
 	 *  return await this.stepsService.lazyFindByID(step.id); 
 	 * }, 10000);
 	 */
-	async set(klass: any, id: string, callbackFn: () => any, expiry: number = this.DEFAULT_EXPIRY) {
+	async set(klass: any, id: string, callbackFn: () => any, expiry?: number) {
 		const cacheKey = this.getCacheKey(klass, id);
 
 		await this.setRaw(cacheKey, callbackFn, expiry);
@@ -94,7 +92,7 @@ export class CacheService {
 	 *  return "hello-there";
 	 * });
 	 */
-	async setRaw(cacheKey: string, callbackFn: () => any, expiry: number = this.DEFAULT_EXPIRY) {
+	async setRaw(cacheKey: string, callbackFn: () => any, expiry?: number) {
 		this.assertValue(cacheKey);
 
 		const result = await callbackFn();
