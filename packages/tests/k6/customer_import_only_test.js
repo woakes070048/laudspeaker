@@ -60,7 +60,7 @@ export default function main() {
   reporter.log(`Creating account and organization`);
 
   // CREATE ACCOUNT and set Auth header
-  let { authorization, email, password } = createAccount(EMAIL, httpxWrapper);
+  let { authorization, email, password } = createAccount(EMAIL, httpxWrapper, `${BASE_URL}${API_ENDPOINT}`);
   console.log(authorization, email, password);
 
   reporter.report(`Finished creating account and organization.`);
@@ -161,136 +161,7 @@ export default function main() {
   reporter.removeTimer("startImport");
   reporter.removeTimer("customerImport");
 
-  // STEP 3 CREATE JOURNEY
-
-  reporter.setStep("JOURNEY_CREATION");
-  reporter.log(`Starting journey creation`);
-  reporter.addTimer(
-    "journeyCreation",
-    "Time elapsed to create a simple journey"
-  );
-  reporter.log(`Posting new journey`);
-  response = httpxWrapper.postOrFail(`${API_ENDPOINT}/journeys`, '{"name":"test"}');
-  let visualLayout = response.json("visualLayout");
-  const JOURNEY_ID = response.json("id");
-
-  reporter.log(`Journey created with id: ${JOURNEY_ID}`);
-
-  response = httpxWrapper.postOrFail(
-    `${API_ENDPOINT}/steps`,
-    `{"type":"message","journeyID":"${JOURNEY_ID}"}`
-  );
-
-  const START_STEP_NODE = visualLayout.nodes[0];
-  const START_STEP_EDGE = visualLayout.edges[0];
-  const MESSAGE_STEP_ID = response.json("id");
-
-  response = httpxWrapper.getOrFail(`${API_ENDPOINT}/templates`, {});
-  const TEMPLATE_ONE = response.json("data")[0];
-  let messageStepNode = visualLayout.nodes[1];
-  messageStepNode.type = "message";
-  messageStepNode.data = {
-    stepId: MESSAGE_STEP_ID,
-    type: "message",
-    customName: "Email 1",
-    template: {
-      type: "email",
-      selected: { id: TEMPLATE_ONE.id, name: TEMPLATE_ONE.name },
-    },
-  };
-
-  response = httpxWrapper.postOrFail(
-    `${API_ENDPOINT}/steps`,
-    `{"type":"exit","journeyID":"${JOURNEY_ID}"}`
-  );
-
-  const EXIT_STEP_ID = response.json("id");
-  const EXIT_STEP_NODE_ID = uuidv4();
-  const EXIT_STEP_NODE = {
-    id: EXIT_STEP_NODE_ID,
-    type: "exit",
-    data: {
-      stepId: EXIT_STEP_ID,
-    },
-    position: {
-      x: 0,
-      y: 228,
-    },
-    selected: false,
-  };
-
-  const EXIT_STEP_EDGE = {
-    id: `${messageStepNode.id}-${EXIT_STEP_NODE_ID}`,
-    type: "primary",
-    source: messageStepNode.id,
-    target: EXIT_STEP_NODE_ID,
-  };
-
-  let visualLayoutBody = JSON.stringify({
-    id: JOURNEY_ID,
-    nodes: [START_STEP_NODE, messageStepNode, EXIT_STEP_NODE],
-    edges: [START_STEP_EDGE, EXIT_STEP_EDGE],
-  });
-
-  response = httpxWrapper.patchOrFail(
-    `${API_ENDPOINT}/journeys/visual-layout`,
-    visualLayoutBody
-  );
-
-  response = httpxWrapper.patchOrFail(
-    `${API_ENDPOINT}/journeys`,
-    `{"id":"${JOURNEY_ID}","name":"test","inclusionCriteria":{"type":"allCustomers"},"isDynamic":true,"journeyEntrySettings":{"entryTiming":{"type":"WhenPublished"},"enrollmentType":"CurrentAndFutureUsers"},"journeySettings":{"tags":[],"maxEntries":{"enabled":false,"limitOnEverySchedule":false,"maxEntries":"500000"},"quietHours":{"enabled":false,"startTime":"00:00","endTime":"08:00","fallbackBehavior":"NextAvailableTime"},"maxMessageSends":{"enabled":false}}}`
-  );
-  reporter.report(`Journey creation completed.`);
-  reporter.removeTimer("journeyCreation");
-
-  reporter.setStep("CUSTOMER_MESSAGING");
-  reporter.log(`Starting journey.`);
-  reporter.addTimer(
-    "journeyMessaging",
-    "Time elapsed since journey started triggering customer messages."
-  );
-
-  response = httpxWrapper.patchOrFail(
-    `${API_ENDPOINT}/journeys/start/${JOURNEY_ID}`,
-    "{}"
-  );
-  reporter.report(`Journey started.`);
-
-  reporter.log(`Check stats: ${API_ENDPOINT}/steps/stats/${MESSAGE_STEP_ID}`);
-
-  let sentCount = 0;
-  let retries = 0; // kill stat checking early if sent count not increasing
-  let prevSentCount = 0;
-  while (sentCount < NUM_CUSTOMERS) {
-    sleep(POLLING_MINUTES * 60);
-    response = httpxWrapper.getOrFail(`${API_ENDPOINT}/steps/stats/${MESSAGE_STEP_ID}`);
-    prevSentCount = sentCount;
-    sentCount = parseInt(response.json("sent"));
-    reporter.report(`Current sent messages: ${sentCount} of ${NUM_CUSTOMERS}`);
-    let deltaSent = sentCount - prevSentCount;
-    customersMessaged.add(deltaSent);
-    customersMessagedTime.add(POLLING_MINUTES * 60);
-    if (prevSentCount === sentCount) {
-      reporter.log(
-        `Sent count hasn't increased since last poll. Current count: ${sentCount}. number of retries: ${retries}`
-      );
-      if (retries > 5) {
-        reporter.report(
-          `Sent count hasn't increased in 5 retries. Failing test...`
-        );
-        fail(
-          `Message customers has failed after ${sentCount} messages sent, but ${NUM_CUSTOMERS} messages expected.`
-        );
-      }
-      retries = retries + 1;
-    } else {
-      retries = 0;
-    }
-  }
   reporter.report(`Test successfully finished.`);
-  reporter.log(`Final sentCount: ${sentCount}.`);
-  reporter.removeTimer("journeyMessaging");
 
   reporter.setStep(`CLEANUP`);
   reporter.log(`Deleting account ${email}`);
@@ -318,8 +189,6 @@ export function handleSummary(data) {
   let summary = "SUMMARY:\n\n\n";
   summary += `Customers Imported: ${imported}\n`;
   summary += `Customers Imported Time (seconds): ${importedTime} seconds\n`;
-  summary += `Customers Messaged: ${messaged}\n`;
-  summary += `Customers Messaged Time (seconds): ${messagedTime} seconds\n\n`;
 
   if (imported && importedTime) {
     summary += `Import Rate (per second): ${
@@ -330,17 +199,6 @@ export function handleSummary(data) {
     } customers per minute\n\n`;
   } else {
     summary += `Import Rate: unkown due to error\n\n`;
-  }
-
-  if (messaged && messagedTime) {
-    summary += `Message Send Rate (per second): ${
-      messaged / messagedTime
-    } customers per second\n`;
-    summary += `Message Send Rate (per minute): ${
-      messaged / (messagedTime / 60)
-    } customers per minute\n`;
-  } else {
-    summary += `Import Rate: unknown due to error\n`;
   }
 
   return {

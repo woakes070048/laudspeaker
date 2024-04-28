@@ -28,6 +28,7 @@ import { StepsModule } from '../steps/steps.module';
 import { JourneyLocation } from './entities/journey-location.entity';
 import { JourneyLocationsService } from './journey-locations.service';
 import { JourneyChange } from './entities/journey-change.entity';
+import { CacheService } from '@/common/services/cache.service';
 
 @Module({
   imports: [
@@ -74,7 +75,11 @@ import { JourneyChange } from './entities/journey-change.entity';
     SlackModule,
   ],
   controllers: [JourneysController],
-  providers: [JourneysService, JourneyLocationsService],
+  providers: [
+    JourneysService,
+    JourneyLocationsService,
+    CacheService
+    ],
   exports: [JourneysService],
 })
 export class JourneysModule {}

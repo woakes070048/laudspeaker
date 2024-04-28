@@ -26,6 +26,7 @@ import { Queue } from 'bullmq';
 import { Webhook } from 'svix';
 import fetch from 'node-fetch'; // Ensure you have node-fetch if you're using Node.js
 import { ProviderType } from '../events/events.preprocessor';
+import * as Sentry from '@sentry/node';
 
 export enum ClickHouseEventProvider {
   MAILGUN = 'mailgun',
@@ -446,26 +447,28 @@ export class WebhooksService {
     clickhouseMessages: ClickHouseMessage[],
     session: string
   ) {
-    if (clickhouseMessages?.length) {
-      await this.eventPreprocessorQueue.addBulk(
-        clickhouseMessages.map((element) => {
-          return {
-            name: ProviderType.MESSAGE,
-            data: {
-              workspaceId: element.workspaceId,
-              message: element,
-              session: session,
-              customer: element.customerId,
-            },
-          };
-        })
-      );
-      return await this.kafkaService.produceMessage(
-        KAFKA_TOPIC_MESSAGE_STATUS,
-        clickhouseMessages.map((clickhouseMessage) => ({
-          value: JSON.stringify(clickhouseMessage),
-        }))
-      );
-    }
+    return Sentry.startSpan({name: "WebhooksService.insertMessageStatusToClickhouse"}, async () => {
+      if (clickhouseMessages?.length) {
+        await this.eventPreprocessorQueue.addBulk(
+          clickhouseMessages.map((element) => {
+            return {
+              name: ProviderType.MESSAGE,
+              data: {
+                workspaceId: element.workspaceId,
+                message: element,
+                session: session,
+                customer: element.customerId,
+              },
+            };
+          })
+        );
+        return await this.kafkaService.produceMessage(
+          KAFKA_TOPIC_MESSAGE_STATUS,
+          clickhouseMessages.map((clickhouseMessage) => ({
+            value: JSON.stringify(clickhouseMessage),
+          }))
+        );
+      }
+    });
   }
 }

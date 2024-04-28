@@ -4,8 +4,8 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 export const options = {
   /* Option 0: Smoke test */
-  vus: 5,
-  duration: "1s",
+  vus: 500,
+  duration: "1h",
 
   /* Option 1: Average load test*/
 
@@ -58,7 +58,7 @@ export default function () {
   let res = http.post(
     //"correlationValue": "${temp_id}"
     // 'https://api.laudspeaker.com/customers/upsert',
-    "http://localhost:3001/events/batch",
+    "https://test-laudspeaker.laudtest.com/api/events/batch",
     `{
       "batch": [
       {
@@ -67,17 +67,13 @@ export default function () {
         "event": "example1",
         "source": "mobile",
         "correlationKey": "_id",
-        "payload": {
-          "$anon_distinct_id": "FBBBCB26-B75E-4342-B40B-568BF879F7C5",
-          "distinct_id": "2001704"
-        },
-        "correlationValue": "ee080786-2250-4f59-83f8-2693719d6278"
+        "correlationValue": "910af624-dee0-49bc-8765-f17f1f1de052"
       }
     ]
   }`,
     {
       headers: {
-        Authorization: "Api-Key R86XdJtbQqzNLbYL1ISwRyh7LQMC3MFAjwjTM6bw",
+        Authorization: "Api-Key IHhUY1y9OcErRjVHksRORcPvND6KMV1v4tJkSXQJ",
         "Content-Type": "application/json",
       },
     }

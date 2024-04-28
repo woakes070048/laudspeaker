@@ -696,51 +696,45 @@ export class StepsService {
   async getStats(account: Account, session: string, stepId?: string) {
     if (!stepId) return {};
     const sentResponse = await this.clickhouseClient.query({
-      query: `SELECT COUNT(*) FROM message_status WHERE event = 'sent' AND stepId = {stepId:UUID}`,
+      query: `SELECT COUNT(*) AS count FROM message_status WHERE event = 'sent' AND stepId = {stepId:UUID}`,
       query_params: { stepId },
     });
     const sentData = (await sentResponse.json<any>())?.data;
-    const sent = +sentData?.[0]?.['count()'] || 0;
+    const sent = +sentData[0].count;
 
     const deliveredResponse = await this.clickhouseClient.query({
-      query: `SELECT COUNT(*) FROM message_status WHERE event = 'delivered' AND stepId = {stepId:UUID}`,
+      query: `SELECT COUNT(*) AS count FROM message_status WHERE event = 'delivered' AND stepId = {stepId:UUID}`,
       query_params: { stepId },
     });
     const deliveredData = (await deliveredResponse.json<any>())?.data;
-    const delivered = +deliveredData?.[0]?.['count()'] || 0;
+    const delivered = +deliveredData[0].count;
 
     const openedResponse = await this.clickhouseClient.query({
-      query: `SELECT COUNT(DISTINCT(stepId, customerId, templateId, messageId, event, eventProvider)) FROM message_status WHERE event = 'opened' AND stepId = {stepId:UUID}`,
+      query: `SELECT COUNT(DISTINCT(stepId, customerId, templateId, messageId, event, eventProvider)) AS count FROM message_status WHERE event = 'opened' AND stepId = {stepId:UUID}`,
       query_params: { stepId },
     });
     const openedData = (await openedResponse.json<any>())?.data;
-    const opened =
-      +openedData?.[0]?.[
-        'uniqExact(tuple(stepId, customerId, templateId, messageId, event, eventProvider))'
-      ];
+    const opened = +openedData[0].count;
 
     const openedPercentage = (opened / sent) * 100;
 
     const clickedResponse = await this.clickhouseClient.query({
-      query: `SELECT COUNT(DISTINCT(stepId, customerId, templateId, messageId, event, eventProvider)) FROM message_status WHERE event = 'clicked' AND stepId = {stepId:UUID}`,
+      query: `SELECT COUNT(DISTINCT(stepId, customerId, templateId, messageId, event, eventProvider)) AS count FROM message_status WHERE event = 'clicked' AND stepId = {stepId:UUID}`,
       query_params: { stepId },
     });
     const clickedData = (await clickedResponse.json<any>())?.data;
-    const clicked =
-      +clickedData?.[0]?.[
-        'uniqExact(tuple(stepId, customerId, templateId, messageId, event, eventProvider))'
-      ];
+    const clicked = +clickedData[0].count;
 
     const clickedPercentage = (clicked / sent) * 100;
 
     const whResponse = await this.clickhouseClient.query({
-      query: `SELECT COUNT(*) FROM message_status WHERE event = 'sent' AND stepId = {stepId:UUID} AND eventProvider = 'webhooks' `,
+      query: `SELECT COUNT(*) AS count FROM message_status WHERE event = 'sent' AND stepId = {stepId:UUID} AND eventProvider = 'webhooks' `,
       query_params: {
         stepId,
       },
     });
     const wsData = (await whResponse.json<any>())?.data;
-    const wssent = +wsData?.[0]?.['count()'] || 0;
+    const wssent = +wsData[0].count;
 
     return {
       sent,

@@ -30,6 +30,7 @@ import * as Sentry from '@sentry/node';
 import { JourneyLocationsService } from '../journeys/journey-locations.service';
 import { Workspace } from 'aws-sdk/clients/workspaces';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CacheService } from '@/common/services/cache.service';
 
 export enum EventType {
   EVENT = 'event',
@@ -68,7 +69,8 @@ export class EventsProcessor extends WorkerHost {
     @InjectQueue('transition') private readonly transitionQueue: Queue,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
-    @InjectRepository(Step) private readonly stepsRepository: Repository<Step>
+    @InjectRepository(Step) private readonly stepsRepository: Repository<Step>,
+    @Inject(CacheService) private cacheService: CacheService
   ) {
     super();
   }
@@ -200,15 +202,18 @@ export class EventsProcessor extends WorkerHost {
       job.data.account
     );
     // All steps in `journey` that might be listening for this event
-    const steps = (
-      await this.stepsRepository.find({
-        where: {
-          type: StepType.WAIT_UNTIL_BRANCH,
-          journey: { id: job.data.journey.id },
-        },
-        relations: ['workspace.organization.owner', 'journey'],
-      })
-    ).filter((el) => el?.metadata?.branches !== undefined);
+    const steps = await this.cacheService.get("WaitUntilSteps", job.data.journey.id, async () => {
+      return (
+        await this.stepsRepository.find({
+          where: {
+            type: StepType.WAIT_UNTIL_BRANCH,
+            journey: { id: job.data.journey.id },
+          },
+          relations: ['workspace.organization.owner', 'journey'],
+        })
+      ).filter((el) => el?.metadata?.branches !== undefined);
+    });
+
     for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
       for (
         let branchIndex = 0;

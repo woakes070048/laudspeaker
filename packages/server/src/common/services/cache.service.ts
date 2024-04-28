@@ -129,11 +129,16 @@ export class CacheService {
 	}
 
 	private getKlassName(klass: any): string {
-		const klass_name: string = klass.name ?? klass.constructor?.name;
+		let klassName: string;
 
-		this.assertValue(klass_name)
+		if (typeof klass === 'string' || klass instanceof String)
+			klassName = klass.toString();
+		else
+			klassName = klass.name ?? klass.constructor?.name;
 
-		return klass_name;
+		this.assertValue(klassName)
+
+		return klassName;
 	}
 
 	private assertValue(str: string) {

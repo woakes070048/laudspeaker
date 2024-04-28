@@ -49,6 +49,7 @@ import { S3Service } from '../s3/s3.service';
 import { Step } from '../steps/entities/step.entity';
 import { Journey } from '../journeys/entities/journey.entity';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { CacheService } from '@/common/services/cache.service';
 
 @Module({
   imports: [
@@ -120,6 +121,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     JourneyLocationsService,
     CustomersService,
     S3Service,
+    CacheService,
   ],
   exports: [EventsService],
 })

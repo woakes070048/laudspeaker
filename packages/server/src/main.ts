@@ -54,6 +54,7 @@ if (cluster.isPrimary) {
       new ProfilingIntegration(),
       ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
     ],
+    debug: false,
     // Performance Monitoring
     tracesSampleRate: 1.0, // Capture 100% of the transactions, reduce in production!
     // Set sampling rate for profiling - this is relative to tracesSampleRate

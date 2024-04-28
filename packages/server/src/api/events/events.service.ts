@@ -1243,33 +1243,29 @@ export class EventsService {
     let customer;
     let findType;
 
+    const findConditions: Array<Object> = [];
+
     // Try to find by primary key if provided
     if (primaryKeyValue) {
-      customer = await this.customersService.CustomerModel.findOne({
+      findConditions.push({
         [primaryKeyName]: primaryKeyValue,
         workspaceId,
       });
-      if (customer) findType = 1;
     }
 
-    // If not found by primary key, try finding by _id
-    if (!customer && event.correlationValue) {
-      customer = await this.customersService.CustomerModel.findOne({
+    if (event.correlationValue) {
+      findConditions.push({
         _id: event.correlationValue,
         workspaceId,
-      });
-
-      if (customer) findType = 2;
-    }
-
-    // If still not found, try finding by other_ids array containing the correlationValue
-    if (!customer && event.correlationValue) {
-      customer = await this.customersService.CustomerModel.findOne({
+      }, {
         other_ids: { $in: [event.correlationValue] },
         workspaceId,
       });
-      if (customer) findType = 3;
     }
+
+    customer = await this.customersService.CustomerModel.findOne({
+      $or: findConditions
+    });
 
     // If customer still not found, create a new one
     if (!customer) {

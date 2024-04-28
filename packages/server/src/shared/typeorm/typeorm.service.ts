@@ -3,6 +3,31 @@ import * as os from 'os';
 
 export class TypeOrmConfigService implements TypeOrmOptionsFactory {
   public createTypeOrmOptions(): TypeOrmModuleOptions {
+    console.log(`Primary ${process.pid} is running`);
+
+    let totalMaxConnections = process.env.DATABASE_MAX_CONNECTIONS
+                                ? +process.env.DATABASE_MAX_CONNECTIONS
+                                : 100;
+    let maxReplicas = process.env.DEPLOY_MAX_REPLICAS
+                        ? +process.env.DEPLOY_MAX_REPLICAS
+                        : 1;
+
+    let connectionsPerReplica = Math.floor(totalMaxConnections / maxReplicas);
+    let totalCpuPerReplica = os.cpus().length;
+
+    let maxDBConnectionsPerReplicaProcess = Math.floor(connectionsPerReplica / totalCpuPerReplica);
+
+    maxDBConnectionsPerReplicaProcess = process.env.MAX_DB_CONNECTIONS_PER_REPLICA_PROCESS
+                                          ? +process.env.MAX_DB_CONNECTIONS_PER_REPLICA_PROCESS
+                                          : maxDBConnectionsPerReplicaProcess;
+                                          
+    console.log(`TypeOrmConfigService settings:
+        totalMaxConnections: (${totalMaxConnections}),
+        maxReplicas: (${maxReplicas}),
+        connectionsPerReplica: (${connectionsPerReplica}),
+        totalCpuPerReplica: (${totalCpuPerReplica}),
+        maxDBConnectionsPerReplicaProcess: (${maxDBConnectionsPerReplicaProcess})`);
+
     return {
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -21,16 +46,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       autoLoadEntities: true,
       maxQueryExecutionTime: 2000,
       extra: {
-        max: Math.floor(
-          Math.floor(
-            process.env.DATABASE_MAX_CONNECTIONS
-              ? +process.env.DATABASE_MAX_CONNECTIONS
-              : 100 /
-                  (process.env.DEPLOY_MAX_REPLICAS
-                    ? +process.env.DEPLOY_MAX_REPLICAS
-                    : 1)
-          ) / os.cpus().length
-        ),
+        max: maxDBConnectionsPerReplicaProcess,
         options:
           '-c lock_timeout=240000ms -c statement_timeout=240000ms -c idle_in_transaction_session_timeout=240000ms',
       },

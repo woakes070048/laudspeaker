@@ -83,8 +83,7 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { JourneyChange } from './entities/journey-change.entity';
 import isObjectDeepEqual from '@/utils/isObjectDeepEqual';
 import { JourneyLocation } from './entities/journey-location.entity';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import { CacheService } from '@/common/services/cache.service';
 
 export enum JourneyStatus {
   ACTIVE = 'Active',
@@ -250,7 +249,7 @@ export class JourneysService {
     @InjectQueue('transition') private readonly transitionQueue: Queue,
     @Inject(RedisService) private redisService: RedisService,
     @InjectQueue('enrollment') private readonly enrollmentQueue: Queue,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache
+    @Inject(CacheService) private cacheService: CacheService
   ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -1412,10 +1411,7 @@ export class JourneysService {
       );
       await this.trackChange(account, id);
 
-      // invalidate journeys cache entry set in eventPreprocessor
-      if(workspace) {
-        await this.cacheManager.del(`journeys:${workspace.id}`);
-      }
+      await this.cleanupJourneyCache({workspaceId: workspace.id});
 
       return result;
     } catch (err) {
@@ -1465,11 +1461,8 @@ export class JourneysService {
       });
 
       await this.trackChange(account, journeyResult.id);
-
-      // invalidate journeys cache entry set in eventPreprocessor
-      if(workspace) {
-        await this.cacheManager.del(`journeys:${workspace.id}`);
-      }
+      
+      await this.cleanupJourneyCache({workspaceId: workspace.id});
       
       return journeyResult;
     } catch (error) {
@@ -1490,6 +1483,7 @@ export class JourneysService {
     let journey: Journey;
     let err: any;
 
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -1498,6 +1492,8 @@ export class JourneysService {
       if (!account) throw new HttpException('User not found', 404);
       const workspace = account.teams?.[0]?.organization?.workspaces?.[0];
 
+      await this.cleanupJourneyCache({workspaceId: workspace.id});
+      
       journey = await queryRunner.manager.findOne(Journey, {
         where: {
           workspace: {
@@ -1516,11 +1512,6 @@ export class JourneysService {
 
       if (!journey.inclusionCriteria)
         throw new Error('To start journey a filter should be defined');
-
-      // invalidate journeys cache entry set in eventPreprocessor
-      if(workspace) {
-        await this.cacheManager.del(`journeys:${workspace.id}`);
-      }
 
       const graph = new Graph();
       const steps = await this.stepsService.transactionalfindByJourneyID(
@@ -1627,10 +1618,7 @@ export class JourneysService {
 
       await this.trackChange(account, journeyResult.id);
 
-      // invalidate journeys cache entry set in eventPreprocessor
-      if(workspace) {
-        await this.cacheManager.del(`journeys:${workspace.id}`);
-      }
+      await this.cleanupJourneyCache({workspaceId: workspace.id});
     } catch (err) {
       this.error(err, this.stop.name, session, account.email);
       throw err;
@@ -2740,5 +2728,12 @@ export class JourneysService {
       changedState: journey,
       previousChange: previousChange ? { id: previousChange.id } : undefined,
     });
+  }
+
+  private async cleanupJourneyCache(data: {workspaceId: string}) {
+    // invalidate journeys cache entry set in eventPreprocessor
+    if(data.workspaceId) {
+      await this.cacheService.delete("Journeys", data.workspaceId);
+    }
   }
 }
