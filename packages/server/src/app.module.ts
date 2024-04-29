@@ -153,7 +153,7 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => ({
-        ttl: 5000,
+        ttl: process.env.REDIS_CACHE_TTL ? +process.env.REDIS_CACHE_TTL : 5000,
         store: await redisStore({
           url: `redis://default:${process.env.REDIS_PASSWORD}@${
             process.env.REDIS_HOST
