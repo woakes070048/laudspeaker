@@ -17,6 +17,7 @@ import { Journey } from '../entities/journey.entity';
 import { Step } from '../../steps/entities/step.entity';
 import { StepsService } from '@/api/steps/steps.service';
 import { CustomersService } from '@/api/customers/customers.service';
+import { JourneysService } from '@/api/journeys/journeys.service';
 
 @Injectable()
 @Processor('enrollment', { removeOnComplete: { count: 100 } })
@@ -29,7 +30,9 @@ export class EnrollmentProcessor extends WorkerHost {
     @Inject(StepsService)
     private readonly stepsService: StepsService,
     @Inject(CustomersService)
-    private readonly customersService: CustomersService
+    private readonly customersService: CustomersService,
+    @Inject(JourneysService)
+    private journeyService: JourneysService,
   ) {
     super();
   }
@@ -142,6 +145,11 @@ export class EnrollmentProcessor extends WorkerHost {
         ...job.data.journey,
         isEnrolling: false,
       });
+
+      const workspace = job.data.account?.teams?.[0]?.organization?.workspaces?.[0];
+       
+      await this.journeyService.cleanupJourneyCache({workspaceId: workspace.id});
+
       await queryRunner.commitTransaction();
       if (triggerStartTasks) {
         await this.startQueue.add(

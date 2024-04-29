@@ -2722,7 +2722,7 @@ export class JourneysService {
     });
   }
 
-  private async cleanupJourneyCache(data: {workspaceId: string}) {
+  async cleanupJourneyCache(data: {workspaceId: string}) {
     // invalidate journeys cache entry set in eventPreprocessor
     if(data.workspaceId) {
       await this.cacheService.delete("Journeys", data.workspaceId);
