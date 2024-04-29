@@ -40,6 +40,12 @@ export enum EventType {
 
 @Injectable()
 @Processor('events', {
+  removeOnComplete: {
+    age: 0,
+    count: process.env.EVENTS_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.EVENTS_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
   metrics: {
     maxDataPoints: MetricsTime.ONE_WEEK,
   },

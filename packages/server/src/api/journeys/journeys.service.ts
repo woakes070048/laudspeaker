@@ -1543,13 +1543,7 @@ export class JourneysService {
       if (!alg.isAcyclic(graph))
         throw new Error('Flow has infinite loops, cannot start.');
 
-      const { collectionName, count } =
-        await this.customersService.getAudienceSize(
-          account,
-          journey.inclusionCriteria,
-          session,
-          null
-        );
+
       if (
         journey.journeyEntrySettings.entryTiming.type ===
         EntryTiming.WhenPublished
@@ -1576,8 +1570,6 @@ export class JourneysService {
       await this.enrollmentQueue.add('enroll', {
         account,
         journey,
-        count,
-        collectionName,
         session,
       });
     } catch (e) {

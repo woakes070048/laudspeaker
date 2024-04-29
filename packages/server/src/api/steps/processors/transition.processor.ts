@@ -62,6 +62,12 @@ import { CacheService } from '@/common/services/cache.service';
 
 @Injectable()
 @Processor('transition', {
+  removeOnComplete: {
+    age: 0,
+    count: process.env.TRANSITION_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.TRANSITION_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
   metrics: {
     maxDataPoints: MetricsTime.ONE_WEEK,
   },

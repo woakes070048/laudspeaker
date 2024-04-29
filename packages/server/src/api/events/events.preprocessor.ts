@@ -43,6 +43,12 @@ export enum ProviderType {
 
 @Injectable()
 @Processor('events_pre', {
+  removeOnComplete: {
+    age: 0,
+    count: process.env.EVENTS_PRE_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.EVENTS_PRE_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
   metrics: {
     maxDataPoints: MetricsTime.ONE_WEEK,
   },

@@ -25,6 +25,12 @@ const BATCH_SIZE = +process.env.START_BATCH_SIZE;
 
 @Injectable()
 @Processor('start', {
+  removeOnComplete: {
+    age: 0,
+    count: process.env.START_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.START_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
   metrics: {
     maxDataPoints: MetricsTime.ONE_WEEK,
   },
