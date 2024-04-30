@@ -62,6 +62,9 @@ import { CacheService } from '@/common/services/cache.service';
 
 @Injectable()
 @Processor('transition', {
+  stalledInterval: process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
+  ? +process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
+  : 600000,
   removeOnComplete: {
     age: 0,
     count: process.env.TRANSITION_PROCESSOR_REMOVE_ON_COMPLETE

@@ -40,6 +40,9 @@ export enum EventType {
 
 @Injectable()
 @Processor('events', {
+  stalledInterval: process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
+  ? +process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
+  : 600000,
   removeOnComplete: {
     age: 0,
     count: process.env.EVENTS_PROCESSOR_REMOVE_ON_COMPLETE

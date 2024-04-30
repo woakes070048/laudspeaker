@@ -20,7 +20,12 @@ import { CustomersService } from '@/api/customers/customers.service';
 import { JourneysService } from '@/api/journeys/journeys.service';
 
 @Injectable()
-@Processor('enrollment', { removeOnComplete: { count: 100 } })
+@Processor('enrollment', {
+  stalledInterval: process.env.ENROLLMENT_PROCESSOR_STALLED_INTERVAL
+    ? +process.env.ENROLLMENT_PROCESSOR_STALLED_INTERVAL
+    : 600000,
+  removeOnComplete: { count: 100 }
+})
 export class EnrollmentProcessor extends WorkerHost {
   constructor(
     private dataSource: DataSource,
@@ -121,19 +126,19 @@ export class EnrollmentProcessor extends WorkerHost {
     await queryRunner.startTransaction();
     try {
       const { collectionName, count } =
-      await this.customersService.getAudienceSize(
-        job.data.account,
-        job.data.journey.inclusionCriteria,
-        job.data.session,
-        null
-      );
+        await this.customersService.getAudienceSize(
+          job.data.account,
+          job.data.journey.inclusionCriteria,
+          job.data.session,
+          null
+        );
       triggerStartTasks = await this.stepsService.triggerStart(
         job.data.account,
         job.data.journey,
         job.data.journey.inclusionCriteria,
         job.data.journey?.journeySettings?.maxEntries?.enabled &&
           count >
-            parseInt(job.data.journey?.journeySettings?.maxEntries?.maxEntries)
+          parseInt(job.data.journey?.journeySettings?.maxEntries?.maxEntries)
           ? parseInt(job.data.journey?.journeySettings?.maxEntries?.maxEntries)
           : count,
         queryRunner,

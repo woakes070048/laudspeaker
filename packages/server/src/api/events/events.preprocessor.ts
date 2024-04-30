@@ -43,6 +43,9 @@ export enum ProviderType {
 
 @Injectable()
 @Processor('events_pre', {
+  stalledInterval: process.env.EVENTS_PRE_PROCESSOR_STALLED_INTERVAL
+  ? +process.env.EVENTS_PRE_PROCESSOR_STALLED_INTERVAL
+  : 600000,
   removeOnComplete: {
     age: 0,
     count: process.env.EVENTS_PRE_PROCESSOR_REMOVE_ON_COMPLETE
