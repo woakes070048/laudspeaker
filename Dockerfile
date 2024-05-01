@@ -79,5 +79,8 @@ COPY ./scripts /app/scripts/
 #Expose web port
 EXPOSE 80
 
-# Run migrations and serve app
-CMD ["sh", "-c", "SENTRY_RELEASE=$(cat SENTRY_RELEASE) && ./scripts/setup_config.sh && clickhouse-migrations migrate && typeorm-ts-node-commonjs migration:run -d packages/server/src/data-source.ts && node dist/src/main.js"]
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
+RUN ["chmod", "+x", "/app/docker-entrypoint.sh"]
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

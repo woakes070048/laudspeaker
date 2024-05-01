@@ -15,6 +15,21 @@ import { TemplatesModule } from '../templates/templates.module';
 import { Step } from '../steps/entities/step.entity';
 import { KafkaModule } from '../kafka/kafka.module';
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+    WebhooksService,
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    providerList = [
+      ...providerList,
+      WebhooksProcessor,
+    ];
+  }
+
+  return providerList;
+}
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([Account, Step]),
@@ -27,7 +42,7 @@ import { KafkaModule } from '../kafka/kafka.module';
     TemplatesModule,
     KafkaModule,
   ],
-  providers: [WebhooksService, WebhooksProcessor],
+  providers: getProvidersList(),
   controllers: [WebhooksController],
   exports: [WebhooksService],
 })

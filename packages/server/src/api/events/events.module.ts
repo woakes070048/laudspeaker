@@ -51,6 +51,28 @@ import { Journey } from '../journeys/entities/journey.entity';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { CacheService } from '@/common/services/cache.service';
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+    EventsService,
+    AudiencesHelper,
+    RedlockService,
+    JourneyLocationsService,
+    CustomersService,
+    S3Service,
+    CacheService,
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    providerList = [
+      ...providerList,
+      EventsProcessor,
+      EventsPreProcessor
+    ];
+  }
+
+  return providerList;
+}
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -112,17 +134,7 @@ import { CacheService } from '@/common/services/cache.service';
     forwardRef(() => StepsModule),
   ],
   controllers: [EventsController],
-  providers: [
-    EventsService,
-    EventsProcessor,
-    EventsPreProcessor,
-    AudiencesHelper,
-    RedlockService,
-    JourneyLocationsService,
-    CustomersService,
-    S3Service,
-    CacheService,
-  ],
+  providers: getProvidersList(),
   exports: [EventsService],
 })
 export class EventsModule {}

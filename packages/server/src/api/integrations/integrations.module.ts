@@ -10,6 +10,21 @@ import { IntegrationsController } from './integrations.controller';
 import { IntegrationsProcessor } from './integrations.processor';
 import { IntegrationsService } from './integrations.service';
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+    IntegrationsService,
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    providerList = [
+      ...providerList,
+      IntegrationsProcessor,
+    ];
+  }
+
+  return providerList;
+}
+
 @Module({
   imports: [
     AccountsModule,
@@ -22,7 +37,7 @@ import { IntegrationsService } from './integrations.service';
     }),
   ],
   controllers: [IntegrationsController],
-  providers: [IntegrationsService, IntegrationsProcessor],
+  providers: getProvidersList(),
   exports: [IntegrationsService],
 })
 export class IntegrationsModule {}

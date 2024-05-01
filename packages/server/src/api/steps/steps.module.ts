@@ -35,6 +35,27 @@ import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { Requeue } from './entities/requeue.entity';
 import { CacheService } from '@/common/services/cache.service';
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+    StepsService,
+    JobsService,
+    RedlockService,
+    JourneyLocationsService,
+    CacheService
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    providerList = [
+      ...providerList,
+      TransitionProcessor,
+      StartProcessor,
+      EnrollmentProcessor
+    ];
+  }
+
+  return providerList;
+}
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -73,16 +94,7 @@ import { CacheService } from '@/common/services/cache.service';
     forwardRef(() => JourneysModule),
     SlackModule,
   ],
-  providers: [
-    StepsService,
-    JobsService,
-    TransitionProcessor,
-    StartProcessor,
-    RedlockService,
-    JourneyLocationsService,
-    EnrollmentProcessor,
-    CacheService,
-  ],
+  providers: getProvidersList(),
   controllers: [StepsController],
   exports: [StepsService],
 })

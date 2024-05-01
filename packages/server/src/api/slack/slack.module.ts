@@ -20,6 +20,22 @@ import { Step } from '../steps/entities/step.entity';
 import { KafkaModule } from '../kafka/kafka.module';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+    SlackService,
+    WebhooksService,
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    providerList = [
+      ...providerList,
+      SlackProcessor,
+    ];
+  }
+
+  return providerList;
+}
+
 @Module({
   imports: [
     BullModule.registerQueue({
@@ -50,7 +66,7 @@ import { Workspaces } from '../workspaces/entities/workspaces.entity';
     KafkaModule,
   ],
   controllers: [SlackController],
-  providers: [SlackProcessor, SlackService, WebhooksService],
+  providers: getProvidersList(),
   exports: [SlackService],
 })
 export class SlackModule {}

@@ -96,6 +96,22 @@ function redact(obj) {
   return copy;
 }
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+    RedlockService,
+    JourneyLocationsService,
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "CRON") {
+    providerList = [
+      ...providerList,
+      CronService,
+    ];
+  }
+
+  return providerList;
+}
+
 const myFormat = winston.format.printf(function ({
   timestamp,
   context,
@@ -260,7 +276,7 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
     OrganizationsModule,
   ],
   controllers: [AppController],
-  providers: [CronService, RedlockService, JourneyLocationsService],
+  providers: getProvidersList(),
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

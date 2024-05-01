@@ -14,6 +14,20 @@ import {
 import { CustomersModule } from '../customers/customers.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 
+function getProvidersList() {
+  let providerList: Array<any> = [
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    providerList = [
+      ...providerList,
+      MessageProcessor,
+    ];
+  }
+
+  return providerList;
+}
+
 @Module({
   imports: [
     BullModule.registerQueue({
@@ -33,6 +47,6 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     WebhooksModule,
   ],
   controllers: [EmailController],
-  providers: [MessageProcessor],
+  providers: getProvidersList(),
 })
 export class EmailModule {}
