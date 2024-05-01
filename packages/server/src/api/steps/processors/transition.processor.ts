@@ -63,8 +63,8 @@ import { CacheService } from '@/common/services/cache.service';
 @Injectable()
 @Processor('transition', {
   stalledInterval: process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
-  ? +process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
-  : 600000,
+    ? +process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
+    : 600000,
   removeOnComplete: {
     age: 0,
     count: process.env.TRANSITION_PROCESSOR_REMOVE_ON_COMPLETE
@@ -757,9 +757,13 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
 
-    let template: Template = await this.cacheService.getIgnoreError(Template, step.metadata.template, async () => {
-      return await this.templatesService.lazyFindByID(step.metadata.template);
-    });
+    let template: Template = await this.cacheService.getIgnoreError(
+      Template,
+      step.metadata.template,
+      async () => {
+        return await this.templatesService.lazyFindByID(step.metadata.template);
+      }
+    );
 
     if (
       messageSendType === 'SEND' &&
@@ -1141,9 +1145,13 @@ export class TransitionProcessor extends WorkerHost {
       return;
     }
 
-    let nextStep: Step = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
-      return await this.stepsService.lazyFindByID(step.metadata.destination);
-    });
+    let nextStep: Step = await this.cacheService.getIgnoreError(
+      Step,
+      step.metadata.destination,
+      async () => {
+        return await this.stepsService.lazyFindByID(step.metadata.destination);
+      }
+    );
 
     if (nextStep) {
       if (
@@ -1194,9 +1202,13 @@ export class TransitionProcessor extends WorkerHost {
   ) {
     let job;
 
-    let nextStep: Step = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
-      return await this.stepsService.lazyFindByID(step.metadata.destination);
-    });
+    let nextStep: Step = await this.cacheService.getIgnoreError(
+      Step,
+      step.metadata.destination,
+      async () => {
+        return await this.stepsService.lazyFindByID(step.metadata.destination);
+      }
+    );
 
     if (nextStep) {
       if (
@@ -1271,10 +1283,15 @@ export class TransitionProcessor extends WorkerHost {
         unit: 'millisecond',
       })
     ) {
-
-      nextStep = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
-        return await this.stepsService.lazyFindByID(step.metadata.destination);
-      });
+      nextStep = await this.cacheService.getIgnoreError(
+        Step,
+        step.metadata.destination,
+        async () => {
+          return await this.stepsService.lazyFindByID(
+            step.metadata.destination
+          );
+        }
+      );
 
       if (nextStep) {
         if (
@@ -1366,9 +1383,15 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
     if (moveCustomer) {
-      nextStep = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
-        return await this.stepsService.lazyFindByID(step.metadata.destination);
-      });
+      nextStep = await this.cacheService.getIgnoreError(
+        Step,
+        step.metadata.destination,
+        async () => {
+          return await this.stepsService.lazyFindByID(
+            step.metadata.destination
+          );
+        }
+      );
 
       if (nextStep) {
         if (
@@ -1505,9 +1528,15 @@ export class TransitionProcessor extends WorkerHost {
         }
       }
       if (moveCustomer) {
-        nextStep = await this.cacheService.getIgnoreError(Step, step.metadata.timeBranch?.destination, async () => {
-          return await this.stepsService.lazyFindByID(step.metadata.timeBranch?.destination);
-        });
+        nextStep = await this.cacheService.getIgnoreError(
+          Step,
+          step.metadata.timeBranch?.destination,
+          async () => {
+            return await this.stepsService.lazyFindByID(
+              step.metadata.timeBranch?.destination
+            );
+          }
+        );
 
         if (nextStep) {
           if (
@@ -1544,9 +1573,13 @@ export class TransitionProcessor extends WorkerHost {
         return branchItem.index === branch;
       })[0].destination;
 
-      nextStep = await this.cacheService.getIgnoreError(Step, nextStepId, async () => {
-        return await this.stepsService.lazyFindByID(nextStepId);
-      });
+      nextStep = await this.cacheService.getIgnoreError(
+        Step,
+        nextStepId,
+        async () => {
+          return await this.stepsService.lazyFindByID(nextStepId);
+        }
+      );
 
       if (nextStep) {
         if (
@@ -1625,9 +1658,13 @@ export class TransitionProcessor extends WorkerHost {
     }
     if (!matches) nextStepId = step.metadata.allOthers;
 
-    nextStep = await this.cacheService.getIgnoreError(Step, nextStepId, async () => {
-      return await this.stepsService.lazyFindByID(nextStepId);
-    });
+    nextStep = await this.cacheService.getIgnoreError(
+      Step,
+      nextStepId,
+      async () => {
+        return await this.stepsService.lazyFindByID(nextStepId);
+      }
+    );
 
     if (nextStep) {
       if (
@@ -1675,9 +1712,13 @@ export class TransitionProcessor extends WorkerHost {
   ) {
     let job;
 
-    let nextStep: Step = await this.cacheService.getIgnoreError(Step, step.metadata.destination, async () => {
-      return await this.stepsService.lazyFindByID(step.metadata.destination);
-    });
+    let nextStep: Step = await this.cacheService.getIgnoreError(
+      Step,
+      step.metadata.destination,
+      async () => {
+        return await this.stepsService.lazyFindByID(step.metadata.destination);
+      }
+    );
 
     if (nextStep) {
       if (
@@ -1730,9 +1771,13 @@ export class TransitionProcessor extends WorkerHost {
       }
     }
 
-    nextStep = await this.cacheService.getIgnoreError(Step, nextBranch.destination, async () => {
-      return await this.stepsService.lazyFindByID(nextBranch.destination);
-    });
+    nextStep = await this.cacheService.getIgnoreError(
+      Step,
+      nextBranch.destination,
+      async () => {
+        return await this.stepsService.lazyFindByID(nextBranch.destination);
+      }
+    );
 
     if (nextStep) {
       if (

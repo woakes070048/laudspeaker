@@ -26,8 +26,8 @@ const BATCH_SIZE = +process.env.START_BATCH_SIZE;
 @Injectable()
 @Processor('start', {
   stalledInterval: process.env.START_PROCESSOR_STALLED_INTERVAL
-  ? +process.env.START_PROCESSOR_STALLED_INTERVAL
-  : 600000,
+    ? +process.env.START_PROCESSOR_STALLED_INTERVAL
+    : 600000,
   removeOnComplete: {
     age: 0,
     count: process.env.START_PROCESSOR_REMOVE_ON_COMPLETE

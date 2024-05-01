@@ -6,21 +6,24 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
     console.log(`Primary ${process.pid} is running`);
 
     let totalMaxConnections = process.env.DATABASE_MAX_CONNECTIONS
-                                ? +process.env.DATABASE_MAX_CONNECTIONS
-                                : 100;
+      ? +process.env.DATABASE_MAX_CONNECTIONS
+      : 100;
     let maxReplicas = process.env.DEPLOY_MAX_REPLICAS
-                        ? +process.env.DEPLOY_MAX_REPLICAS
-                        : 1;
+      ? +process.env.DEPLOY_MAX_REPLICAS
+      : 1;
 
     let connectionsPerReplica = Math.floor(totalMaxConnections / maxReplicas);
     let totalCpuPerReplica = os.cpus().length;
 
-    let maxDBConnectionsPerReplicaProcess = Math.floor(connectionsPerReplica / totalCpuPerReplica);
+    let maxDBConnectionsPerReplicaProcess = Math.floor(
+      connectionsPerReplica / totalCpuPerReplica
+    );
 
-    maxDBConnectionsPerReplicaProcess = process.env.MAX_DB_CONNECTIONS_PER_REPLICA_PROCESS
-                                          ? +process.env.MAX_DB_CONNECTIONS_PER_REPLICA_PROCESS
-                                          : maxDBConnectionsPerReplicaProcess;
-                                          
+    maxDBConnectionsPerReplicaProcess = process.env
+      .MAX_DB_CONNECTIONS_PER_REPLICA_PROCESS
+      ? +process.env.MAX_DB_CONNECTIONS_PER_REPLICA_PROCESS
+      : maxDBConnectionsPerReplicaProcess;
+
     console.log(`TypeOrmConfigService settings:
         totalMaxConnections: (${totalMaxConnections}),
         maxReplicas: (${maxReplicas}),

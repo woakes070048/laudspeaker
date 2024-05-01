@@ -1411,7 +1411,7 @@ export class JourneysService {
       );
       await this.trackChange(account, id);
 
-      await this.cleanupJourneyCache({workspaceId: workspace.id});
+      await this.cleanupJourneyCache({ workspaceId: workspace.id });
 
       return result;
     } catch (err) {
@@ -1461,9 +1461,9 @@ export class JourneysService {
       });
 
       await this.trackChange(account, journeyResult.id);
-      
-      await this.cleanupJourneyCache({workspaceId: workspace.id});
-      
+
+      await this.cleanupJourneyCache({ workspaceId: workspace.id });
+
       return journeyResult;
     } catch (error) {
       this.error(error, this.setPaused.name, session, account.email);
@@ -1483,7 +1483,6 @@ export class JourneysService {
     let journey: Journey;
     let err: any;
 
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -1492,8 +1491,8 @@ export class JourneysService {
       if (!account) throw new HttpException('User not found', 404);
       const workspace = account.teams?.[0]?.organization?.workspaces?.[0];
 
-      await this.cleanupJourneyCache({workspaceId: workspace.id});
-      
+      await this.cleanupJourneyCache({ workspaceId: workspace.id });
+
       journey = await queryRunner.manager.findOne(Journey, {
         where: {
           workspace: {
@@ -1542,7 +1541,6 @@ export class JourneysService {
       }
       if (!alg.isAcyclic(graph))
         throw new Error('Flow has infinite loops, cannot start.');
-
 
       if (
         journey.journeyEntrySettings.entryTiming.type ===
@@ -1610,7 +1608,7 @@ export class JourneysService {
 
       await this.trackChange(account, journeyResult.id);
 
-      await this.cleanupJourneyCache({workspaceId: workspace.id});
+      await this.cleanupJourneyCache({ workspaceId: workspace.id });
     } catch (err) {
       this.error(err, this.stop.name, session, account.email);
       throw err;
@@ -2722,10 +2720,10 @@ export class JourneysService {
     });
   }
 
-  async cleanupJourneyCache(data: {workspaceId: string}) {
+  async cleanupJourneyCache(data: { workspaceId: string }) {
     // invalidate journeys cache entry set in eventPreprocessor
-    if(data.workspaceId) {
-      await this.cacheService.delete("Journeys", data.workspaceId);
+    if (data.workspaceId) {
+      await this.cacheService.delete('Journeys', data.workspaceId);
     }
   }
 }

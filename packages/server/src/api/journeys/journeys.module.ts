@@ -75,11 +75,7 @@ import { CacheService } from '@/common/services/cache.service';
     SlackModule,
   ],
   controllers: [JourneysController],
-  providers: [
-    JourneysService,
-    JourneyLocationsService,
-    CacheService
-    ],
+  providers: [JourneysService, JourneyLocationsService, CacheService],
   exports: [JourneysService],
 })
 export class JourneysModule {}

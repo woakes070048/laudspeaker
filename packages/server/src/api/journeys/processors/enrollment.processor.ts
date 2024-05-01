@@ -24,7 +24,7 @@ import { JourneysService } from '@/api/journeys/journeys.service';
   stalledInterval: process.env.ENROLLMENT_PROCESSOR_STALLED_INTERVAL
     ? +process.env.ENROLLMENT_PROCESSOR_STALLED_INTERVAL
     : 600000,
-  removeOnComplete: { count: 100 }
+  removeOnComplete: { count: 100 },
 })
 export class EnrollmentProcessor extends WorkerHost {
   constructor(
@@ -37,7 +37,7 @@ export class EnrollmentProcessor extends WorkerHost {
     @Inject(CustomersService)
     private readonly customersService: CustomersService,
     @Inject(JourneysService)
-    private journeyService: JourneysService,
+    private journeyService: JourneysService
   ) {
     super();
   }
@@ -138,7 +138,7 @@ export class EnrollmentProcessor extends WorkerHost {
         job.data.journey.inclusionCriteria,
         job.data.journey?.journeySettings?.maxEntries?.enabled &&
           count >
-          parseInt(job.data.journey?.journeySettings?.maxEntries?.maxEntries)
+            parseInt(job.data.journey?.journeySettings?.maxEntries?.maxEntries)
           ? parseInt(job.data.journey?.journeySettings?.maxEntries?.maxEntries)
           : count,
         queryRunner,
@@ -151,9 +151,12 @@ export class EnrollmentProcessor extends WorkerHost {
         isEnrolling: false,
       });
 
-      const workspace = job.data.account?.teams?.[0]?.organization?.workspaces?.[0];
-       
-      await this.journeyService.cleanupJourneyCache({workspaceId: workspace.id});
+      const workspace =
+        job.data.account?.teams?.[0]?.organization?.workspaces?.[0];
+
+      await this.journeyService.cleanupJourneyCache({
+        workspaceId: workspace.id,
+      });
 
       await queryRunner.commitTransaction();
       if (triggerStartTasks) {

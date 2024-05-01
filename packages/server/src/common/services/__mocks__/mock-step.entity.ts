@@ -1,2 +1,1 @@
-export class Step {
-}
+export class Step {}

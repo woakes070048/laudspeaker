@@ -81,7 +81,7 @@ import { CacheService } from '@/common/services/cache.service';
     RedlockService,
     JourneyLocationsService,
     EnrollmentProcessor,
-    CacheService
+    CacheService,
   ],
   controllers: [StepsController],
   exports: [StepsService],

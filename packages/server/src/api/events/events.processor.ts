@@ -41,8 +41,8 @@ export enum EventType {
 @Injectable()
 @Processor('events', {
   stalledInterval: process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
-  ? +process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
-  : 600000,
+    ? +process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
+    : 600000,
   removeOnComplete: {
     age: 0,
     count: process.env.EVENTS_PROCESSOR_REMOVE_ON_COMPLETE
@@ -211,17 +211,21 @@ export class EventsProcessor extends WorkerHost {
       job.data.account
     );
     // All steps in `journey` that might be listening for this event
-    const steps = await this.cacheService.get("WaitUntilSteps", job.data.journey.id, async () => {
-      return (
-        await this.stepsRepository.find({
-          where: {
-            type: StepType.WAIT_UNTIL_BRANCH,
-            journey: { id: job.data.journey.id },
-          },
-          relations: ['workspace.organization.owner', 'journey'],
-        })
-      ).filter((el) => el?.metadata?.branches !== undefined);
-    });
+    const steps = await this.cacheService.get(
+      'WaitUntilSteps',
+      job.data.journey.id,
+      async () => {
+        return (
+          await this.stepsRepository.find({
+            where: {
+              type: StepType.WAIT_UNTIL_BRANCH,
+              journey: { id: job.data.journey.id },
+            },
+            relations: ['workspace.organization.owner', 'journey'],
+          })
+        ).filter((el) => el?.metadata?.branches !== undefined);
+      }
+    );
 
     for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
       for (

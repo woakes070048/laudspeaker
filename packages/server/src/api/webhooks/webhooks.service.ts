@@ -447,28 +447,31 @@ export class WebhooksService {
     clickhouseMessages: ClickHouseMessage[],
     session: string
   ) {
-    return Sentry.startSpan({name: "WebhooksService.insertMessageStatusToClickhouse"}, async () => {
-      if (clickhouseMessages?.length) {
-        await this.eventPreprocessorQueue.addBulk(
-          clickhouseMessages.map((element) => {
-            return {
-              name: ProviderType.MESSAGE,
-              data: {
-                workspaceId: element.workspaceId,
-                message: element,
-                session: session,
-                customer: element.customerId,
-              },
-            };
-          })
-        );
-        return await this.kafkaService.produceMessage(
-          KAFKA_TOPIC_MESSAGE_STATUS,
-          clickhouseMessages.map((clickhouseMessage) => ({
-            value: JSON.stringify(clickhouseMessage),
-          }))
-        );
+    return Sentry.startSpan(
+      { name: 'WebhooksService.insertMessageStatusToClickhouse' },
+      async () => {
+        if (clickhouseMessages?.length) {
+          await this.eventPreprocessorQueue.addBulk(
+            clickhouseMessages.map((element) => {
+              return {
+                name: ProviderType.MESSAGE,
+                data: {
+                  workspaceId: element.workspaceId,
+                  message: element,
+                  session: session,
+                  customer: element.customerId,
+                },
+              };
+            })
+          );
+          return await this.kafkaService.produceMessage(
+            KAFKA_TOPIC_MESSAGE_STATUS,
+            clickhouseMessages.map((clickhouseMessage) => ({
+              value: JSON.stringify(clickhouseMessage),
+            }))
+          );
+        }
       }
-    });
+    );
   }
 }
