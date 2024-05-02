@@ -58,7 +58,7 @@ describe("multisplit attribute", () => {
             cy.get('[data-option="webhook"]').click();
             cy.get("#submitTemplateCreation").click();
             cy.get("#webhookURL").type(
-              `${Cypress.env("TESTS_API_BASE_URL")}/events`
+              `${Cypress.env("TESTS_INTERNAL_API_BASE_URL")}/events`
             );
             cy.get("#custom-header").type(`Api-Key ${apikey}`);
             cy.contains("Content").click();
@@ -88,7 +88,7 @@ describe("multisplit attribute", () => {
             cy.get('[data-option="webhook"]').click();
             cy.get("#submitTemplateCreation").click();
             cy.get("#webhookURL").type(
-              `${Cypress.env("TESTS_API_BASE_URL")}/events`
+              `${Cypress.env("TESTS_INTERNAL_API_BASE_URL")}/events`
             );
             cy.get("#custom-header").type(`Api-Key ${apikey}`);
             cy.contains("Content").click();
@@ -219,7 +219,7 @@ describe("multisplit attribute", () => {
             cy.get('[data-option="webhook"]').click();
             cy.get("#submitTemplateCreation").click();
             cy.get("#webhookURL").type(
-              `${Cypress.env("TESTS_API_BASE_URL")}/events`
+              `${Cypress.env("TESTS_INTERNAL_API_BASE_URL")}/events`
             );
             cy.get("#custom-header").type(`Api-Key ${apikey}`);
             cy.contains("Content").click();
@@ -249,7 +249,7 @@ describe("multisplit attribute", () => {
             cy.get('[data-option="webhook"]').click();
             cy.get("#submitTemplateCreation").click();
             cy.get("#webhookURL").type(
-              `${Cypress.env("TESTS_API_BASE_URL")}/events`
+              `${Cypress.env("TESTS_INTERNAL_API_BASE_URL")}/events`
             );
             cy.get("#custom-header").type(`Api-Key ${apikey}`);
             cy.contains("Content").click();

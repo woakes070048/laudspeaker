@@ -24,7 +24,7 @@ const numCPUs = process.env.NODE_ENV === 'development' ? 1 : os.cpus().length;
 
 if (cluster.isPrimary) {
   console.log(`Primary ${process.pid} is running`);
-
+  console.log(`[${process.env.LAUDSPEAKER_PROCESS_TYPE}] Starting.`)
   // Fork workers.
   for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
@@ -138,67 +138,87 @@ if (cluster.isPrimary) {
   // Replace the global setTimeout
   global.setInterval = customSetInterval as any;
 
-  async function bootstrap() {
-    const httpsOptions = {
-      key:
-        parseInt(process.env.PORT) == 443
-          ? readFileSync(process.env.KEY_PATH, 'utf8')
-          : null,
-      cert:
-        parseInt(process.env.PORT) == 443
-          ? readFileSync(process.env.CERT_PATH, 'utf8')
-          : null,
-    };
+  async function initializeApp() {
+    let app;
 
+    if (process.env.LAUDSPEAKER_PROCESS_TYPE == "WEB") {
+      const httpsOptions = {
+        key:
+          parseInt(process.env.PORT) == 443
+            ? readFileSync(process.env.KEY_PATH, 'utf8')
+            : null,
+        cert:
+          parseInt(process.env.PORT) == 443
+            ? readFileSync(process.env.CERT_PATH, 'utf8')
+            : null,
+      };
+
+      app = await NestFactory.create(
+        AppModule,
+        new ExpressAdapter(expressApp),
+        {
+          rawBody: true,
+          httpsOptions:
+            parseInt(process.env.PORT) == 443 ? httpsOptions : undefined,
+        }
+      );
+
+      const rawBodyBuffer = (req, res, buf, encoding) => {
+        if (buf && buf.length) {
+          req.rawBody = buf.toString(encoding || 'utf8');
+        }
+      };
+      app.use(urlencoded({ verify: rawBodyBuffer, extended: true }));
+      if (process.env.SERVE_CLIENT_FROM_NEST) app.setGlobalPrefix('api');
+      app.set('trust proxy', 1);
+      app.enableCors();
+
+      const morganMiddleware = morgan(
+        ':method :url :status :res[content-length] :remote-addr :user-agent - :response-time ms :total-time ms',
+        {
+          stream: {
+            // Configure Morgan to use our custom logger with the http severity
+            write: (message) => logger.log(message.trim(), AppModule.name),
+          },
+        }
+      );
+      app.use(morganMiddleware);
+
+      app.useGlobalPipes(
+        new ValidationPipe({
+          whitelist: true,
+          transform: true,
+          exceptionFactory: (errors) =>
+            console.log(JSON.stringify(errors, null, 2)),
+        })
+      );
+    }
+    else {
+      app = await NestFactory.createApplicationContext(AppModule);
+    }
+
+    const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+
+    app.useLogger(logger);
+
+    return app;
+  }
+
+  async function bootstrap() {
     expressApp.use(Sentry.Handlers.requestHandler());
     expressApp.use(Sentry.Handlers.tracingHandler());
-
-    const app: NestExpressApplication = await NestFactory.create(
-      AppModule,
-      new ExpressAdapter(expressApp),
-      {
-        rawBody: true,
-        httpsOptions:
-          parseInt(process.env.PORT) == 443 ? httpsOptions : undefined,
-      }
-    );
-    const port: number = parseInt(process.env.PORT);
-
     expressApp.use(Sentry.Handlers.errorHandler());
 
-    const rawBodyBuffer = (req, res, buf, encoding) => {
-      if (buf && buf.length) {
-        req.rawBody = buf.toString(encoding || 'utf8');
-      }
-    };
-    app.use(urlencoded({ verify: rawBodyBuffer, extended: true }));
-    if (process.env.SERVE_CLIENT_FROM_NEST) app.setGlobalPrefix('api');
-    app.set('trust proxy', 1);
-    app.enableCors();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        transform: true,
-        exceptionFactory: (errors) =>
-          console.log(JSON.stringify(errors, null, 2)),
-      })
-    );
-    const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
-    const morganMiddleware = morgan(
-      ':method :url :status :res[content-length] :remote-addr :user-agent - :response-time ms :total-time ms',
-      {
-        stream: {
-          // Configure Morgan to use our custom logger with the http severity
-          write: (message) => logger.log(message.trim(), AppModule.name),
-        },
-      }
-    );
-    app.useLogger(logger);
-    app.use(morganMiddleware);
+    const app: NestExpressApplication = await initializeApp();
+    const port: number = parseInt(process.env.PORT);
 
-    await app.listen(port, () => {
-      console.log('[WEB]', `http://localhost:${port}`);
-    });
+    if (process.env.LAUDSPEAKER_PROCESS_TYPE == "WEB") {
+      await app.listen(port, () => {
+        console.log('[WEB]', `http://localhost:${port}`);
+      });
+    }
+
+    console.log(`[${process.env.LAUDSPEAKER_PROCESS_TYPE}] Started.`)
   }
 
   bootstrap();

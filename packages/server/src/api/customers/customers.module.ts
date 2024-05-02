@@ -34,7 +34,6 @@ function getProvidersList() {
   let providerList: Array<any> = [
     CustomersService,
     AudiencesHelper,
-    CustomersConsumerService,
     S3Service,
     JourneyLocationsService,
   ];
@@ -44,10 +43,26 @@ function getProvidersList() {
       ...providerList,
       CustomersProcessor,
       ImportProcessor,
+      CustomersConsumerService,
     ];
   }
 
   return providerList;
+}
+
+function getExportsList() {
+  let exportList: Array<any> = [
+    CustomersService,
+  ];
+
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+    exportList = [
+      ...exportList,
+      CustomersConsumerService,
+    ];
+  }
+
+  return exportList;
 }
 
 @Module({
@@ -85,6 +100,6 @@ function getProvidersList() {
   ],
   controllers: [CustomersController],
   providers: getProvidersList(),
-  exports: [CustomersService, CustomersConsumerService],
+  exports: getExportsList(),
 })
 export class CustomersModule {}

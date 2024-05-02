@@ -205,7 +205,7 @@ export class WebhooksProcessor extends WorkerHost {
     let success = false;
 
     this.logger.debug(
-      'Sending webhook requst: \n' +
+      'Sending webhook request: \n' +
         JSON.stringify(template.webhookData, null, 2)
     );
 

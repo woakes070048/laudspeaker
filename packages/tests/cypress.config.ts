@@ -22,6 +22,8 @@ module.exports = defineConfig({
     TESTS_BASE_URL: process.env.TESTS_BASE_URL,
     TESTS_API_BASE_URL:
       process.env.TESTS_API_BASE_URL || "http://localhost:3001",
+    TESTS_INTERNAL_API_BASE_URL:
+      process.env.TESTS_INTERNAL_API_BASE_URL || "http://localhost:3001",      
     TESTS_SMS_TO: process.env.TESTS_SMS_TO,
     TESTS_SMS_SID: process.env.TESTS_SMS_SID,
     TESTS_SMS_AUTH_TOKEN: process.env.TESTS_SMS_AUTH_TOKEN,
