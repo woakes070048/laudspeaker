@@ -15,8 +15,12 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
     let connectionsPerReplica = Math.floor(totalMaxConnections / maxReplicas);
     let totalCpuPerReplica = os.cpus().length;
 
+    let maxProcessCountPerReplica = process.env.MAX_PROCESS_COUNT_PER_REPLICA
+      ? +process.env.MAX_PROCESS_COUNT_PER_REPLICA
+      : totalCpuPerReplica;
+
     let maxDBConnectionsPerReplicaProcess = Math.floor(
-      connectionsPerReplica / totalCpuPerReplica
+      connectionsPerReplica / maxProcessCountPerReplica
     );
 
     maxDBConnectionsPerReplicaProcess = process.env
@@ -29,6 +33,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
         maxReplicas: (${maxReplicas}),
         connectionsPerReplica: (${connectionsPerReplica}),
         totalCpuPerReplica: (${totalCpuPerReplica}),
+        maxProcessCountPerReplica: (${maxProcessCountPerReplica}),
         maxDBConnectionsPerReplicaProcess: (${maxDBConnectionsPerReplicaProcess})`);
 
     return {
