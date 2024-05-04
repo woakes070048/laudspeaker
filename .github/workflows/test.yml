@@ -30,6 +30,13 @@ jobs:
         # TODO remove the || true from the below run once https://github.com/docker/compose/pull/11649 is merged allowing init containers to exit 0 with --wait-allow-exit over --wait
         run: |
           LAUDSPEAKER_IMAGE=${{ inputs.image }} docker compose --profile testing up --wait --quiet-pull || true
+      - name: Install unit test dependencies
+        run: |
+          npm install -w packages/server          
+      - name: Run unit tests
+        # TODO: Existing unit tests need their dependencies mocked. Append fixed spec files as arguments to test:server
+        run: |
+          npm run test:server -- cache.service.spec
       - name: Install cypress dependencies
         run: |
           npm install -w packages/tests
