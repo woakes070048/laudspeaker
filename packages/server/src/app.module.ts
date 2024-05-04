@@ -61,6 +61,7 @@ import { OrganizationsModule } from './api/organizations/organizations.module';
 import { OrganizationInvites } from './api/organizations/entities/organization-invites.entity';
 import { redisStore } from 'cache-manager-redis-yet';
 import { CacheModule } from '@nestjs/cache-manager';
+import { HealthCheckService } from './app.healthcheck.service';
 
 const sensitiveKeys = [
   /cookie/i,
@@ -100,6 +101,7 @@ function getProvidersList() {
   let providerList: Array<any> = [
     RedlockService,
     JourneyLocationsService,
+    HealthCheckService
   ];
 
   if (process.env.LAUDSPEAKER_PROCESS_TYPE == "CRON") {
