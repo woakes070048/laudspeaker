@@ -1258,14 +1258,40 @@ export class EventsService {
         _id: event.correlationValue,
         workspaceId,
       }, {
-        other_ids: { $in: [event.correlationValue] },
+        other_ids: event.correlationValue,
         workspaceId,
       });
     }
 
-    customer = await this.customersService.CustomerModel.findOne({
+    let customers = await this.customersService.CustomerModel.find({
       $or: findConditions
     });
+
+    for(let i = 0; i < customers.length; i++) {
+      if (primaryKeyName && customers[i][primaryKeyName] == primaryKeyValue) {
+        findType = 1;
+        customer = customers[i];
+
+        break;
+      }
+      else if (customers[i]._id == event.correlationValue) {
+        findType = 2;
+        customer = customers[i];
+
+        break;
+      }
+      else if (event.correlationValue && customers[i].other_ids.includes(event.correlationValue.toString())) {
+        findType = 3;
+        customer = customers[i];
+
+        break;
+      }
+    }
+
+    // our conditions were not inclusive, something's wrong
+    if (customers.length > 0 && !customer) {
+      this.error("MongoDB returned multiple customers but could not select one of them", this.findOrCreateCustomer.name, session);
+    }
 
     // If customer still not found, create a new one
     if (!customer) {
