@@ -260,6 +260,15 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
     BullModule.registerQueue({
       name: 'start',
     }),
+    BullModule.registerQueue({
+      name: 'wait.until.step',
+    }),
+    BullModule.registerQueue({
+      name: 'time.delay.step',
+    }),
+    BullModule.registerQueue({
+      name: 'time.window.step',
+    }),
     IntegrationsModule,
     CustomersModule,
     TemplatesModule,

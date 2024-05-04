@@ -46,7 +46,7 @@ export class StartProcessor extends WorkerHost {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('transition') private readonly transitionQueue: Queue,
+    @InjectQueue('start.step') private readonly startStepQueue: Queue,
     @InjectQueue('start') private readonly startQueue: Queue,
     @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(CustomersService)
@@ -189,7 +189,7 @@ export class StartProcessor extends WorkerHost {
           null
         );
         await queryRunner.commitTransaction();
-        if (jobs && jobs.length) await this.transitionQueue.addBulk(jobs);
+        if (jobs && jobs.length) await this.startStepQueue.addBulk(jobs);
       } catch (e) {
         this.error(e, this.process.name, job.data.session, job.data.owner.id);
         await queryRunner.rollbackTransaction();

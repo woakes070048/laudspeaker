@@ -75,7 +75,7 @@ export class EventsProcessor extends WorkerHost {
     private readonly audiencesHelper: AudiencesHelper,
     @Inject(WebsocketGateway)
     private websocketGateway: WebsocketGateway,
-    @InjectQueue('transition') private readonly transitionQueue: Queue,
+    @InjectQueue('wait.until.step') private readonly waitUntilStepQueue: Queue,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
     @InjectRepository(Step) private readonly stepsRepository: Repository<Step>,
@@ -501,7 +501,7 @@ export class EventsProcessor extends WorkerHost {
         }
       }
       if (stepToQueue) {
-        await this.transitionQueue.add(stepToQueue.type, {
+        await this.waitUntilStepQueue.add(stepToQueue.type, {
           step: stepToQueue,
           branch: branch,
           customer: job.data.customer,

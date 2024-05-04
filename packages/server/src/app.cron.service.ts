@@ -120,6 +120,9 @@ export class CronService {
     @Inject(StepsService) private stepsService: StepsService,
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,
+    @InjectQueue('wait.until.step') private readonly waitUntilStepQueue: Queue,
+    @InjectQueue('time.delay.step') private readonly timeDelayStep: Queue,
+    @InjectQueue('time.window.step') private readonly timeWindowStep: Queue,
     @InjectQueue('transition') private readonly transitionQueue: Queue,
     @InjectQueue('start') private readonly startQueue: Queue,
     @Inject(RedlockService)
@@ -502,7 +505,23 @@ export class CronService {
       } finally {
         await queryRunner.release();
       }
-      if (!timeBasedErr) await this.transitionQueue.addBulk(timeBasedJobs);
+      if (!timeBasedErr) {
+        await this.waitUntilStepQueue.addBulk(
+          timeBasedJobs.filter((job) => {
+            return job.name === String(StepType.WAIT_UNTIL_BRANCH);
+          })
+        );
+        await this.timeDelayStep.addBulk(
+          timeBasedJobs.filter((job) => {
+            return job.name === String(StepType.TIME_DELAY);
+          })
+        );
+        await this.timeWindowStep.addBulk(
+          timeBasedJobs.filter((job) => {
+            return job.name === String(StepType.TIME_WINDOW);
+          })
+        );
+      }
 
       // Handle expiry of recovery emails
       let recoveryErr: any;
