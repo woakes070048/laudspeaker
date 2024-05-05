@@ -214,13 +214,11 @@ services:
     image: ${LAUDSPEAKER_IMAGE:-laudspeaker/laudspeaker:latest}
     container_name: laudspeaker-queue
     command: "queue"
-    # ports:
-    #   - "8080:8080"
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "localhost:8080"]
-    #   interval: 5s
-    #   timeout: 30s
-    #   retries: 20
+    healthcheck:
+      test: '[ $(find /tmp/laudspeaker-healthcheck-queue -mmin -1 | wc -l) -eq 1 ] || false'
+      interval: 10s
+      timeout: 30s
+      retries: 10
     depends_on:
       laudspeaker-web:
         condition: service_healthy
@@ -235,13 +233,11 @@ services:
     image: ${LAUDSPEAKER_IMAGE:-laudspeaker/laudspeaker:latest}
     container_name: laudspeaker-cron
     command: "cron"
-    # ports:
-    #   - "8080:8080"
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "localhost:8080"]
-    #   interval: 5s
-    #   timeout: 30s
-    #   retries: 20
+    healthcheck:
+      test: '[ $(find /tmp/laudspeaker-healthcheck-cron -mmin -1 | wc -l) -eq 1 ] || false'
+      interval: 10s
+      timeout: 30s
+      retries: 10
     depends_on:
       laudspeaker-web:
         condition: service_healthy
