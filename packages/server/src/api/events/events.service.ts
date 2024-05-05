@@ -1267,25 +1267,30 @@ export class EventsService {
       $or: findConditions
     });
 
-    for(let i = 0; i < customers.length; i++) {
-      if (primaryKeyName && customers[i][primaryKeyName] == primaryKeyValue) {
-        findType = 1;
-        customer = customers[i];
+    for(let findTypeIndex = 1; findTypeIndex <= 3; findTypeIndex++) {
+      for(let i = 0; i < customers.length; i++) {
+        if (findTypeIndex == 1 && primaryKeyName && customers[i][primaryKeyName] == primaryKeyValue) {
+          findType = 1;
+          customer = customers[i];
 
-        break;
-      }
-      else if (customers[i]._id == event.correlationValue) {
-        findType = 2;
-        customer = customers[i];
+          break;
+        }
+        else if (findTypeIndex == 2 && customers[i]._id == event.correlationValue) {
+          findType = 2;
+          customer = customers[i];
 
-        break;
-      }
-      else if (event.correlationValue && customers[i].other_ids.includes(event.correlationValue.toString())) {
-        findType = 3;
-        customer = customers[i];
+          break;
+        }
+        else if (findTypeIndex == 3 && event.correlationValue && customers[i].other_ids.includes(event.correlationValue.toString())) {
+          findType = 3;
+          customer = customers[i];
 
-        break;
+          break;
+        }
       }
+
+      if(findType == findTypeIndex)
+        break;
     }
 
     // our conditions were not inclusive, something's wrong
