@@ -75,6 +75,7 @@ import {
 import { Liquid } from 'liquidjs';
 import { cleanTagsForSending } from '@/shared/utils/helpers';
 import { randomUUID } from 'crypto';
+import * as Sentry from '@sentry/node';
 
 @Injectable()
 export class EventsService {
@@ -1033,66 +1034,71 @@ export class EventsService {
     MobileBatchDto: MobileBatchDto,
     session: string
   ) {
-    let err: any;
+    return Sentry.startSpan(
+      { name: 'EventsService.batch' },
+      async () => {
+        let err: any;
 
-    try {
-      for (const thisEvent of MobileBatchDto.batch) {
-        if (thisEvent.source === 'message') {
-          const clickHouseRecord: ClickHouseMessage = {
-            workspaceId: thisEvent.payload.workspaceID,
-            stepId: thisEvent.payload.stepID,
-            customerId: thisEvent.payload.customerID,
-            templateId: String(thisEvent.payload.templateID),
-            messageId: thisEvent.payload.messageID,
-            event: thisEvent.event === '$delivered' ? 'delivered' : 'opened',
-            eventProvider: ClickHouseEventProvider.PUSH,
-            processed: false,
-            createdAt: new Date().toISOString(),
-          };
-          await this.webhooksService.insertMessageStatusToClickhouse(
-            [clickHouseRecord],
-            session
-          );
-        } else {
-          switch (thisEvent.event) {
-            case '$identify':
-              this.debug(
-                `Handling $identify event for correlationKey: ${thisEvent.correlationValue}`,
-                this.batch.name,
-                session,
-                auth.account.id
-              );
-              await this.handleIdentify(auth, thisEvent, session);
-              break;
-            case '$set':
-              this.debug(
-                `Handling $set event for correlationKey: ${thisEvent.correlationValue}`,
-                this.batch.name,
-                session,
-                auth.account.id
-              );
-              await this.handleSet(auth, thisEvent, session);
-              break;
-            default:
-              await this.customPayload(
-                { account: auth.account, workspace: auth.workspace },
-                thisEvent,
+        try {
+          for (const thisEvent of MobileBatchDto.batch) {
+            if (thisEvent.source === 'message') {
+              const clickHouseRecord: ClickHouseMessage = {
+                workspaceId: thisEvent.payload.workspaceID,
+                stepId: thisEvent.payload.stepID,
+                customerId: thisEvent.payload.customerID,
+                templateId: String(thisEvent.payload.templateID),
+                messageId: thisEvent.payload.messageID,
+                event: thisEvent.event === '$delivered' ? 'delivered' : 'opened',
+                eventProvider: ClickHouseEventProvider.PUSH,
+                processed: false,
+                createdAt: new Date().toISOString(),
+              };
+              await this.webhooksService.insertMessageStatusToClickhouse(
+                [clickHouseRecord],
                 session
               );
-              if (!thisEvent.correlationValue) {
-                throw new Error('correlation value is empty');
+            } else {
+              switch (thisEvent.event) {
+                case '$identify':
+                  this.debug(
+                    `Handling $identify event for correlationKey: ${thisEvent.correlationValue}`,
+                    this.batch.name,
+                    session,
+                    auth.account.id
+                  );
+                  await this.handleIdentify(auth, thisEvent, session);
+                  break;
+                case '$set':
+                  this.debug(
+                    `Handling $set event for correlationKey: ${thisEvent.correlationValue}`,
+                    this.batch.name,
+                    session,
+                    auth.account.id
+                  );
+                  await this.handleSet(auth, thisEvent, session);
+                  break;
+                default:
+                  await this.customPayload(
+                    { account: auth.account, workspace: auth.workspace },
+                    thisEvent,
+                    session
+                  );
+                  if (!thisEvent.correlationValue) {
+                    throw new Error('correlation value is empty');
+                  }
+                  break;
               }
-              break;
+            }
           }
+          //}
+        } catch (e) {
+          this.error(e, this.batch.name, session, auth.account.email);
+          err = e;
+        } finally {
+          if (err) throw err;
         }
       }
-      //}
-    } catch (e) {
-      this.error(e, this.batch.name, session);
-      err = e;
-    } finally {
-      if (err) throw err;
-    }
+    );
   }
 
   async handleSet(
