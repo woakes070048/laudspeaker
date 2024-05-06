@@ -125,7 +125,7 @@ const myFormat = winston.format.printf(function ({
   try {
     ctx = JSON.parse(context);
   } catch (e) {}
-  return `[${timestamp}] [${level}]${
+  return `[${timestamp}] [${level}] [${process.env.LAUDSPEAKER_PROCESS_TYPE}]${
     ctx?.class ? ' [Class: ' + ctx?.class + ']' : ''
   }${ctx?.method ? ' [Method: ' + ctx?.method + ']' : ''}${
     ctx?.session ? ' [User: ' + ctx?.user + ']' : ''
