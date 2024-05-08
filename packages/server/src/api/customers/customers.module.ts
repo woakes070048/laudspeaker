@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CustomersController } from './customers.controller';
 import { CustomersService } from './customers.service';
-import { CustomersProcessor } from './customers.processor';
 import { BullModule } from '@nestjs/bullmq';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Customer, CustomerSchema } from './schemas/customer.schema';
@@ -29,6 +28,7 @@ import { JourneyLocation } from '../journeys/entities/journey-location.entity';
 import { SegmentsService } from '../segments/segments.service';
 import { Segment } from '../segments/entities/segment.entity';
 import { SegmentCustomers } from '../segments/entities/segment-customers.entity';
+import { CustomerChangeProcessor } from './processors/customers.processor';
 
 function getProvidersList() {
   let providerList: Array<any> = [
@@ -38,12 +38,12 @@ function getProvidersList() {
     JourneyLocationsService,
   ];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
     providerList = [
       ...providerList,
-      CustomersProcessor,
       ImportProcessor,
       CustomersConsumerService,
+      CustomerChangeProcessor,
     ];
   }
 
@@ -51,15 +51,10 @@ function getProvidersList() {
 }
 
 function getExportsList() {
-  let exportList: Array<any> = [
-    CustomersService,
-  ];
+  let exportList: Array<any> = [CustomersService];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
-    exportList = [
-      ...exportList,
-      CustomersConsumerService,
-    ];
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
+    exportList = [...exportList, CustomersConsumerService, CustomerChangeProcessor];
   }
 
   return exportList;
@@ -75,6 +70,9 @@ function getExportsList() {
     ]),
     BullModule.registerQueue({
       name: 'customers',
+    }),
+    BullModule.registerQueue({
+      name: 'customer_change',
     }),
     BullModule.registerQueue({
       name: 'imports',

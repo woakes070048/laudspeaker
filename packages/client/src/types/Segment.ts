@@ -11,6 +11,7 @@ export interface Segment {
   name: string;
   inclusionCriteria: InclusionCriteria;
   isFreezed: boolean;
+  isUpdating: boolean;
   resources: Resource[];
   type: SegmentType;
 }

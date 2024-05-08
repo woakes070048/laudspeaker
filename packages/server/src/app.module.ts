@@ -269,6 +269,12 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
     BullModule.registerQueue({
       name: 'time.window.step',
     }),
+    BullModule.registerQueue({
+      name: 'customer_change',
+    }),
+    BullModule.registerQueue({
+      name: 'segment_update',
+    }),
     IntegrationsModule,
     CustomersModule,
     TemplatesModule,

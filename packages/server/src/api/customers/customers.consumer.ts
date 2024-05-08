@@ -4,81 +4,13 @@ import {
   Logger,
   OnApplicationBootstrap,
 } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
 import { randomUUID } from 'crypto';
 import { EachMessagePayload } from 'kafkajs';
-import mongoose from 'mongoose';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChangeStreamDocument, DataSource } from 'typeorm';
-import { AccountsService } from '../accounts/accounts.service';
-import { Account } from '../accounts/entities/accounts.entity';
-import { JourneysService } from '../journeys/journeys.service';
 import { KafkaConsumerService } from '../kafka/consumer.service';
-import { SegmentsService } from '../segments/segments.service';
 import { CustomersService } from './customers.service';
-import {
-  Customer,
-  CustomerDocument,
-  CustomerSchema,
-} from './schemas/customer.schema';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { ProviderType } from '../events/events.preprocessor';
-import { KEYS_TO_SKIP } from '@/utils/customer-key-name-validator';
-
-const containsUnskippedKeys = (updateDescription) => {
-  // Combine keys from updatedFields, removedFields, and the fields of truncatedArrays
-  const allKeys = Object.keys(updateDescription.updatedFields)
-    .concat(updateDescription.removedFields)
-    .concat(updateDescription.truncatedArrays.map((array) => array.field));
-
-  // Check if any key is not included in KEYS_TO_SKIP, considering prefix matches
-  return allKeys.some(
-    (key) =>
-      !KEYS_TO_SKIP.some(
-        (skipKey) => key.startsWith(skipKey) || key === skipKey
-      )
-  );
-};
-
-const copyMessageWithFilteredUpdateDescription = (message) => {
-  // Filter updatedFields with consideration for dynamic keys like journeyEnrollmentsDates.<uuid>
-  const filteredUpdatedFields = Object.entries(
-    message.updateDescription.updatedFields
-  )
-    .filter(
-      ([key]) =>
-        !KEYS_TO_SKIP.some(
-          (skipKey) => key.startsWith(skipKey) || key === skipKey
-        )
-    )
-    .reduce((acc, [key, value]) => {
-      acc[key] = value;
-      return acc;
-    }, {});
-
-  // Assume removedFields and truncatedArrays are handled as before since they're not affected by the new information
-  const filteredRemovedFields = message.updateDescription.removedFields.filter(
-    (key) => !KEYS_TO_SKIP.includes(key)
-  );
-  const filteredTruncatedArrays =
-    message.updateDescription.truncatedArrays.filter(
-      (entry) => !KEYS_TO_SKIP.includes(entry.field)
-    );
-
-  // Constructing a new message object with filtered updateDescription
-  const newMessage = {
-    ...message,
-    updateDescription: {
-      ...message.updateDescription,
-      updatedFields: filteredUpdatedFields,
-      removedFields: filteredRemovedFields,
-      truncatedArrays: filteredTruncatedArrays,
-    },
-  };
-
-  return newMessage;
-};
 
 @Injectable()
 export class CustomersConsumerService implements OnApplicationBootstrap {
@@ -86,14 +18,8 @@ export class CustomersConsumerService implements OnApplicationBootstrap {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
     private readonly consumerService: KafkaConsumerService,
-    private readonly customersService: CustomersService,
-    private readonly journeysService: JourneysService,
-    private readonly accountsService: AccountsService,
-    private readonly segmentsService: SegmentsService,
-    @InjectQueue('events_pre')
-    private readonly eventPreprocessorQueue: Queue,
-    @InjectConnection() private readonly connection: mongoose.Connection,
-    private dataSource: DataSource
+    @InjectQueue('customer_change')
+    private readonly customerChangeQueue: Queue
   ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -177,90 +103,31 @@ export class CustomersConsumerService implements OnApplicationBootstrap {
   private handleCustomerChangeStream(this: CustomersConsumerService) {
     return async (changeMessage: EachMessagePayload) => {
       const session = randomUUID();
-      let err: any;
-      const queryRunner = await this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-      const clientSession = await this.connection.startSession();
-      await clientSession.startTransaction();
       try {
-        const messStr = changeMessage.message.value.toString();
-        let message: ChangeStreamDocument<Customer> = JSON.parse(messStr);
-        if (typeof message === 'string') {
-          message = JSON.parse(message); //double parse if kafka record is published as string not object
-        }
+        const threshold = process.env.CUSTOMER_CHANGE_QUEUE_THRESHOLD
+          ? +process.env.CUSTOMER_CHANGE_QUEUE_THRESHOLD
+          : 10; // Set the threshold for maximum waiting jobs
 
-        //const session = randomUUID();
-        let account: Account;
-        let customer: CustomerDocument;
-        switch (message.operationType) {
-          case 'insert':
-          case 'update':
-          case 'replace':
-            if (
-              message.operationType === 'update' &&
-              !containsUnskippedKeys(message.updateDescription)
-            )
-              break;
-            customer = await this.customersService.findByCustomerId(
-              message.documentKey._id,
-              clientSession
-            );
-            if (!customer) {
-              this.logger.warn(
-                `No customer with id ${message.documentKey._id}. Can't process ${CustomersConsumerService.name}.`
-              );
-              break;
-            }
-            account =
-              await this.accountsService.findOrganizationOwnerByWorkspaceId(
-                customer.workspaceId,
-                session
-              );
-            await this.segmentsService.updateCustomerSegments(
-              account,
-              customer._id,
-              session,
-              queryRunner
-            );
-            await this.journeysService.updateEnrollmentForCustomer(
-              account,
-              customer._id,
-              message.operationType === 'insert' ? 'NEW' : 'CHANGE',
-              session,
-              queryRunner,
-              clientSession
-            );
+        while (true) {
+          const jobCounts = await this.customerChangeQueue.getJobCounts('wait');
+          const waitingJobs = jobCounts.wait;
 
-            if (message.operationType === 'update')
-              await this.eventPreprocessorQueue.add(ProviderType.WU_ATTRIBUTE, {
-                account: account,
-                session: session,
-                message: copyMessageWithFilteredUpdateDescription(message),
-              });
-            break;
-          case 'delete': {
-            // TODO_JH: remove customerID from all steps also
-            const customerId = message.documentKey._id;
-            await this.segmentsService.removeCustomerFromAllSegments(
-              customerId,
-              queryRunner
-            );
-            break;
+          if (waitingJobs < threshold) {
+            break; // Exit the loop if the number of waiting jobs is below the threshold
           }
+
+          this.warn(
+            `Waiting for the queue to process. Current waiting jobs: ${waitingJobs}`,
+            this.handleCustomerChangeStream.name,
+            session
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Sleep for 1 second before checking again
         }
-        await clientSession.commitTransaction();
-        await queryRunner.commitTransaction();
-      } catch (e) {
-        this.error(e, this.handleCustomerChangeStream.name, session);
-        err = e;
-        await clientSession.abortTransaction();
-        await queryRunner.rollbackTransaction();
-      } finally {
-        await clientSession.endSession();
-        await queryRunner.release();
-        if (err) throw err;
-      }
+        await this.customerChangeQueue.add('change', {
+          session,
+          changeMessage,
+        });
+      } catch (err) {}
     };
   }
 }

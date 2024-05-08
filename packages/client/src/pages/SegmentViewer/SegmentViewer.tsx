@@ -35,6 +35,14 @@ const SegmentViewer = () => {
     try {
       const { data } = await ApiService.get({ url: "/segments/" + id });
 
+      if (data.isUpdating) {
+        toast.error(
+          "Segment is updating, please wait before accessing the page"
+        );
+        navigate("/segments");
+        return;
+      }
+
       setSegmentType(data.type);
       setName(data.name);
       setDescription(data.description);

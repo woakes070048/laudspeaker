@@ -20,10 +20,16 @@ import { Segment, SegmentType } from "types/Segment";
 import { Link } from "react-router-dom";
 import Select from "components/Elements/Selectv2";
 
+enum SegmentStatus {
+  UPDATING = "Updating",
+  UPDATED = "Updated",
+}
+
 interface SegmentRowData {
   id: string;
   name: string;
   type: string;
+  status: SegmentStatus;
   lastUpdate: string;
 }
 
@@ -40,6 +46,11 @@ interface SortOptions {
   sortBy: SortProperty;
   sortType: SortType;
 }
+
+export const isUpdatingClassName: Record<SegmentStatus, string> = {
+  [SegmentStatus.UPDATED]: "bg-[#DCFCE7] text-[#14532D]",
+  [SegmentStatus.UPDATING]: "bg-[#FEF9C3] text-[#713F12]",
+};
 
 const SegmentTablev2 = () => {
   const navigate = useNavigate();
@@ -83,6 +94,9 @@ const SegmentTablev2 = () => {
           name: segment.name,
           type: segment.type,
           lastUpdate: new Date().toUTCString(),
+          status: segment.isUpdating
+            ? SegmentStatus.UPDATING
+            : SegmentStatus.UPDATED,
         }))
       );
       setPagesCount(totalPages);
@@ -241,6 +255,7 @@ const SegmentTablev2 = () => {
                     />
                   </div>
                 </div>,
+                <div className="px-5 py-[10px] select-none">Status</div>,
                 ,
                 <div className="px-5 py-[10px] select-none"></div>,
               ]}
@@ -255,6 +270,13 @@ const SegmentTablev2 = () => {
                 <div>{row.type}</div>,
                 <div>
                   {format(new Date(row.lastUpdate), "MM/dd/yyyy HH:mm")}
+                </div>,
+                <div
+                  className={`px-[10px] py-[2px] rounded-[14px] w-fit ${
+                    isUpdatingClassName[row.status]
+                  }`}
+                >
+                  {row.status}
                 </div>,
                 <Menu as="div" className="relative">
                   <Menu.Button>
