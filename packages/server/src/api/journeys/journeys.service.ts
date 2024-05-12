@@ -84,6 +84,8 @@ import { JourneyChange } from './entities/journey-change.entity';
 import isObjectDeepEqual from '@/utils/isObjectDeepEqual';
 import { JourneyLocation } from './entities/journey-location.entity';
 import { CacheService } from '@/common/services/cache.service';
+import { EntityComputedFieldsHelper } from '@/common/helper/entityComputedFields.helper';
+import { EntityWithComputedFields } from '@/common/entities/entityWithComputedFields.entity';
 
 export enum JourneyStatus {
   ACTIVE = 'Active',
@@ -931,7 +933,7 @@ export class JourneysService {
     showDisabled?: boolean,
     search = '',
     filterStatusesString = ''
-  ): Promise<{ data: Journey[]; totalPages: number }> {
+  ): Promise<{ data: EntityWithComputedFields<Journey>[]; totalPages: number }> {
     try {
       const filterStatusesParts = filterStatusesString.split(',');
       const isActive = filterStatusesParts.includes(JourneyStatus.ACTIVE);
@@ -1004,26 +1006,25 @@ export class JourneysService {
           where: whereOrParts,
         })) / take || 1
       );
-      const orderOptions = {};
-      if (orderBy && orderType) {
-        orderOptions[orderBy] = orderType;
-      }
-      const journeys = await this.journeysRepository.find({
-        where: whereOrParts,
-        order: orderOptions,
-        take: take < 100 ? take : 100,
-        skip,
-        relations: ['latestChanger'],
-      });
 
-      const journeysWithEnrolledCustomersCount = journeys.map((journey) => ({
-        ...journey,
-        latestChanger: null,
-        latestChangerEmail: journey.latestChanger?.email,
-        enrolledCustomers: +journey.enrollment_count,
-      }));
+      let query = this.journeysRepository
+        .createQueryBuilder('journey')
+        .where(whereOrParts)
+        .take(take < 100 ? take : 100)
+        .skip(skip)
+        .leftJoin('journey.latestChanger', 'account')
+        .loadRelationCountAndMap("journey.totalEnrolled", "journey.journeyLocations")
+        .addSelect('account.email', 'latestChangerEmail')
 
-      return { data: journeysWithEnrolledCustomersCount, totalPages };
+      if(orderBy)
+        query = query.addOrderBy(`journey.${orderBy}`, orderType == 'desc' ? 'DESC' : 'ASC')
+
+      const journeys = await query.getRawAndEntities();
+      const computedFieldsList = ['latestChangerEmail', 'totalEnrolled'];
+
+      const result = EntityComputedFieldsHelper.processCollection<Journey>(journeys, computedFieldsList);
+
+      return { data: result, totalPages };
     } catch (err) {
       this.error(err, this.findAll.name, session, account.email);
       throw err;

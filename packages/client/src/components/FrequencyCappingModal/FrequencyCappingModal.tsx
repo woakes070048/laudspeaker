@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import ApiService from "services/api.service";
-import { Workflow } from "types/Workflow";
+import { Workflow, EntityWithComputedFields } from "types/Workflow";
 import { toast } from "react-toastify";
 import Modal from "components/Elements/Modal";
 import sortAscChevronsImage from "../../pages/TemplateTablev2/svg/sort-asc-chevrons.svg";
@@ -72,27 +72,30 @@ export const FrequencyCappingModal: React.FC<{
     try {
       const {
         data: { data, totalPages },
-      } = await ApiService.get<{ data: Workflow[]; totalPages: number }>({
+      } = await ApiService.get<{ data: EntityWithComputedFields<Workflow>[]; totalPages: number }>({
         url: `/journeys?take=${ITEMS_PER_PAGE}&skip=${
           (currentPage - 1) * ITEMS_PER_PAGE
         }&orderBy=${sortOptions.sortBy}&orderType=${sortOptions.sortType}`,
       });
 
       setRows(
-        data.map((workflow) => {
+        data.map((journeyResult) => {
+          const journey = journeyResult.entity;
+          const { computed } = journeyResult;
+
           let status: JourneyStatus = JourneyStatus.DRAFT;
-          if (workflow.isActive) status = JourneyStatus.ACTIVE;
-          if (workflow.isPaused) status = JourneyStatus.PAUSED;
-          if (workflow.isStopped) status = JourneyStatus.STOPPED;
-          if (workflow.isDeleted) status = JourneyStatus.DELETED;
+          if (journey.isActive) status = JourneyStatus.ACTIVE;
+          if (journey.isPaused) status = JourneyStatus.PAUSED;
+          if (journey.isStopped) status = JourneyStatus.STOPPED;
+          if (journey.isDeleted) status = JourneyStatus.DELETED;
 
           return {
-            id: workflow.id,
-            name: workflow.name,
+            id: journey.id,
+            name: journey.name,
             status,
-            enrolledCount: workflow.enrolledCustomers || 0,
-            lastUpdate: workflow.latestSave,
-            latestChangerEmail: workflow.latestChangerEmail,
+            enrolledCount: computed.totalEnrolled || 0,
+            lastUpdate: journey.latestSave,
+            latestChangerEmail: computed.latestChangerEmail,
           };
         })
       );

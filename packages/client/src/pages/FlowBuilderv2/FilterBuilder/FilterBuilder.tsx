@@ -43,7 +43,7 @@ import { useDispatch } from "react-redux";
 import { SegmentsSettings } from "reducers/segment.reducer";
 import { capitalize } from "lodash";
 import Select from "components/Elements/Selectv2";
-import { Workflow } from "types/Workflow";
+import { Workflow, EntityWithComputedFields } from "types/Workflow";
 import axios, { CancelTokenSource } from "axios";
 import deepCopy from "utils/deepCopy";
 import AutoComplete from "../../../components/AutoCompletev2/AutoCompletev2";
@@ -270,7 +270,7 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
   const [journeySearchQuery, setJourneySearchQuery] = useState("");
   const [journeySearchQueryPage, setJourneySearchQueryPage] = useState(1);
   const [journeySearchTotalPages, setJourneySearchTotalPages] = useState(1);
-  const [availableJourneys, setAvailableJourneys] = useState<Workflow[]>([]);
+  const [availableJourneys, setAvailableJourneys] = useState<EntityWithComputedFields<Workflow>[]>([]);
   const [isJourneySearchLoading, setIsJourneySearchLoading] = useState(false);
 
   const [tagSearchQuery, setTagSearchQuery] = useState("");
@@ -357,7 +357,7 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
     setIsJourneySearchLoading(true);
     try {
       const { data } = await ApiService.get<{
-        data: Workflow[];
+        data: EntityWithComputedFields<Workflow>[];
         totalPages: number;
       }>({
         url: `/journeys?take=12&skip=${
@@ -869,8 +869,8 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
           },
         ]
       : availableJourneys?.map((el) => ({
-          key: el.id,
-          title: el.name,
+          key: el.entity.id,
+          title: el.entity.name,
         })) || []),
   ];
 

@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDebounce } from "react-use";
 import ApiService from "services/api.service";
-import { Workflow } from "types/Workflow";
+import { Workflow, EntityWithComputedFields } from "types/Workflow";
 import NameJourneyModal from "./Modals/NameJourneyModal";
 import searchIconImage from "./svg/search-icon.svg";
 import threeDotsIcon from "./svg/three-dots-icon.svg";
@@ -135,7 +135,7 @@ const JourneyTablev2 = () => {
     try {
       const {
         data: { data, totalPages },
-      } = await ApiService.get<{ data: Workflow[]; totalPages: number }>({
+      } = await ApiService.get<{ data: EntityWithComputedFields<Workflow>[]; totalPages: number }>({
         url: `/journeys?take=${ITEMS_PER_PAGE}&skip=${
           (currentPage - 1) * ITEMS_PER_PAGE
         }&search=${search}&orderBy=${sortOptions.sortBy}&orderType=${
@@ -150,24 +150,27 @@ const JourneyTablev2 = () => {
       });
 
       setRows(
-        data.map((workflow) => {
+        data.map((journeyResult) => {
+          const journey = journeyResult.entity;
+          const { computed } = journeyResult;
+
           let status: JourneyStatus = JourneyStatus.DRAFT;
 
-          if (workflow.isActive) {
-            if (workflow.isEnrolling) status = JourneyStatus.ENROLLING;
+          if (journey.isActive) {
+            if (journey.isEnrolling) status = JourneyStatus.ENROLLING;
             else status = JourneyStatus.ACTIVE;
           }
-          if (workflow.isPaused) status = JourneyStatus.PAUSED;
-          if (workflow.isStopped) status = JourneyStatus.STOPPED;
-          if (workflow.isDeleted) status = JourneyStatus.DELETED;
+          if (journey.isPaused) status = JourneyStatus.PAUSED;
+          if (journey.isStopped) status = JourneyStatus.STOPPED;
+          if (journey.isDeleted) status = JourneyStatus.DELETED;
 
           return {
-            id: workflow.id,
-            name: workflow.name,
+            id: journey.id,
+            name: journey.name,
             status,
-            enrolledCount: workflow.enrolledCustomers || 0,
-            lastUpdate: workflow.latestSave,
-            latestChangerEmail: workflow.latestChangerEmail,
+            enrolledCount: computed.totalEnrolled || 0,
+            lastUpdate: journey.latestSave,
+            latestChangerEmail: computed.latestChangerEmail,
           };
         })
       );
@@ -314,7 +317,7 @@ const JourneyTablev2 = () => {
                 <div className="px-5 py-[10px] select-none">Name</div>,
                 <div className="px-5 py-[10px] select-none">Status</div>,
                 <div className="px-5 py-[10px] select-none">
-                  Enrolled customer
+                  Enrolled customers
                 </div>,
                 <div className="px-5 py-[10px] select-none">
                   Last updated by
@@ -380,7 +383,7 @@ const JourneyTablev2 = () => {
                   {row.status === JourneyStatus.DRAFT ? (
                     "-"
                   ) : (
-                    <>{row.enrolledCount} persons</>
+                    <>{row.enrolledCount} {row.enrolledCount == 1 ? 'customer' : 'customers'}</>
                   )}
                 </div>,
                 <div>{row.latestChangerEmail || "-"}</div>,

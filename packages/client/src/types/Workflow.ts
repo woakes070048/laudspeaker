@@ -132,3 +132,8 @@ export interface Workflow {
   latestChangerEmail?: string;
   enrolledCustomers?: number;
 }
+
+export interface EntityWithComputedFields<T> {
+  entity: T;
+  computed: Record<string, any>;
+}

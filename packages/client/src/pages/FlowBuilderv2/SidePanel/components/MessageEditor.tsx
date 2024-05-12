@@ -12,7 +12,7 @@ import {
   WaitUntilMessageProviderCorelation,
 } from "reducers/flow-builder.reducer";
 import ApiService from "services/api.service";
-import { Workflow } from "types/Workflow";
+import { Workflow, EntityWithComputedFields } from "types/Workflow";
 import { ConditionEditorError, errorToMessageMap } from "./ConditionEditor";
 
 interface MessageEditorProps {
@@ -37,7 +37,7 @@ const MessageEditor = ({
   const [journeySearchQuery, setJourneySearchQuery] = useState("");
   const [journeySearchQueryPage, setJourneySearchQueryPage] = useState(1);
   const [journeySearchTotalPages, setJourneySearchTotalPages] = useState(1);
-  const [availableJourneys, setAvailableJourneys] = useState<Workflow[]>([]);
+  const [availableJourneys, setAvailableJourneys] = useState<EntityWithComputedFields<Workflow>[]>([]);
   const [isJourneySearchLoading, setIsJourneySearchLoading] = useState(false);
 
   const [specMessageQuery, setSpecMessageQuery] = useState("");
@@ -82,7 +82,7 @@ const MessageEditor = ({
     setIsJourneySearchLoading(true);
     try {
       const { data } = await ApiService.get<{
-        data: Workflow[];
+        data: EntityWithComputedFields<Workflow>[];
         totalPages: number;
       }>({
         url: `/journeys?take=12&skip=${
@@ -158,8 +158,8 @@ const MessageEditor = ({
             from: {
               key: el,
               title: (availableJourneys?.map((availableJ) => ({
-                key: availableJ.id,
-                title: availableJ.name,
+                key: availableJ.entity.id,
+                title: availableJ.entity.name,
               })) || [])[selectedOptionI].title,
             },
           });
@@ -167,8 +167,8 @@ const MessageEditor = ({
         noDataPlaceholder={"No results"}
         options={
           availableJourneys?.map((el) => ({
-            key: el.id,
-            title: el.name,
+            key: el.entity.id,
+            title: el.entity.name,
           })) || []
         }
       />
