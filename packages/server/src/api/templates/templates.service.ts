@@ -47,6 +47,7 @@ import { TestWebhookDto } from './dto/test-webhook.dto';
 import wait from '../../utils/wait';
 import { ModalsService } from '../modals/modals.service';
 import { WebsocketGateway } from '../../websockets/websocket.gateway';
+import { CacheService } from '@/common/services/cache.service';
 
 @Injectable()
 @QueueEventsListener('message')
@@ -67,7 +68,8 @@ export class TemplatesService extends QueueEventsHost {
     @Inject(ModalsService) private modalsService: ModalsService,
     @InjectQueue('message') private readonly messageQueue: Queue,
     @InjectQueue('webhooks') private readonly webhooksQueue: Queue,
-    @InjectQueue('slack') private readonly slackQueue: Queue
+    @InjectQueue('slack') private readonly slackQueue: Queue,
+    @Inject(CacheService) private cacheService: CacheService
   ) {
     super();
     this.tagEngine.registerFilter('date', (input, formatString) => {
@@ -676,13 +678,15 @@ export class TemplatesService extends QueueEventsHost {
     });
   }
 
-  update(
+  async update(
     account: Account,
     id: string,
     updateTemplateDto: UpdateTemplateDto,
     session: string
   ) {
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+
+    await this.cacheService.delete(Template, id);
 
     return this.templatesRepository.update(
       { workspace: { id: workspace.id }, id },

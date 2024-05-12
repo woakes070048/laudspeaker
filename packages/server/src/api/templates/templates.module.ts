@@ -21,6 +21,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
 import { ModalsModule } from '../modals/modals.module';
 import { WebsocketsModule } from '../../websockets/websockets.module';
 import { Step } from '../steps/entities/step.entity';
+import { CacheService } from '@/common/services/cache.service';
 
 @Module({
   imports: [
@@ -59,7 +60,7 @@ import { Step } from '../steps/entities/step.entity';
     ModalsModule,
     forwardRef(() => WebsocketsModule),
   ],
-  providers: [TemplatesService],
+  providers: [TemplatesService, CacheService],
   controllers: [TemplatesController],
   exports: [TemplatesService],
 })
