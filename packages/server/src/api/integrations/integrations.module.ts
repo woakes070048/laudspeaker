@@ -11,15 +11,10 @@ import { IntegrationsProcessor } from './integrations.processor';
 import { IntegrationsService } from './integrations.service';
 
 function getProvidersList() {
-  let providerList: Array<any> = [
-    IntegrationsService,
-  ];
+  let providerList: Array<any> = [IntegrationsService];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
-    providerList = [
-      ...providerList,
-      IntegrationsProcessor,
-    ];
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
+    providerList = [...providerList, IntegrationsProcessor];
   }
 
   return providerList;

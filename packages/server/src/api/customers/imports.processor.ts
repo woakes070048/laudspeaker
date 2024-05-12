@@ -205,8 +205,8 @@ export class ImportProcessor extends WorkerHost {
       await this.customersService.removeImportFile(account);
       await this.segmentRepository.save({
         id: segmentId,
-        isUpdating: false
-      })
+        isUpdating: false,
+      });
     } catch (error) {
       this.error(error, 'Processing customer import', session);
       throw error;

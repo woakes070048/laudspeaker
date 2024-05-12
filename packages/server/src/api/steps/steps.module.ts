@@ -50,10 +50,10 @@ function getProvidersList() {
     JobsService,
     RedlockService,
     JourneyLocationsService,
-    CacheService
+    CacheService,
   ];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
     providerList = [
       ...providerList,
       TransitionProcessor,

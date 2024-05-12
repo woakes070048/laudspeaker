@@ -24,7 +24,7 @@ const numCPUs = process.env.NODE_ENV === 'development' ? 1 : os.cpus().length;
 
 if (cluster.isPrimary) {
   console.log(`Primary ${process.pid} is running`);
-  console.log(`[${process.env.LAUDSPEAKER_PROCESS_TYPE}] Starting.`)
+  console.log(`[${process.env.LAUDSPEAKER_PROCESS_TYPE}] Starting.`);
   // Fork workers.
   for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
@@ -141,7 +141,7 @@ if (cluster.isPrimary) {
   async function initializeApp() {
     let app;
 
-    if (process.env.LAUDSPEAKER_PROCESS_TYPE == "WEB") {
+    if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'WEB') {
       const httpsOptions = {
         key:
           parseInt(process.env.PORT) == 443
@@ -192,8 +192,7 @@ if (cluster.isPrimary) {
             console.log(JSON.stringify(errors, null, 2)),
         })
       );
-    }
-    else {
+    } else {
       app = await NestFactory.createApplicationContext(AppModule);
     }
 
@@ -212,13 +211,13 @@ if (cluster.isPrimary) {
     const app: NestExpressApplication = await initializeApp();
     const port: number = parseInt(process.env.PORT);
 
-    if (process.env.LAUDSPEAKER_PROCESS_TYPE == "WEB") {
+    if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'WEB') {
       await app.listen(port, () => {
         console.log('[WEB]', `http://localhost:${port}`);
       });
     }
 
-    console.log(`[${process.env.LAUDSPEAKER_PROCESS_TYPE}] Started.`)
+    console.log(`[${process.env.LAUDSPEAKER_PROCESS_TYPE}] Started.`);
   }
 
   bootstrap();

@@ -15,14 +15,10 @@ import { CustomersModule } from '../customers/customers.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 
 function getProvidersList() {
-  let providerList: Array<any> = [
-  ];
+  let providerList: Array<any> = [];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
-    providerList = [
-      ...providerList,
-      MessageProcessor,
-    ];
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
+    providerList = [...providerList, MessageProcessor];
   }
 
   return providerList;

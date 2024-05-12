@@ -42,7 +42,7 @@ export class SegmentUpdateProcessor extends WorkerHost {
     @InjectQueue('customer_change')
     private readonly customerChangeQueue: Queue,
     @InjectRepository(SegmentCustomers)
-    private segmentCustomersRepository: Repository<SegmentCustomers>,
+    private segmentCustomersRepository: Repository<SegmentCustomers>
   ) {
     super();
   }
@@ -231,7 +231,6 @@ export class SegmentUpdateProcessor extends WorkerHost {
     }
   }
 
-
   async handleUpdateDynamic(
     job: Job<
       {
@@ -266,7 +265,11 @@ export class SegmentUpdateProcessor extends WorkerHost {
     const client = await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const segment = await this.segmentsService.findOne(job.data.account, job.data.id, job.data.session);
+      const segment = await this.segmentsService.findOne(
+        job.data.account,
+        job.data.id,
+        job.data.session
+      );
       const forDelete = await this.segmentCustomersRepository.findBy({
         segment: segment.id,
       });

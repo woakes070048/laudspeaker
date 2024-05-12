@@ -45,8 +45,8 @@ export class SegmentsService {
     private readonly audiencesHelper: AudiencesHelper,
     @InjectConnection() private readonly connection: mongoose.Connection,
     @InjectQueue('segment_update')
-    private readonly segmentUpdateQueue: Queue,
-  ) { }
+    private readonly segmentUpdateQueue: Queue
+  ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
     this.logger.log(
@@ -585,7 +585,11 @@ export class SegmentsService {
     );
 
     await this.segmentUpdateQueue.add('updateDynamic', {
-      account, id, updateSegmentDTO, session, workspace
+      account,
+      id,
+      updateSegmentDTO,
+      session,
+      workspace,
     });
   }
 

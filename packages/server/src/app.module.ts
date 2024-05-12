@@ -101,14 +101,11 @@ function getProvidersList() {
   let providerList: Array<any> = [
     RedlockService,
     JourneyLocationsService,
-    HealthCheckService
+    HealthCheckService,
   ];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "CRON") {
-    providerList = [
-      ...providerList,
-      CronService,
-    ];
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'CRON') {
+    providerList = [...providerList, CronService];
   }
 
   return providerList;

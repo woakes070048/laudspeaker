@@ -21,16 +21,10 @@ import { KafkaModule } from '../kafka/kafka.module';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 
 function getProvidersList() {
-  let providerList: Array<any> = [
-    SlackService,
-    WebhooksService,
-  ];
+  let providerList: Array<any> = [SlackService, WebhooksService];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
-    providerList = [
-      ...providerList,
-      SlackProcessor,
-    ];
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
+    providerList = [...providerList, SlackProcessor];
   }
 
   return providerList;

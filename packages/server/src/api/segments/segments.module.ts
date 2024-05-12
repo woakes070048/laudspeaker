@@ -14,14 +14,10 @@ import { CustomerChangeProcessor } from '../customers/processors/customers.proce
 import { JourneysModule } from '../journeys/journeys.module';
 import { AccountsModule } from '../accounts/accounts.module';
 
-
 function getProvidersList() {
-  let providerList: Array<any> = [
-    SegmentsService,
-    AudiencesHelper,
-  ];
+  let providerList: Array<any> = [SegmentsService, AudiencesHelper];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
     providerList = [
       ...providerList,
       SegmentUpdateProcessor,
@@ -33,11 +29,9 @@ function getProvidersList() {
 }
 
 function getExportList() {
-  let exportList: Array<any> = [
-    SegmentsService,
-  ];
+  let exportList: Array<any> = [SegmentsService];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
     exportList = [
       ...exportList,
       SegmentUpdateProcessor,
@@ -46,7 +40,6 @@ function getExportList() {
   }
 
   return exportList;
-
 }
 
 @Module({
@@ -70,4 +63,4 @@ function getExportList() {
   providers: getProvidersList(),
   exports: getExportList(),
 })
-export class SegmentsModule { }
+export class SegmentsModule {}

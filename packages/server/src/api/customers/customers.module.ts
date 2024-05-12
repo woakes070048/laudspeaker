@@ -54,7 +54,11 @@ function getExportsList() {
   let exportList: Array<any> = [CustomersService];
 
   if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
-    exportList = [...exportList, CustomersConsumerService, CustomerChangeProcessor];
+    exportList = [
+      ...exportList,
+      CustomersConsumerService,
+      CustomerChangeProcessor,
+    ];
   }
 
   return exportList;

@@ -16,15 +16,10 @@ import { Step } from '../steps/entities/step.entity';
 import { KafkaModule } from '../kafka/kafka.module';
 
 function getProvidersList() {
-  let providerList: Array<any> = [
-    WebhooksService,
-  ];
+  let providerList: Array<any> = [WebhooksService];
 
-  if (process.env.LAUDSPEAKER_PROCESS_TYPE == "QUEUE") {
-    providerList = [
-      ...providerList,
-      WebhooksProcessor,
-    ];
+  if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
+    providerList = [...providerList, WebhooksProcessor];
   }
 
   return providerList;

@@ -1,14 +1,14 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import fs from "fs";
+import fs from 'fs';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class HealthCheckService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
+    private readonly logger: LoggerService
   ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
@@ -72,7 +72,9 @@ export class HealthCheckService {
 
   @Cron(CronExpression.EVERY_5_SECONDS)
   async healthCheck() {
-    const processType = (process.env.LAUDSPEAKER_PROCESS_TYPE ?? "WEB").toLowerCase();
+    const processType = (
+      process.env.LAUDSPEAKER_PROCESS_TYPE ?? 'WEB'
+    ).toLowerCase();
     const fileName = `laudspeaker-healthcheck-${processType}`;
     const filePath = `/tmp/${fileName}`;
     const fileContents = `${Date.now().toString()}\n`;
