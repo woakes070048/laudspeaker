@@ -2296,9 +2296,10 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
                   ? sizeData[i]
                   : sizeData[0];
 
-              const percentage = data
-                ? Math.ceil((data.size / data.total) * 100)
-                : 0;
+              let percentage = 0;
+
+              if(data && data.total > 0)
+                percentage = Math.ceil((data.size / data.total) * 100);
 
               return !data && !isLoading ? (
                 <></>
