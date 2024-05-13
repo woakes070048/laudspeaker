@@ -77,7 +77,6 @@
     "class-validator": "^0.13.2",
     "csv-parse": "^5.3.5",
     "date-fns": "^2.30.0",
-    "dd-trace": "^3.8.0",
     "env-cmd": "^10.1.0",
     "fast-csv": "^4.3.6",
     "firebase-admin": "^11.6.0",

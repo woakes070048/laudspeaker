@@ -1,5 +1,4 @@
-// DO NOT IMPORT ANYTHING BEFORE TRACER
-import './tracer';
+import p from '../package.json';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
