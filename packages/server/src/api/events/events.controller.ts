@@ -283,16 +283,18 @@ export class EventsController {
   async getCustomEvents(
     @Req() { user }: Request,
     @Query('take') take?: string,
-    @Query('skip') skip?: string,
-    @Query('search') search?: string
+    @Query('search') search?: string,
+    @Query('anchor') anchor?: string,
+    @Query('cursorEventId') cursorEventId?: string,
   ) {
     const session = randomUUID();
     return this.eventsService.getCustomEvents(
       <Account>user,
       session,
       take && +take,
-      skip && +skip,
-      search
+      search,
+      anchor,
+      cursorEventId
     );
   }
 

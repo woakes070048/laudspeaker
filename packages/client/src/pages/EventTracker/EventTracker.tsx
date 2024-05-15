@@ -12,7 +12,7 @@ import Input from "components/Elements/Inputv2";
 import Table from "components/Tablev2";
 import { format } from "date-fns";
 import CopyIcon from "assets/icons/CopyIcon";
-import Pagination from "components/Pagination";
+import KeysetPagination from "components/KeysetPagination";
 import SearchIcon from "assets/icons/SearchIcon";
 
 interface PosthogEvent {
@@ -44,8 +44,19 @@ const EventTracker = () => {
   const [selectedCustomEvent, setSelectedCustomEvent] = useState<string>("{}");
 
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagesCount, setPagesCount] = useState(1);
+
+  const [showNext, setShowNext] = useState(false);
+  const [showPrev, setShowPrev] = useState(false);
+  const [showLast, setShowLast] = useState(false);
+
+  const [showNextCursorEventId, setShowNextCursorEventId] = useState("");
+  const [showPrevCursorEventId, setShowPrevCursorEventId] = useState("");
+  const [cursorEventId, setCursorEventId] = useState("");
+
+  const [currentAnchor, setCurrentAnchor] = useState("");
+  const [newAnchor, setNewAnchor] = useState("");
+  
+  const [isFetchNewPageNeeded, setIsFetchNewPageNeeded] = useState(true);
 
   const [searchName, setSearchName] = useState("");
   const [possibleNames, setPossibleNames] = useState<string[]>([]);
@@ -69,15 +80,30 @@ const EventTracker = () => {
       */
 
       const { data } = await ApiService.get({
-        url: `/events/custom-events?take=${itemsPerPage}&skip=${
-          itemsPerPage * (currentPage - 1)
+        url: `/events/custom-events?take=${itemsPerPage
+        }&anchor=${newAnchor
+        }&cursorEventId=${cursorEventId
         }&search=${searchName}`,
       });
       const {
         data: fetchedCustomEvents,
-        totalPages,
-      }: { data: CustomEvent[]; totalPages: number } = data;
-      setPagesCount(totalPages);
+        showNext: showNextData,
+        showPrev: showPrevData,
+        showLast: showLastData,
+        showNextCursorEventId: showNextCursorEventIdData,
+        showPrevCursorEventId: showPrevCursorEventIdData,
+        anchor: anchorData,
+      }: {
+        data: CustomEvent[];
+        showNext: boolean;
+        showPrev: boolean;
+        showNextCursorEventId: string;
+        showPrevCursorEventId: string;
+        showLast: boolean;
+        anchor: string;
+      } = data;
+
+      setIsFetchNewPageNeeded(false);
       setCustomEvents(fetchedCustomEvents);
       setPossibleNames(
         fetchedCustomEvents
@@ -87,6 +113,14 @@ const EventTracker = () => {
             [] as string[]
           )
       );
+
+      setShowNext(showNextData);
+      setShowPrev(showPrevData);
+      setShowNextCursorEventId(showNextCursorEventIdData);
+      setShowPrevCursorEventId(showPrevCursorEventIdData);
+      setShowLast(showLastData);
+      setCurrentAnchor(anchorData);
+      
       /*
       setPagesCount(totalPages);
       setPosthogEvents(fetchedPosthogEvents);
@@ -107,8 +141,11 @@ const EventTracker = () => {
   };
 
   useEffect(() => {
+    if(!isFetchNewPageNeeded)
+      return;
+
     loadData();
-  }, [itemsPerPage, currentPage]);
+  }, [itemsPerPage, isFetchNewPageNeeded]);
 
   useDebounce(
     () => {
@@ -208,11 +245,17 @@ const EventTracker = () => {
             />
           </div>
 
-          {pagesCount > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              totalPages={pagesCount}
+          { (showNext || showPrev) && (
+            <KeysetPagination
+              showNext={showNext}
+              showPrev={showPrev}
+              showNextCursorEventId={showNextCursorEventId}
+              showPrevCursorEventId={showPrevCursorEventId}
+              showLast={showLast}
+              currentAnchor={currentAnchor}
+              setNewAnchor={setNewAnchor}
+              setCursorEventId={setCursorEventId}
+              setIsFetchNewPageNeeded={setIsFetchNewPageNeeded}
             />
           )}
         </div>

@@ -30,7 +30,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Job, Queue, UnrecoverableError } from 'bullmq';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import mongoose, { ClientSession, Model } from 'mongoose';
+import mongoose, { ClientSession, Model, SortOrder } from 'mongoose';
 import { EventDocument, Event } from './schemas/event.schema';
 import mockData from '../../fixtures/mockData';
 import { EventKeys, EventKeysDocument } from './schemas/event-keys.schema';
@@ -153,6 +153,8 @@ export class EventsService {
         await collection.createIndex({ correlationKey: 1, workspaceId: 1 });
         await collection.createIndex({ correlationValue: 1, workspaceId: 1 });
         await collection.createIndex({ createdAt: 1 });
+        await collection.createIndex({ workspaceId: 1, _id: -1 });
+        await collection.createIndex({ event: "text" });
       } catch (e) {
         this.error(e, EventsService.name, session);
       }
@@ -527,90 +529,212 @@ export class EventsService {
     account: Account,
     session: string,
     take = 100,
-    skip = 0,
-    search = ''
+    search = '',
+    anchor = '',
+    id = '',
+    lastPageId = ''
   ) {
-    this.debug(
-      ` in customEvents`,
-      this.getCustomEvents.name,
-      session,
-      account.id
-    );
+    return Sentry.startSpan({ name: 'EventsService.getCustomEvents' }, async () => {
+      this.debug(
+        ` in customEvents`,
+        this.getCustomEvents.name,
+        session,
+        account.id
+      );
 
-    //console.log("in customEvents")
-    const searchRegExp = new RegExp(`.*${search}.*`, 'i');
+      const result = await this.getCustomEventsCursorSearch(account, session, take, search, anchor, id, lastPageId);
+
+      return result;
+    });
+  }
+
+  async getCustomEventsCursorSearch(
+    account: Account,
+    session: string,
+    pageSize: number,
+    search: string,
+    anchor: string,
+    cursorEventId: string,
+    lastPageId: string
+  ) {
+    let direction;
+    // anchor options: first_page, previous, next, last_page
+    // direction: 1 or -1. 1 means we're going to the next page, -1 means previous
+    // cursorEventId is the event id we need to search after or before, depending
+    // on the direction
+    ({ anchor, direction, cursorEventId } = this.computeCustomEventsQueryVariables(anchor, direction, cursorEventId));
+    const {filter, sort, limit} = this.prepareCustomEventsQuery(account, pageSize, search, anchor, direction, cursorEventId);
+
+    const customEvents = await this.executeCustomEventsQuery(filter, sort, limit);
+
+    var resultSetHasMoreThanPageSize = false;
+
+    // since we always fetch pageSize + 1 events, pop the last element in the resultset
+    if(customEvents.length > pageSize)
+    {
+      customEvents.pop();
+      resultSetHasMoreThanPageSize = true;
+    }
+
+    // if we're going the reverse direction (direction == -1 / previous page)
+    // we need to reverse the customEvents array so we have the most recent
+    // event at the top
+    if(direction == -1){
+      customEvents.reverse();
+    }
+
+    var showNext = direction == 1 && resultSetHasMoreThanPageSize || direction == -1 && anchor == "previous";
+    var showPrev = direction == -1 && resultSetHasMoreThanPageSize || direction == 1 && anchor == "next";
+    var showLast = anchor == "first_page" && resultSetHasMoreThanPageSize || anchor != "last_page" || direction == 1 && resultSetHasMoreThanPageSize;
+
+    var showNextCursorEventId = "";
+    var showPrevCursorEventId = "";
+
+    if(showNext)
+      showNextCursorEventId = customEvents[customEvents.length - 1]._id;
+
+    if(showPrev)
+      showPrevCursorEventId = customEvents[0]._id;
+
+    const filteredCustomEvents = this.filterCustomEventsAttributes(customEvents);
+
+    const result = {
+      data: filteredCustomEvents,
+      showPrev: showPrev,
+      showNext: showNext,
+      showPrevCursorEventId: showPrevCursorEventId,
+      showNextCursorEventId: showNextCursorEventId,
+      showLast: showLast,
+      anchor: anchor
+    }
+    
+    return result;
+  }
+
+  computeCustomEventsQueryVariables(
+    anchor: string,
+    direction: number,
+    cursorEventId: string
+  ) {
+    // initial load of events_tracker page
+    if(cursorEventId == "" && anchor == "")
+    {
+      anchor = "first_page";
+    }
+
+    if(anchor == "first_page") {
+      direction = 1;
+      cursorEventId = "";
+    }
+    else if(anchor == "last_page") {
+      direction = -1;
+      cursorEventId = "";
+    }
+    else if(anchor == "next") {
+      direction = 1;
+    }
+    else if(anchor == "previous") {
+      direction = -1;
+    }
+
+    return { anchor, direction, cursorEventId };
+  }
+
+  prepareCustomEventsQuery(
+    account: Account,
+    pageSize: number,
+    search: string,
+    anchor: string,
+    direction: number,
+    cursorEventId: string
+  ) {
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-    const totalPages =
-      Math.ceil(
-        (await this.EventModel.count({
-          event: searchRegExp,
-          workspaceId: workspace.id,
-          //ownerId: (<Account>account).id,
-        }).exec()) / take
-      ) || 1;
-
-    //console.log("regex", searchRegExp );
-    //console.log("ownderId", (<Account>account).id );
-
-    /*
-    const customEvents = await this.EventModel.find({
-      event: searchRegExp,
-      ownerId: (<Account>account).id,
-    }, {
-      ownerId: 0, // Exclude the ownerId field
-      __v: 0 // Exclude the __v (version key) field
-    })
-      .sort({ createdAt: 'desc' })
-      .skip(skip)
-      .limit(take > 100 ? 100 : take)
-      .exec();
-    */
-    const customEvents = await this.EventModel.aggregate([
-      {
-        $match: {
-          event: searchRegExp,
-          workspaceId: workspace.id,
-          //ownerId: (<Account>account).id,
-        },
-      },
-      {
-        $addFields: {
-          createdAt: { $toDate: '$_id' }, // Convert _id to a date and assign to createdAt
-        },
-      },
-      {
-        $project: {
-          _id: 0, // Exclude the _id field
-          ownerId: 0, // Exclude the ownerId field
-          workspaceId: 0, // Exclude the ownerId field
-          __v: 0, // Exclude the __v field
-          // Note: No need to explicitly include other fields; they are included by default
-        },
-      },
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: take > 100 ? 100 : take },
-    ]).exec();
-
-    return {
-      /*
-      data: customEvents.map((customEvent) => ({
-        ...customEvent.toObject(),
-        //createdAt: customEvent._id.getTimestamp(),
-        createdAt: customEvent._id.getTimestamp(),
-        
-      })),
-      */
-      data: customEvents.map((customEvent) => {
-        const cleanedEvent = {
-          ...customEvent,
-          // Perform any additional transformations here if necessary
-        };
-        return cleanedEvent;
-      }),
-      totalPages,
+    const filter = {
+      workspaceId: workspace.id,
     };
+
+    if(search !== "") {
+      const searchRegExp = new RegExp(`.*${search}.*`, 'i');
+      filter['event'] = searchRegExp;
+
+      // disable the use of text index until autocomplete is implemented
+      // text search supports whole word search only
+      // const searchObj = {
+      //   $search: `"${search}"`,
+      //   $caseSensitive: false
+      // }
+
+      // filter["$text"] = searchObj;
+    }
+
+    // default sort is most recent events first (_id desc)
+    const sort: Record<string, SortOrder> = {
+      _id: -1
+    };
+
+    // next page should find events with id < last event id on current page
+    if(direction == 1) {
+      if(cursorEventId != "")
+        filter['_id'] = { '$lt': new mongoose.Types.ObjectId(cursorEventId) };
+    }
+    // previous page should find the first events with id > first event id on current page
+    else {
+      if(cursorEventId != "")
+        filter['_id'] = { '$gt': new mongoose.Types.ObjectId(cursorEventId) };
+      sort['_id'] = 1;
+    }
+
+    // fetch one more to find out if ther is a next page
+    // if direction == 1, then next page is ->
+    const limit = pageSize + 1;
+
+    const query = {
+      filter,
+      sort,
+      limit
+    }
+
+    return query;
+  }
+
+  async executeCustomEventsQuery(
+    filter: Record<string, any>,
+    sort: Record<string, SortOrder>,
+    limit: number,
+  ) {
+    const projection = {};
+
+    const result = await this.EventModel
+      .find(filter, projection)
+      .sort(sort)
+      .limit(limit)
+      .lean()
+      .exec();
+
+    const parsedResult = this.parseCustomEventsQueryResult(result);
+
+    return parsedResult;
+  }
+
+  parseCustomEventsQueryResult(result) {
+    for(var i = 0; i < result.length; i++) {
+      result[i]._id = result[i]._id.toString();
+    }
+
+    return result;
+  }
+
+  filterCustomEventsAttributes(customEvents) {
+    const attributesToRemove = ['_id', 'workspaceId'];
+
+    for(const attribute of attributesToRemove) {
+      for(var i = 0; i < customEvents.length; i++) {
+        delete(customEvents[i][attribute]);
+      }
+    }
+
+    return customEvents;
   }
 
   //to do need to specify how this is
