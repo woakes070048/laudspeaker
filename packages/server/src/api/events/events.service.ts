@@ -685,7 +685,7 @@ export class EventsService {
       sort['_id'] = 1;
     }
 
-    // fetch one more to find out if ther is a next page
+    // fetch one more to find out if there is a next page
     // if direction == 1, then next page is ->
     const limit = pageSize + 1;
 
@@ -1361,7 +1361,68 @@ export class EventsService {
     });
   }
 
-  async findOrCreateCustomer(
+  // find keys that weren't marked as primary but may be used
+  // as channels for sending messages (e.g. email, email_address,
+  // phone, phone_number, etc..)
+  async findMessageChannelsPrimaryKeys(
+    workspaceId: string
+  ): Promise<string[]> {
+    let keys = [];
+
+    const customerKeys = await this.CustomerKeysModel.find({ workspaceId });
+
+    // some of these fields are nested inside events (e.g. event.$fcm.iosDeviceToken)
+    const rules = {
+      email: ["^email",  "^email_address"],
+      phone: ["^phone",  "^phone_number"],
+      ios: ["^iosDeviceToken"],
+      android: ["^androidDeviceToken"]
+    };
+
+    for(const customerKey of customerKeys) {
+      if(customerKey.isPrimary || ( customerKey.type !== AttributeType.STRING && customerKey.type !== AttributeType.EMAIL ) )
+        continue;
+
+      let customKeyName = customerKey.key;
+
+      for(const [channel, channelRules] of Object.entries(rules)) {
+        let matchFound = false;
+
+        for(const regexRule of channelRules) {
+          let regex = new RegExp(regexRule, "i");
+          let result = regex.exec(customKeyName);
+
+          if(result) {
+            matchFound = true;
+            break;
+          }
+        }
+
+        if(matchFound) {
+          keys.push(customKeyName);
+
+          this.logger.log(
+            `Matched channel ${channel} with customerKey ${customKeyName}`,
+            this.findMessageChannelsPrimaryKeys.name
+          );
+          break;
+        }
+      }
+    }
+
+    return keys;
+  }
+
+  getFieldValueFromEvent(event: EventDto, fieldName: string): any {
+    let objectToUse:any = event;
+
+    if(fieldName == 'iosDeviceToken' || fieldName == 'androidDeviceToken')
+      objectToUse = event.$fcm;
+
+    return objectToUse[fieldName]
+  }
+
+  async findCustomer(
     workspaceId: string,
     session: string,
     primaryKeyValue?: string,
@@ -1370,7 +1431,6 @@ export class EventsService {
   ): Promise<{ customer: any; findType: number }> {
     let customer;
     let findType;
-
     const findConditions: Array<Object> = [];
 
     // Try to find by primary key if provided
@@ -1379,6 +1439,23 @@ export class EventsService {
         [primaryKeyName]: primaryKeyValue,
         workspaceId,
       });
+    }
+
+    // try to find customers via message channel fields
+    const messageChannelsKeys = await this.findMessageChannelsPrimaryKeys(workspaceId);
+    // subset of the keys that are currently present in the event and used in findConditions
+    const eventMessageChannelsKeys = [];
+
+    for(const messageChannelsKey of messageChannelsKeys) {
+      let eventFieldValue = this.getFieldValueFromEvent(event, messageChannelsKey);
+
+      if(eventFieldValue) {
+        findConditions.push({
+          [messageChannelsKey]: eventFieldValue,
+          workspaceId,
+        });
+        eventMessageChannelsKeys.push(messageChannelsKey);
+      }
     }
 
     if (event.correlationValue) {
@@ -1398,31 +1475,49 @@ export class EventsService {
       $or: findConditions,
     });
 
-    for (let findTypeIndex = 1; findTypeIndex <= 3; findTypeIndex++) {
+    for (let findTypeIndex = 1; findTypeIndex <= 4; findTypeIndex++) {
       for (let i = 0; i < customers.length; i++) {
         if (
           findTypeIndex == 1 &&
           primaryKeyName &&
           customers[i][primaryKeyName] == primaryKeyValue
         ) {
-          findType = 1;
+          findType = findTypeIndex;
           customer = customers[i];
 
           break;
         } else if (
-          findTypeIndex == 2 &&
-          customers[i]._id == event.correlationValue
+          findTypeIndex == 2
         ) {
-          findType = 2;
-          customer = customers[i];
+          // find which field from the customer matches the event's
+          for(const eventMessageField of eventMessageChannelsKeys) {
+            let eventFieldValue = this.getFieldValueFromEvent(event, eventMessageField);
 
-          break;
+            if(eventFieldValue == customers[i][eventMessageField]) {
+              findType = findTypeIndex;
+              customer = customers[i];
+
+              break;
+            }
+          }
+
+          if(findType == findTypeIndex)
+            break;
+
         } else if (
           findTypeIndex == 3 &&
+          customers[i]._id == event.correlationValue
+        ) {
+          findType = findTypeIndex;
+          customer = customers[i];
+
+          break;
+        } else if (
+          findTypeIndex == 4 &&
           event.correlationValue &&
           customers[i].other_ids.includes(event.correlationValue.toString())
         ) {
-          findType = 3;
+          findType = findTypeIndex;
           customer = customers[i];
 
           break;
@@ -1440,6 +1535,24 @@ export class EventsService {
         session
       );
     }
+
+    return { customer, findType };
+  }
+
+  async findOrCreateCustomer(
+    workspaceId: string,
+    session: string,
+    primaryKeyValue?: string,
+    primaryKeyName?: string,
+    event?: EventDto
+  ): Promise<{ customer: any; findType: number }> {
+    let { customer, findType } = await this.findCustomer(
+      workspaceId,
+      session,
+      primaryKeyValue,
+      primaryKeyName,
+      event
+    );
 
     // If customer still not found, create a new one
     if (!customer) {
@@ -1462,7 +1575,7 @@ export class EventsService {
           upsertData,
           { upsert: true, new: true }
         );
-        findType = 4; // Set findType to 4 to indicate an upsert operation
+        findType = 100; // Set findType to 100 to indicate an upsert operation
       } catch (error: any) {
         // Check if the error is a duplicate key error
         if (error.code === 11000) {
@@ -1470,7 +1583,7 @@ export class EventsService {
             _id: event.correlationValue,
             workspaceId,
           });
-          findType = 5; // Optionally, set a different findType to indicate handling of a duplicate key error
+          findType = 200; // Optionally, set a different findType to indicate handling of a duplicate key error
         } else {
           this.error(error, this.findOrCreateCustomer.name, session);
         }
