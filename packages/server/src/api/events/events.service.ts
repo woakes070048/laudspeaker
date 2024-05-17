@@ -1680,7 +1680,7 @@ export class EventsService {
       event
     );
     //check the customer does not have another primary key already if it does this is not supported right now
-    if (findType == 2) {
+    if (findType == 3) {
       if (
         customer.primaryKeyName &&
         customer.primaryKeyName !== primaryKeyValue
