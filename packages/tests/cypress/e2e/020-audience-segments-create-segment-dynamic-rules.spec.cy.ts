@@ -32,14 +32,7 @@ describe("Segment Correctness", { retries: 2 }, () => {
     cy.visit("/home");
     cy.url().should("include", "/home");
 
-    uploadCSV("correctness_testing.csv");
-
-    mapAttributesToNewFields();
-    cy.get("#next-button").click();
-    cy.get("[data-testid='confirm-validation-button']").click();
-
-    cy.get("#import-button").click();
-    cy.contains("Import started").should("be.visible");
+    uploadCSV("correctness_testing.csv", mapAttributesToNewFields, 0);
 
     // Create string segments
     stringSegments.forEach(createNewDynamicSegment);

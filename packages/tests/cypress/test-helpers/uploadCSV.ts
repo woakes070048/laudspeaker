@@ -1,9 +1,10 @@
 import "@4tw/cypress-drag-drop";
 
-export const uploadCSV = (filename: string) => {
+export const uploadCSV = (filename: string, mappingCallBack: () => any, waitDelay: number = 20000) => {
   cy.visit("/people");
 
-  cy.wait(5000);
+  cy.wait(1000);
+  
   cy.get("#import-customer-button").click({
     force: true,
   });
@@ -22,4 +23,29 @@ export const uploadCSV = (filename: string) => {
   cy.get("#import-file-name", { timeout: 60000 }).should("be.visible");
 
   cy.get("#next-button").click({ force: true });
+
+  if(mappingCallBack)
+  {
+    cy.log("Calling callback");
+
+    mappingCallBack();
+
+    cy.log("callback finished");
+
+    cy.get("#next-button").click();
+
+    cy.get("[data-testid='confirm-validation-button']").click();
+
+    cy.get("#import-button").click();
+  }
+  else
+  {
+    cy.get("#next-button").click();
+
+    cy.get("#import-button").click();
+  }
+
+  cy.contains("Import started").should("be.visible");
+
+  cy.wait(waitDelay);
 };

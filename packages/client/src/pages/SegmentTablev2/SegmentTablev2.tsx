@@ -190,6 +190,7 @@ const SegmentTablev2 = () => {
               {showSearch ? (
                 <div className="flex gap-[10px] items-center">
                   <Input
+                    id="search-input"
                     value={search}
                     onChange={setSearch}
                     placeholder="Search all segments"
@@ -204,7 +205,7 @@ const SegmentTablev2 = () => {
                   </Button>
                 </div>
               ) : (
-                <button onClick={() => setShowSearch(true)}>
+                <button onClick={() => setShowSearch(true)} id="show-search">
                   <img src={searchIconImage} />
                 </button>
               )}
