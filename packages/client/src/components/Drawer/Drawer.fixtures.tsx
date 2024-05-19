@@ -71,13 +71,13 @@ export const dataSubArray = [
     text: "Data",
     type: "group",
     children: [
-      {
-        id: "data-transfer",
-        imgIcon: audienceIcon,
-        text: "Data transfer",
-        type: "menu",
-        link: "/data-transfer",
-      },
+      //{
+      //  id: "data-transfer",
+      //  imgIcon: audienceIcon,
+      //  text: "Data transfer",
+      //  type: "menu",
+      //  link: "/data-transfer",
+      //},
     ],
   },
   // Removed for version 1 release

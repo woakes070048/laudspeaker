@@ -190,7 +190,7 @@ const FlowBuilderHeader = () => {
                   ? "pl-[10px] text-[#16A34A] bg-[#F0FDF4] border-[#22C55E]"
                   : "pr-[10px] text-[#111827] border-[#E5E7EB]"
               } disabled:!grayscale-1 flex items-center p-1 border mr-[10px] rounded-2xl text-[14px] leading-[22px] font-roboto`}
-              disabled={devModeState.status === ConnectionStatus.Reconnection}
+              disabled={true /*devModeState.status === ConnectionStatus.Reconnection*/}
               onClick={() =>
                 devModeState.status === ConnectionStatus.Reconnection
                   ? null
@@ -219,7 +219,7 @@ const FlowBuilderHeader = () => {
             </button>
             {devModeState.status === ConnectionStatus.Disabled && (
               <div className="hidden absolute whitespace-nowrap leading-[22px] text-[14px] top-[44px] z-[1] right-[-30px] p-2 bg-black text-white font-medium">
-                Dev Mode help you to test the journey with your localhost
+                Dev Mode is coming soon!
               </div>
             )}
           </div>

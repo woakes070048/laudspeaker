@@ -68,11 +68,11 @@ const flowBuilderDrawerFixtures: FlowBuilderDrawerFixture[] = [
       //   icon: CustomModalIcon(),
       //   text: "Custom Modal",
       // },
-      {
-        id: DrawerAction.TRACKER,
-        icon: CustomModalIcon(),
-        text: "Onboarding",
-      },
+      //{
+      //  id: DrawerAction.TRACKER,
+      //  icon: CustomModalIcon(),
+      //  text: "Onboarding",
+      //},
       {
         id: DrawerAction.JUMP_TO,
         icon: JumpToIcon(),

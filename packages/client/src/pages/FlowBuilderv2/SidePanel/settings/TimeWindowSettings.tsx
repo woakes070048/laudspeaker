@@ -36,7 +36,7 @@ const TimeWindowSettings: FC<SidePanelComponentProps<TimeWindowNodeData>> = ({
           options={[
             {
               key: TimeWindowTypes.SPEC_DATES,
-              title: "Specific days",
+              title: "Calendar window",
             },
             {
               key: TimeWindowTypes.SPEC_WEEK_DAYS,

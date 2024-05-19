@@ -870,7 +870,7 @@ const Personv2 = () => {
             <Table
               isLoading={isLoading}
               headings={[
-                <div className="pr-30 py-[10px] select-none">me</div>,
+                <div className="pr-30 py-[10px] select-none">Segment Name</div>,
                 <div className="px-5 py-[10px] select-none">Type</div>,
                 <div
                   className="px-5 py-[10px] select-none flex gap-[2px] items-center cursor-pointer"
