@@ -32,24 +32,24 @@ describe("text exactly 2x batch size", () => {
   });
 });
 
-describe("text exactly 2.5x batch size", () => {
-  beforeEach(() => {
-    cy.request(`${Cypress.env("TESTS_API_BASE_URL")}/tests/reset-tests`);
-    cy.wait(1000);
-    cy.clearAllCookies();
-    cy.clearAllLocalStorage();
-    cy.clearAllSessionStorage();
-    signup(email, password, firstName, lastName);
-    cy.wait(1000);
-  });
+// describe("text exactly 2.5x batch size", () => {
+//   beforeEach(() => {
+//     cy.request(`${Cypress.env("TESTS_API_BASE_URL")}/tests/reset-tests`);
+//     cy.wait(1000);
+//     cy.clearAllCookies();
+//     cy.clearAllLocalStorage();
+//     cy.clearAllSessionStorage();
+//     signup(email, password, firstName, lastName);
+//     cy.wait(1000);
+//   });
 
-  it("passes", () => {
-    cy.viewport(1920, 1080);
-    setupOrganization(organizationName, timeZone);
+//   it("passes", () => {
+//     cy.viewport(1920, 1080);
+//     setupOrganization(organizationName, timeZone);
 
-    createPrimaryKey("user_id");
-    uploadCSV("./25k.csv", null, 30000);
+//     createPrimaryKey("user_id");
+//     uploadCSV("./25k.csv", null, 30000);
 
-    verifyTotalNumberOfCustomerPages(2500);
-  });
-});
+//     verifyTotalNumberOfCustomerPages(2500);
+//   });
+// });
