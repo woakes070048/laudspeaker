@@ -179,11 +179,13 @@ export class ImportProcessor extends WorkerHost {
                 segmentId,
                 session
               )
-              .catch(error => { throw error; })
-              .finally( () => {
-                promiseSet.delete(batchId);
-              });
-               await new Promise(resolve => setTimeout(resolve, 10000))
+                .catch((error) => {
+                  throw error;
+                })
+                .finally(() => {
+                  promiseSet.delete(batchId);
+                });
+              await new Promise((resolve) => setTimeout(resolve, 10000));
               batch = [];
               csvStream.resume();
             }
@@ -191,44 +193,42 @@ export class ImportProcessor extends WorkerHost {
           .on('end', async () => {
             // end() might be called while the last record of the last
             // batch is still being processed. batch array might
-            // still have the records in the last batch, so we 
+            // still have the records in the last batch, so we
             // need to ensure all promises have been resolved
             // before checking on the batch array
             let interval: NodeJS.Timeout | undefined = undefined;
             const checkAllBatchesCompleted = async () => {
-                if (promiseSet.size === 0) {
-                    if (interval)
-                       clearInterval(interval);
-                    
-                    if (batch.length > 0) {
-                      this.warn(
-                        `Processing ending batch. Batch size: ${batch.length}`,
-                        this.process.name,
-                        session
-                      );
+              if (promiseSet.size === 0) {
+                if (interval) clearInterval(interval);
 
-                      await this.processImportRecord(
-                        account,
-                        settings.importOption,
-                        passedPK.asAttribute.key,
-                        batch,
-                        segmentId,
-                        session
-                      );
+                if (batch.length > 0) {
+                  this.warn(
+                    `Processing ending batch. Batch size: ${batch.length}`,
+                    this.process.name,
+                    session
+                  );
 
-                      batch = [];
-                    }
-                    resolve();
-                    return;
+                  await this.processImportRecord(
+                    account,
+                    settings.importOption,
+                    passedPK.asAttribute.key,
+                    batch,
+                    segmentId,
+                    session
+                  );
+
+                  batch = [];
                 }
-            }
+                resolve();
+                return;
+              }
+            };
             await checkAllBatchesCompleted();
 
             setInterval(checkAllBatchesCompleted, 200);
             setTimeout(() => {
-                if (interval)
-                   clearInterval(interval);
-                reject("Timeout while waiting for all batches to complete");
+              if (interval) clearInterval(interval);
+              reject('Timeout while waiting for all batches to complete');
             }, 5000);
           })
           .on('error', (err) => {
@@ -239,7 +239,7 @@ export class ImportProcessor extends WorkerHost {
       await readPromise;
       await this.customersService.removeImportFile(account);
 
-      if(segmentId) {
+      if (segmentId) {
         await this.segmentRepository.save({
           id: segmentId,
           isUpdating: false,

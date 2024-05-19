@@ -72,7 +72,10 @@ export const FrequencyCappingModal: React.FC<{
     try {
       const {
         data: { data, totalPages },
-      } = await ApiService.get<{ data: EntityWithComputedFields<Workflow>[]; totalPages: number }>({
+      } = await ApiService.get<{
+        data: EntityWithComputedFields<Workflow>[];
+        totalPages: number;
+      }>({
         url: `/journeys?take=${ITEMS_PER_PAGE}&skip=${
           (currentPage - 1) * ITEMS_PER_PAGE
         }&orderBy=${sortOptions.sortBy}&orderType=${sortOptions.sortType}`,

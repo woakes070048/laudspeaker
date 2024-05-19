@@ -4,15 +4,15 @@ import {
   PrimaryGeneratedColumn,
   JoinColumn,
   ManyToOne,
-  OneToMany
+  OneToMany,
 } from 'typeorm';
 import { VisualLayout } from '../types/visual-layout.interface';
 import {
   JourneyEntrySettings,
   JourneySettings,
 } from '../types/additional-journey-settings.interface';
-import { Workspaces } from '@/api/workspaces/entities/workspaces.entity';
-import { Account } from '@/api/accounts/entities/accounts.entity';
+import { Workspaces } from '../../workspaces/entities/workspaces.entity';
+import { Account } from '../../accounts/entities/accounts.entity';
 import { JourneyLocation } from './journey-location.entity';
 
 @Entity()
@@ -97,5 +97,5 @@ export class Journey {
   last_enrollment_timestamp?: number;
 
   @OneToMany(() => JourneyLocation, (location) => location.journey)
-  journeyLocations: Promise<JourneyLocation[]>
+  journeyLocations: Promise<JourneyLocation[]>;
 }

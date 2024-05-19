@@ -677,7 +677,7 @@ export class SegmentsService {
     for (const segment of segments) {
       try {
         // We skip manual segments and empty inclusion criteria
-        if (segment.type && segment.type === 'manual') {
+        if (segment.type && (segment.type === 'manual' || segment.isUpdating)) {
           continue;
         }
         if (

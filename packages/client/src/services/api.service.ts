@@ -40,7 +40,7 @@ instance.interceptors.response.use(
     }
     if (originalConfig.url !== ApiConfig.login && err.response) {
       // Access Token was expired
-      if (err.response.status === 401 && !originalConfig._retry) {
+      if (false && err.response.status === 401 && !originalConfig._retry) {
         originalConfig._retry = true;
         try {
           // FIXME: endpoint does not exist

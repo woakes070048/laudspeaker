@@ -1,4 +1,5 @@
 import credentials from "../fixtures/credentials";
+import { checkSegmentFinishedUpdating } from "../test-helpers/checkSegmentFinishedUpdating";
 import createTestCustomer from "../test-helpers/createTestCustomer";
 import drag from "../test-helpers/drag";
 import { loginFunc } from "../test-helpers/loginFunc";
@@ -51,8 +52,9 @@ describe("upload from csv", () => {
     cy.get("td:nth-of-type(1) > button").click();
     //cy.get("#segments > div").click();
     //cy.get("tbody.relative > * > :nth-child(1) > :first").click();
-    cy.wait(10000);
-    cy.reload();
+    cy.visit("/segment");
+    checkSegmentFinishedUpdating("Segment 1", 5000, 12);
+    cy.contains("Segment 1").click();
     cy.contains("Eligible users: 41 Users").should("exist");
   });
 });

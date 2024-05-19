@@ -55,7 +55,7 @@ const EventTracker = () => {
 
   const [currentAnchor, setCurrentAnchor] = useState("");
   const [newAnchor, setNewAnchor] = useState("");
-  
+
   const [isFetchNewPageNeeded, setIsFetchNewPageNeeded] = useState(true);
 
   const [searchName, setSearchName] = useState("");
@@ -80,10 +80,7 @@ const EventTracker = () => {
       */
 
       const { data } = await ApiService.get({
-        url: `/events/custom-events?take=${itemsPerPage
-        }&anchor=${newAnchor
-        }&cursorEventId=${cursorEventId
-        }&search=${searchName}`,
+        url: `/events/custom-events?take=${itemsPerPage}&anchor=${newAnchor}&cursorEventId=${cursorEventId}&search=${searchName}`,
       });
       const {
         data: fetchedCustomEvents,
@@ -120,7 +117,7 @@ const EventTracker = () => {
       setShowPrevCursorEventId(showPrevCursorEventIdData);
       setShowLast(showLastData);
       setCurrentAnchor(anchorData);
-      
+
       /*
       setPagesCount(totalPages);
       setPosthogEvents(fetchedPosthogEvents);
@@ -141,8 +138,7 @@ const EventTracker = () => {
   };
 
   useEffect(() => {
-    if(!isFetchNewPageNeeded)
-      return;
+    if (!isFetchNewPageNeeded) return;
 
     loadData();
   }, [itemsPerPage, isFetchNewPageNeeded]);
@@ -245,7 +241,7 @@ const EventTracker = () => {
             />
           </div>
 
-          { (showNext || showPrev) && (
+          {(showNext || showPrev) && (
             <KeysetPagination
               showNext={showNext}
               showPrev={showPrev}

@@ -1,9 +1,5 @@
-import {
-  Account,
-  PushFirebasePlatforms,
-} from '@/api/accounts/entities/accounts.entity';
-import { PushPlatforms } from '@/api/templates/entities/template.entity';
-import { Workspaces } from '@/api/workspaces/entities/workspaces.entity';
+import { Account } from '../../accounts/entities/accounts.entity';
+import { Workspaces } from '../../workspaces/entities/workspaces.entity';
 import {
   BaseEntity,
   Column,

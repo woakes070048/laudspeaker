@@ -270,7 +270,9 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
   const [journeySearchQuery, setJourneySearchQuery] = useState("");
   const [journeySearchQueryPage, setJourneySearchQueryPage] = useState(1);
   const [journeySearchTotalPages, setJourneySearchTotalPages] = useState(1);
-  const [availableJourneys, setAvailableJourneys] = useState<EntityWithComputedFields<Workflow>[]>([]);
+  const [availableJourneys, setAvailableJourneys] = useState<
+    EntityWithComputedFields<Workflow>[]
+  >([]);
   const [isJourneySearchLoading, setIsJourneySearchLoading] = useState(false);
 
   const [tagSearchQuery, setTagSearchQuery] = useState("");
@@ -2298,7 +2300,7 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
 
               let percentage = 0;
 
-              if(data && data.total > 0)
+              if (data && data.total > 0)
                 percentage = Math.ceil((data.size / data.total) * 100);
 
               return !data && !isLoading ? (

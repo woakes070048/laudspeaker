@@ -37,7 +37,9 @@ const MessageEditor = ({
   const [journeySearchQuery, setJourneySearchQuery] = useState("");
   const [journeySearchQueryPage, setJourneySearchQueryPage] = useState(1);
   const [journeySearchTotalPages, setJourneySearchTotalPages] = useState(1);
-  const [availableJourneys, setAvailableJourneys] = useState<EntityWithComputedFields<Workflow>[]>([]);
+  const [availableJourneys, setAvailableJourneys] = useState<
+    EntityWithComputedFields<Workflow>[]
+  >([]);
   const [isJourneySearchLoading, setIsJourneySearchLoading] = useState(false);
 
   const [specMessageQuery, setSpecMessageQuery] = useState("");

@@ -23,16 +23,15 @@ const KeysetPagination: FC<PaginationProps> = ({
   currentAnchor,
   setNewAnchor,
   setCursorEventId,
-  setIsFetchNewPageNeeded
+  setIsFetchNewPageNeeded,
 }) => {
   return (
     <div className="flex border border-[#E5E7EB] rounded-md w-fit">
       <button
         title="First Page"
         className="p-2 border-r-[1px] border-[#E5E7EB]"
-        onClick={ () => {
-          if(currentAnchor !== "first_page")
-          {
+        onClick={() => {
+          if (currentAnchor !== "first_page") {
             setNewAnchor("first_page");
             setIsFetchNewPageNeeded(true);
           }
@@ -45,7 +44,7 @@ const KeysetPagination: FC<PaginationProps> = ({
         <button
           disabled={!showPrev}
           className={`px-[16px] py-2 border-[#E5E7EB]`}
-          onClick={ () => {
+          onClick={() => {
             setCursorEventId(showPrevCursorEventId);
             setNewAnchor("previous");
             setIsFetchNewPageNeeded(true);
@@ -59,7 +58,7 @@ const KeysetPagination: FC<PaginationProps> = ({
         <button
           disabled={!showNext}
           className={`px-[16px] py-2 border-[#E5E7EB]`}
-          onClick={ () => {
+          onClick={() => {
             setCursorEventId(showNextCursorEventId);
             setNewAnchor("next");
             setIsFetchNewPageNeeded(true);
@@ -73,9 +72,8 @@ const KeysetPagination: FC<PaginationProps> = ({
         title="Last Page"
         disabled={!showLast}
         className="p-2"
-        onClick={ () => {
-          if(currentAnchor !== "last_page")
-          {
+        onClick={() => {
+          if (currentAnchor !== "last_page") {
             setNewAnchor("last_page");
             setIsFetchNewPageNeeded(true);
           }

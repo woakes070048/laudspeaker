@@ -13,7 +13,7 @@ import {
   StepType,
   StepTypeMetadata,
 } from '../types/step.interface';
-import { Workspaces } from '@/api/workspaces/entities/workspaces.entity';
+import { Workspaces } from '../../workspaces/entities/workspaces.entity';
 
 @Entity()
 export class Step extends BaseEntity {

@@ -1,5 +1,5 @@
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job, Queue } from 'bullmq';
+import { Job, MetricsTime, Queue } from 'bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { KEYS_TO_SKIP } from '@/utils/customer-key-name-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -70,7 +70,23 @@ const copyMessageWithFilteredUpdateDescription = (message) => {
 };
 
 @Injectable()
-@Processor('customer_change')
+@Processor('customer_change', {
+  // stalledInterval: process.env.CUSTOMER_CHANGE_PROCESSOR_STALLED_INTERVAL
+  //   ? +process.env.CUSTOMER_CHANGE_PROCESSOR_STALLED_INTERVAL
+  //   : 100,
+  // removeOnComplete: {
+  //   age: 0,
+  //   count: process.env.CUSTOMER_CHANGE_PROCESSOR_REMOVE_ON_COMPLETE
+  //     ? +process.env.CUSTOMER_CHANGE_PROCESSOR_REMOVE_ON_COMPLETE
+  //     : 1000000,
+  // },
+  // metrics: {
+  //   maxDataPoints: MetricsTime.ONE_WEEK,
+  // },
+  // concurrency: process.env.CUSTOMER_CHANGE_PROCESSOR_CONCURRENCY
+  //   ? +process.env.CUSTOMER_CHANGE_PROCESSOR_CONCURRENCY
+  //   : 50,
+})
 export class CustomerChangeProcessor extends WorkerHost {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)

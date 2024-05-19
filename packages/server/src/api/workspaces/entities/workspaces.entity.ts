@@ -1,13 +1,13 @@
-import { PushFirebasePlatforms } from '@/api/accounts/entities/accounts.entity';
-import { Integration } from '@/api/integrations/entities/integration.entity';
-import { Journey } from '@/api/journeys/entities/journey.entity';
-import { Organization } from '@/api/organizations/entities/organization.entity';
-import { Segment } from '@/api/segments/entities/segment.entity';
-import { Step } from '@/api/steps/entities/step.entity';
+import { PushFirebasePlatforms } from '../../accounts/entities/accounts.entity';
+import { Integration } from '../../integrations/entities/integration.entity';
+import { Journey } from '../../journeys/entities/journey.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
+import { Segment } from '../../segments/entities/segment.entity';
+import { Step } from '../../steps/entities/step.entity';
 import {
   PushPlatforms,
   Template,
-} from '@/api/templates/entities/template.entity';
+} from '../../templates/entities/template.entity';
 import {
   BaseEntity,
   Column,

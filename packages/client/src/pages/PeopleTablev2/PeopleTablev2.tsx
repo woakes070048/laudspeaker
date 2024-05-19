@@ -363,7 +363,10 @@ const PeopleTablev2 = () => {
         )}
 
         {pagesCount > 1 && (
-          <div className="flex justify-center items-center" id="people-table-pagination">
+          <div
+            className="flex justify-center items-center"
+            id="people-table-pagination"
+          >
             <Pagination
               currentPage={currentPage}
               setCurrentPage={setCurrentPage}

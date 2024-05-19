@@ -91,7 +91,7 @@ export class CustomersConsumerService implements OnApplicationBootstrap {
       {
         groupId:
           process.env.NODE_ENV === 'development'
-            ? new Date().toUTCString()
+            ? 'development-group'
             : this.MONGO_CHANGE_STREAM_CONSUMER_GROUP,
       },
       {
@@ -104,30 +104,32 @@ export class CustomersConsumerService implements OnApplicationBootstrap {
     return async (changeMessage: EachMessagePayload) => {
       const session = randomUUID();
       try {
-        const threshold = process.env.CUSTOMER_CHANGE_QUEUE_THRESHOLD
-          ? +process.env.CUSTOMER_CHANGE_QUEUE_THRESHOLD
-          : 10; // Set the threshold for maximum waiting jobs
+        // const threshold = process.env.CUSTOMER_CHANGE_QUEUE_THRESHOLD
+        //   ? +process.env.CUSTOMER_CHANGE_QUEUE_THRESHOLD
+        //   : 10; // Set the threshold for maximum waiting jobs
 
-        while (true) {
-          const jobCounts = await this.customerChangeQueue.getJobCounts('wait');
-          const waitingJobs = jobCounts.wait;
+        // while (true) {
+        //   const jobCounts = await this.customerChangeQueue.getJobCounts('wait');
+        //   const waitingJobs = jobCounts.wait;
 
-          if (waitingJobs < threshold) {
-            break; // Exit the loop if the number of waiting jobs is below the threshold
-          }
+        //   if (waitingJobs < threshold) {
+        //     break; // Exit the loop if the number of waiting jobs is below the threshold
+        //   }
 
-          this.warn(
-            `Waiting for the queue to process. Current waiting jobs: ${waitingJobs}`,
-            this.handleCustomerChangeStream.name,
-            session
-          );
-          await new Promise((resolve) => setTimeout(resolve, 1000)); // Sleep for 1 second before checking again
-        }
+        //   this.warn(
+        //     `Waiting for the queue to process. Current waiting jobs: ${waitingJobs}`,
+        //     this.handleCustomerChangeStream.name,
+        //     session
+        //   );
+        //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Sleep for 1 second before checking again
+        // }
         await this.customerChangeQueue.add('change', {
           session,
           changeMessage,
         });
-      } catch (err) {}
+      } catch (err) {
+        this.error(err, this.handleCustomerChangeStream.name, session);
+      }
     };
   }
 }

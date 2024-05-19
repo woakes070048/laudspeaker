@@ -135,7 +135,10 @@ const JourneyTablev2 = () => {
     try {
       const {
         data: { data, totalPages },
-      } = await ApiService.get<{ data: EntityWithComputedFields<Workflow>[]; totalPages: number }>({
+      } = await ApiService.get<{
+        data: EntityWithComputedFields<Workflow>[];
+        totalPages: number;
+      }>({
         url: `/journeys?take=${ITEMS_PER_PAGE}&skip=${
           (currentPage - 1) * ITEMS_PER_PAGE
         }&search=${search}&orderBy=${sortOptions.sortBy}&orderType=${
@@ -383,7 +386,10 @@ const JourneyTablev2 = () => {
                   {row.status === JourneyStatus.DRAFT ? (
                     "-"
                   ) : (
-                    <>{row.enrolledCount} {row.enrolledCount == 1 ? 'customer' : 'customers'}</>
+                    <>
+                      {row.enrolledCount}{" "}
+                      {row.enrolledCount == 1 ? "customer" : "customers"}
+                    </>
                   )}
                 </div>,
                 <div>{row.latestChangerEmail || "-"}</div>,

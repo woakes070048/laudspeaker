@@ -933,7 +933,10 @@ export class JourneysService {
     showDisabled?: boolean,
     search = '',
     filterStatusesString = ''
-  ): Promise<{ data: EntityWithComputedFields<Journey>[]; totalPages: number }> {
+  ): Promise<{
+    data: EntityWithComputedFields<Journey>[];
+    totalPages: number;
+  }> {
     try {
       const filterStatusesParts = filterStatusesString.split(',');
       const isActive = filterStatusesParts.includes(JourneyStatus.ACTIVE);
@@ -1013,16 +1016,25 @@ export class JourneysService {
         .take(take < 100 ? take : 100)
         .skip(skip)
         .leftJoin('journey.latestChanger', 'account')
-        .loadRelationCountAndMap("journey.totalEnrolled", "journey.journeyLocations")
-        .addSelect('account.email', 'latestChangerEmail')
+        .loadRelationCountAndMap(
+          'journey.totalEnrolled',
+          'journey.journeyLocations'
+        )
+        .addSelect('account.email', 'latestChangerEmail');
 
-      if(orderBy)
-        query = query.addOrderBy(`journey.${orderBy}`, orderType == 'desc' ? 'DESC' : 'ASC')
+      if (orderBy)
+        query = query.addOrderBy(
+          `journey.${orderBy}`,
+          orderType == 'desc' ? 'DESC' : 'ASC'
+        );
 
       const journeys = await query.getRawAndEntities();
       const computedFieldsList = ['latestChangerEmail', 'totalEnrolled'];
 
-      const result = EntityComputedFieldsHelper.processCollection<Journey>(journeys, computedFieldsList);
+      const result = EntityComputedFieldsHelper.processCollection<Journey>(
+        journeys,
+        computedFieldsList
+      );
 
       return { data: result, totalPages };
     } catch (err) {
