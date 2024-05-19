@@ -10,7 +10,7 @@ import { verifyTotalNumberOfCustomerPages } from "../test-helpers/verifyTotalNum
 const { email, password, firstName, lastName, organizationName, timeZone } =
   credentials;
 
-describe("text exactly 2x batch size", () => {
+describe("test importing multiples of batch size", () => {
   beforeEach(() => {
     cy.request(`${Cypress.env("TESTS_API_BASE_URL")}/tests/reset-tests`);
     cy.wait(1000);
@@ -21,7 +21,7 @@ describe("text exactly 2x batch size", () => {
     cy.wait(1000);
   });
 
-  it("passes", () => {
+  it("test 2x batch size", () => {
     cy.viewport(1920, 1080);
     setupOrganization(organizationName, timeZone);
 
@@ -30,26 +30,15 @@ describe("text exactly 2x batch size", () => {
 
     verifyTotalNumberOfCustomerPages(2000);
   });
+
+  it("test 2.5x batch size", () => {
+    cy.viewport(1920, 1080);
+    setupOrganization(organizationName, timeZone);
+
+    createPrimaryKey("user_id");
+    uploadCSV("./25k.csv", null, 30000);
+
+    verifyTotalNumberOfCustomerPages(2500);
+  });
 });
 
-// describe("text exactly 2.5x batch size", () => {
-//   beforeEach(() => {
-//     cy.request(`${Cypress.env("TESTS_API_BASE_URL")}/tests/reset-tests`);
-//     cy.wait(1000);
-//     cy.clearAllCookies();
-//     cy.clearAllLocalStorage();
-//     cy.clearAllSessionStorage();
-//     signup(email, password, firstName, lastName);
-//     cy.wait(1000);
-//   });
-
-//   it("passes", () => {
-//     cy.viewport(1920, 1080);
-//     setupOrganization(organizationName, timeZone);
-
-//     createPrimaryKey("user_id");
-//     uploadCSV("./25k.csv", null, 30000);
-
-//     verifyTotalNumberOfCustomerPages(2500);
-//   });
-// });

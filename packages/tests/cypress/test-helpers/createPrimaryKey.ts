@@ -10,6 +10,8 @@ export const createPrimaryKey = (attribute: string, attribute_type: string = "St
   cy.contains("Select user attribute").click();
   cy.contains(attribute).click();
 
+  cy.wait(1000);
+
   cy.contains("Save").click();
 
   cy.wait(1000);

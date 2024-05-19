@@ -24,26 +24,28 @@ export const uploadCSV = (filename: string, mappingCallBack: () => any, waitDela
 
   cy.get("#next-button").click({ force: true });
 
+  cy.wait(1000);
+  
   if(mappingCallBack)
   {
-    cy.log("Calling callback");
-
     mappingCallBack();
 
-    cy.log("callback finished");
+    cy.wait(1000);
 
     cy.get("#next-button").click();
 
-    cy.get("[data-testid='confirm-validation-button']").click();
+    cy.wait(500);
 
-    cy.get("#import-button").click();
+    cy.get("[data-testid='confirm-validation-button']").click();
   }
   else
   {
-    cy.get("#next-button").click();
-
-    cy.get("#import-button").click();
+    cy.get("#next-button").click();  
   }
+
+  cy.wait(500);
+
+  cy.get("#import-button").click();
 
   cy.contains("Import started").should("be.visible");
 

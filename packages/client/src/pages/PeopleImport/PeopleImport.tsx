@@ -144,7 +144,7 @@ const PeopleImport: FC<PeopleImportProps> = ({ inSegment }) => {
     },
     [ValidationError.PRIMARY_MAP_REQUIRED]: {
       title: "Primary key attribute not mapped",
-      desc: `You don't have filed that mapping to your primary key (${fileData?.primaryAttribute?.key}), it's required to map your data properly.`,
+      desc: `You don't have a field that maps to your primary key (${fileData?.primaryAttribute?.key}), it's required to map your data properly.`,
       cancel: "",
       confirm: "Got it",
     },
