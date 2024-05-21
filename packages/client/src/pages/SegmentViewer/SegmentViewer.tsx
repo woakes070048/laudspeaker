@@ -39,7 +39,7 @@ const SegmentViewer = () => {
         toast.error(
           "Segment is updating, please wait before accessing the page"
         );
-        navigate("/segments");
+        navigate("/segment");
         return;
       }
 

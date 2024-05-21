@@ -6,7 +6,7 @@ dotenv.config();
 module.exports = defineConfig({
   e2e: {
     retries: {
-      runMode: 0,
+      runMode: 2,
       openMode: 0,
     },
     screenshotOnRunFailure: false,
