@@ -41,7 +41,7 @@ if (cluster.isPrimary) {
 
   Sentry.init({
     dsn: process.env.SENTRY_DSN_URL_BACKEND,
-    environment: process.env.SENTRY_ENVIRONMENT || process.env.ENVIRONMENT,
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || process.env.ENVIRONMENT,
     release: process.env.SENTRY_RELEASE,
     integrations: [
       new Sentry.Integrations.Express({
@@ -55,7 +55,7 @@ if (cluster.isPrimary) {
     ],
     debug: false,
     // Performance Monitoring
-    tracesSampleRate: 1.0, // Capture 100% of the transactions, reduce in production!
+    tracesSampleRate: process.env.NODE_ENV == "production" ? 0.25 : 1.0,
     // Set sampling rate for profiling - this is relative to tracesSampleRate
     profilesSampleRate: 1.0, // Capture 100% of the transactions, reduce in production!
     maxBreadcrumbs: Number.MAX_SAFE_INTEGER,
