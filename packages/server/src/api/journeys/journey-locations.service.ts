@@ -213,14 +213,16 @@ export class JourneyLocationsService {
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
     const moveStarted = Date.now(),
       stepEntry = Date.now(),
-      journeyEntry = Date.now();
+      stepEntryAt = new Date(Date.now()),
+      journeyEntry = Date.now(),
+      journeyEntryAt = new Date(Date.now());
 
     // Create a readable stream from your customers array
     const readableStream = new Readable({
       read() {
         customers.forEach((customerId) => {
           this.push(
-            `${journeyId}\t${customerId}\t${step.id}\t${workspace.id}\t${moveStarted}\t${stepEntry}\t${journeyEntry}\n`
+            `${journeyId}\t${customerId}\t${step.id}\t${workspace.id}\t${moveStarted}\t${stepEntry}\t${journeyEntry}\t${stepEntryAt.toISOString()}\t${journeyEntryAt.toISOString()}\n`
           );
         });
         this.push(null); // No more data
@@ -229,7 +231,7 @@ export class JourneyLocationsService {
 
     const stream = client.query(
       copyFrom.from(
-        `COPY journey_location ("journeyId", "customer", "stepId", "workspaceId", "moveStarted", "stepEntry", "journeyEntry") FROM STDIN WITH (FORMAT text)`
+        `COPY journey_location ("journeyId", "customer", "stepId", "workspaceId", "moveStarted", "stepEntry", "journeyEntry", "stepEntryAt", "journeyEntryAt") FROM STDIN WITH (FORMAT text)`
       )
     );
 

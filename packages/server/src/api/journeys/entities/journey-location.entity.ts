@@ -39,10 +39,16 @@ export class JourneyLocation {
   @Column({ type: 'bigint', nullable: false })
   stepEntry!: number;
 
+  @Column({ type: 'timestamp', nullable: false, default: () => 'CURRENT_TIMESTAMP' })
+  stepEntryAt!: Date;
+
   // This is actually a timestamp using ECMAScript's native Date object; will yield
   // the same number across any timezone
   @Column({ type: 'bigint', nullable: false, default: 0 })
   journeyEntry!: number;
+
+  @Column({ type: 'timestamp', nullable: false, default: () => 'CURRENT_TIMESTAMP' })
+  journeyEntryAt!: Date;
 
   // This is actually a timestamp using ECMAScript's native Date object; will yield
   // the same number across any timezone
