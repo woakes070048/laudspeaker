@@ -56,7 +56,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       extra: {
         max: maxDBConnectionsPerReplicaProcess,
         options:
-          '-c lock_timeout=240000ms -c statement_timeout=240000ms -c idle_in_transaction_session_timeout=240000ms',
+          '-c lock_timeout=240000ms -c statement_timeout=900000ms -c idle_in_transaction_session_timeout=240000ms',
       },
       // migrationsRun: true,
     };
