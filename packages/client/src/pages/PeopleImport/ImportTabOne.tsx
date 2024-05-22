@@ -56,8 +56,8 @@ const ImportTabOne = ({
     <div className="w-full flex justify-center">
       <div className="py-10 max-w-[800px]">
         <div className="text-[#111827] font-inter text-sm">
-          Pick a csv file to upload, you can use it to create new users,
-          update existing users, or a combination of both. See an example file here:
+          Pick a csv file to upload, you can use it to create new users, update
+          existing users, or a combination of both. See an example file here:
           <Link
             className="text-[#6366F1] ml-1"
             target="_blank"

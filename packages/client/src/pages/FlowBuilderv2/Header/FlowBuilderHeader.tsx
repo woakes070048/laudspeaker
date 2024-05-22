@@ -190,7 +190,9 @@ const FlowBuilderHeader = () => {
                   ? "pl-[10px] text-[#16A34A] bg-[#F0FDF4] border-[#22C55E]"
                   : "pr-[10px] text-[#111827] border-[#E5E7EB]"
               } disabled:!grayscale-1 flex items-center p-1 border mr-[10px] rounded-2xl text-[14px] leading-[22px] font-roboto`}
-              disabled={true /*devModeState.status === ConnectionStatus.Reconnection*/}
+              disabled={
+                true /*devModeState.status === ConnectionStatus.Reconnection*/
+              }
               onClick={() =>
                 devModeState.status === ConnectionStatus.Reconnection
                   ? null

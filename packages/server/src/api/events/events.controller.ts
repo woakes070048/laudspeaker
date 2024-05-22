@@ -285,7 +285,7 @@ export class EventsController {
     @Query('take') take?: string,
     @Query('search') search?: string,
     @Query('anchor') anchor?: string,
-    @Query('cursorEventId') cursorEventId?: string,
+    @Query('cursorEventId') cursorEventId?: string
   ) {
     const session = randomUUID();
     return this.eventsService.getCustomEvents(

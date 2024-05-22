@@ -154,7 +154,7 @@ export class EventsService {
         await collection.createIndex({ correlationValue: 1, workspaceId: 1 });
         await collection.createIndex({ createdAt: 1 });
         await collection.createIndex({ workspaceId: 1, _id: -1 });
-        await collection.createIndex({ event: "text" });
+        await collection.createIndex({ event: 'text' });
       } catch (e) {
         this.error(e, EventsService.name, session);
       }
@@ -534,18 +534,29 @@ export class EventsService {
     id = '',
     lastPageId = ''
   ) {
-    return Sentry.startSpan({ name: 'EventsService.getCustomEvents' }, async () => {
-      this.debug(
-        ` in customEvents`,
-        this.getCustomEvents.name,
-        session,
-        account.id
-      );
+    return Sentry.startSpan(
+      { name: 'EventsService.getCustomEvents' },
+      async () => {
+        this.debug(
+          ` in customEvents`,
+          this.getCustomEvents.name,
+          session,
+          account.id
+        );
 
-      const result = await this.getCustomEventsCursorSearch(account, session, take, search, anchor, id, lastPageId);
+        const result = await this.getCustomEventsCursorSearch(
+          account,
+          session,
+          take,
+          search,
+          anchor,
+          id,
+          lastPageId
+        );
 
-      return result;
-    });
+        return result;
+      }
+    );
   }
 
   async getCustomEventsCursorSearch(
@@ -562,16 +573,27 @@ export class EventsService {
     // direction: 1 or -1. 1 means we're going to the next page, -1 means previous
     // cursorEventId is the event id we need to search after or before, depending
     // on the direction
-    ({ anchor, direction, cursorEventId } = this.computeCustomEventsQueryVariables(anchor, direction, cursorEventId));
-    const {filter, sort, limit} = this.prepareCustomEventsQuery(account, pageSize, search, anchor, direction, cursorEventId);
+    ({ anchor, direction, cursorEventId } =
+      this.computeCustomEventsQueryVariables(anchor, direction, cursorEventId));
+    const { filter, sort, limit } = this.prepareCustomEventsQuery(
+      account,
+      pageSize,
+      search,
+      anchor,
+      direction,
+      cursorEventId
+    );
 
-    const customEvents = await this.executeCustomEventsQuery(filter, sort, limit);
+    const customEvents = await this.executeCustomEventsQuery(
+      filter,
+      sort,
+      limit
+    );
 
     var resultSetHasMoreThanPageSize = false;
 
     // since we always fetch pageSize + 1 events, pop the last element in the resultset
-    if(customEvents.length > pageSize)
-    {
+    if (customEvents.length > pageSize) {
       customEvents.pop();
       resultSetHasMoreThanPageSize = true;
     }
@@ -579,24 +601,31 @@ export class EventsService {
     // if we're going the reverse direction (direction == -1 / previous page)
     // we need to reverse the customEvents array so we have the most recent
     // event at the top
-    if(direction == -1){
+    if (direction == -1) {
       customEvents.reverse();
     }
 
-    var showNext = direction == 1 && resultSetHasMoreThanPageSize || direction == -1 && anchor == "previous";
-    var showPrev = direction == -1 && resultSetHasMoreThanPageSize || direction == 1 && anchor == "next";
-    var showLast = anchor == "first_page" && resultSetHasMoreThanPageSize || anchor != "last_page" || direction == 1 && resultSetHasMoreThanPageSize;
+    var showNext =
+      (direction == 1 && resultSetHasMoreThanPageSize) ||
+      (direction == -1 && anchor == 'previous');
+    var showPrev =
+      (direction == -1 && resultSetHasMoreThanPageSize) ||
+      (direction == 1 && anchor == 'next');
+    var showLast =
+      (anchor == 'first_page' && resultSetHasMoreThanPageSize) ||
+      anchor != 'last_page' ||
+      (direction == 1 && resultSetHasMoreThanPageSize);
 
-    var showNextCursorEventId = "";
-    var showPrevCursorEventId = "";
+    var showNextCursorEventId = '';
+    var showPrevCursorEventId = '';
 
-    if(showNext)
+    if (showNext)
       showNextCursorEventId = customEvents[customEvents.length - 1]._id;
 
-    if(showPrev)
-      showPrevCursorEventId = customEvents[0]._id;
+    if (showPrev) showPrevCursorEventId = customEvents[0]._id;
 
-    const filteredCustomEvents = this.filterCustomEventsAttributes(customEvents);
+    const filteredCustomEvents =
+      this.filterCustomEventsAttributes(customEvents);
 
     const result = {
       data: filteredCustomEvents,
@@ -605,9 +634,9 @@ export class EventsService {
       showPrevCursorEventId: showPrevCursorEventId,
       showNextCursorEventId: showNextCursorEventId,
       showLast: showLast,
-      anchor: anchor
-    }
-    
+      anchor: anchor,
+    };
+
     return result;
   }
 
@@ -617,23 +646,19 @@ export class EventsService {
     cursorEventId: string
   ) {
     // initial load of events_tracker page
-    if(cursorEventId == "" && anchor == "")
-    {
-      anchor = "first_page";
+    if (cursorEventId == '' && anchor == '') {
+      anchor = 'first_page';
     }
 
-    if(anchor == "first_page") {
+    if (anchor == 'first_page') {
       direction = 1;
-      cursorEventId = "";
-    }
-    else if(anchor == "last_page") {
+      cursorEventId = '';
+    } else if (anchor == 'last_page') {
       direction = -1;
-      cursorEventId = "";
-    }
-    else if(anchor == "next") {
+      cursorEventId = '';
+    } else if (anchor == 'next') {
       direction = 1;
-    }
-    else if(anchor == "previous") {
+    } else if (anchor == 'previous') {
       direction = -1;
     }
 
@@ -654,7 +679,7 @@ export class EventsService {
       workspaceId: workspace.id,
     };
 
-    if(search !== "") {
+    if (search !== '') {
       const searchRegExp = new RegExp(`.*${search}.*`, 'i');
       filter['event'] = searchRegExp;
 
@@ -670,18 +695,18 @@ export class EventsService {
 
     // default sort is most recent events first (_id desc)
     const sort: Record<string, SortOrder> = {
-      _id: -1
+      _id: -1,
     };
 
     // next page should find events with id < last event id on current page
-    if(direction == 1) {
-      if(cursorEventId != "")
-        filter['_id'] = { '$lt': new mongoose.Types.ObjectId(cursorEventId) };
+    if (direction == 1) {
+      if (cursorEventId != '')
+        filter['_id'] = { $lt: new mongoose.Types.ObjectId(cursorEventId) };
     }
     // previous page should find the first events with id > first event id on current page
     else {
-      if(cursorEventId != "")
-        filter['_id'] = { '$gt': new mongoose.Types.ObjectId(cursorEventId) };
+      if (cursorEventId != '')
+        filter['_id'] = { $gt: new mongoose.Types.ObjectId(cursorEventId) };
       sort['_id'] = 1;
     }
 
@@ -692,8 +717,8 @@ export class EventsService {
     const query = {
       filter,
       sort,
-      limit
-    }
+      limit,
+    };
 
     return query;
   }
@@ -701,12 +726,11 @@ export class EventsService {
   async executeCustomEventsQuery(
     filter: Record<string, any>,
     sort: Record<string, SortOrder>,
-    limit: number,
+    limit: number
   ) {
     const projection = {};
 
-    const result = await this.EventModel
-      .find(filter, projection)
+    const result = await this.EventModel.find(filter, projection)
       .sort(sort)
       .limit(limit)
       .lean()
@@ -718,7 +742,7 @@ export class EventsService {
   }
 
   parseCustomEventsQueryResult(result) {
-    for(var i = 0; i < result.length; i++) {
+    for (var i = 0; i < result.length; i++) {
       result[i]._id = result[i]._id.toString();
     }
 
@@ -728,9 +752,9 @@ export class EventsService {
   filterCustomEventsAttributes(customEvents) {
     const attributesToRemove = ['_id', 'workspaceId'];
 
-    for(const attribute of attributesToRemove) {
-      for(var i = 0; i < customEvents.length; i++) {
-        delete(customEvents[i][attribute]);
+    for (const attribute of attributesToRemove) {
+      for (var i = 0; i < customEvents.length; i++) {
+        delete customEvents[i][attribute];
       }
     }
 
@@ -1364,41 +1388,43 @@ export class EventsService {
   // find keys that weren't marked as primary but may be used
   // as channels for sending messages (e.g. email, email_address,
   // phone, phone_number, etc..)
-  async findMessageChannelsPrimaryKeys(
-    workspaceId: string
-  ): Promise<string[]> {
+  async findMessageChannelsPrimaryKeys(workspaceId: string): Promise<string[]> {
     let keys = [];
 
     const customerKeys = await this.CustomerKeysModel.find({ workspaceId });
 
     // some of these fields are nested inside events (e.g. event.$fcm.iosDeviceToken)
     const rules = {
-      email: ["^email",  "^email_address"],
-      phone: ["^phone",  "^phone_number"],
-      ios: ["^iosDeviceToken"],
-      android: ["^androidDeviceToken"]
+      email: ['^email', '^email_address'],
+      phone: ['^phone', '^phone_number'],
+      ios: ['^iosDeviceToken'],
+      android: ['^androidDeviceToken'],
     };
 
-    for(const customerKey of customerKeys) {
-      if(customerKey.isPrimary || ( customerKey.type !== AttributeType.STRING && customerKey.type !== AttributeType.EMAIL ) )
+    for (const customerKey of customerKeys) {
+      if (
+        customerKey.isPrimary ||
+        (customerKey.type !== AttributeType.STRING &&
+          customerKey.type !== AttributeType.EMAIL)
+      )
         continue;
 
       let customKeyName = customerKey.key;
 
-      for(const [channel, channelRules] of Object.entries(rules)) {
+      for (const [channel, channelRules] of Object.entries(rules)) {
         let matchFound = false;
 
-        for(const regexRule of channelRules) {
-          let regex = new RegExp(regexRule, "i");
+        for (const regexRule of channelRules) {
+          let regex = new RegExp(regexRule, 'i');
           let result = regex.exec(customKeyName);
 
-          if(result) {
+          if (result) {
             matchFound = true;
             break;
           }
         }
 
-        if(matchFound) {
+        if (matchFound) {
           keys.push(customKeyName);
 
           this.logger.log(
@@ -1414,12 +1440,12 @@ export class EventsService {
   }
 
   getFieldValueFromEvent(event: EventDto, fieldName: string): any {
-    let objectToUse:any = event;
+    let objectToUse: any = event;
 
-    if(fieldName == 'iosDeviceToken' || fieldName == 'androidDeviceToken')
+    if (fieldName == 'iosDeviceToken' || fieldName == 'androidDeviceToken')
       objectToUse = event.$fcm;
 
-    return objectToUse[fieldName]
+    return objectToUse[fieldName];
   }
 
   async findCustomer(
@@ -1442,14 +1468,19 @@ export class EventsService {
     }
 
     // try to find customers via message channel fields
-    const messageChannelsKeys = await this.findMessageChannelsPrimaryKeys(workspaceId);
+    const messageChannelsKeys = await this.findMessageChannelsPrimaryKeys(
+      workspaceId
+    );
     // subset of the keys that are currently present in the event and used in findConditions
     const eventMessageChannelsKeys = [];
 
-    for(const messageChannelsKey of messageChannelsKeys) {
-      let eventFieldValue = this.getFieldValueFromEvent(event, messageChannelsKey);
+    for (const messageChannelsKey of messageChannelsKeys) {
+      let eventFieldValue = this.getFieldValueFromEvent(
+        event,
+        messageChannelsKey
+      );
 
-      if(eventFieldValue) {
+      if (eventFieldValue) {
         findConditions.push({
           [messageChannelsKey]: eventFieldValue,
           workspaceId,
@@ -1486,14 +1517,15 @@ export class EventsService {
           customer = customers[i];
 
           break;
-        } else if (
-          findTypeIndex == 2
-        ) {
+        } else if (findTypeIndex == 2) {
           // find which field from the customer matches the event's
-          for(const eventMessageField of eventMessageChannelsKeys) {
-            let eventFieldValue = this.getFieldValueFromEvent(event, eventMessageField);
+          for (const eventMessageField of eventMessageChannelsKeys) {
+            let eventFieldValue = this.getFieldValueFromEvent(
+              event,
+              eventMessageField
+            );
 
-            if(eventFieldValue == customers[i][eventMessageField]) {
+            if (eventFieldValue == customers[i][eventMessageField]) {
               findType = findTypeIndex;
               customer = customers[i];
 
@@ -1501,9 +1533,7 @@ export class EventsService {
             }
           }
 
-          if(findType == findTypeIndex)
-            break;
-
+          if (findType == findTypeIndex) break;
         } else if (
           findTypeIndex == 3 &&
           customers[i]._id == event.correlationValue

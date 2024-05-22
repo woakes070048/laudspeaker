@@ -401,17 +401,17 @@ export class StepsService {
     select?: string[]
   ): Promise<Step[]> {
     try {
-      let query = this.stepsRepository.createQueryBuilder('step')
-        .where({journey: journeyID})
+      let query = this.stepsRepository
+        .createQueryBuilder('step')
+        .where({ journey: journeyID })
         .andWhere("metadata -> 'destination' IS NULL")
         .andWhere("metadata -> 'timeBranch' -> 'destination' IS NULL")
         .andWhere(`NOT EXISTS (
                   select branch ->> 'destination' AS "destination"
                   from jsonb_array_elements(metadata -> 'branches') AS "branch"
-                  WHERE 'destination' IS NOT NULL)`)
+                  WHERE 'destination' IS NOT NULL)`);
 
-        if(select)
-          query = query.select(select);
+      if (select) query = query.select(select);
 
       let res = await query.getMany();
 
@@ -428,7 +428,7 @@ export class StepsService {
       this.error(e, this.findAllTerminalInJourney.name, session);
       throw e;
     }
-  }  
+  }
 
   /**
    * Find a step by its ID.
