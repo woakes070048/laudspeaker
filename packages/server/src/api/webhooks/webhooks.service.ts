@@ -78,7 +78,7 @@ export class WebhooksService {
     private accountRepository: Repository<Account>,
     @Inject(KafkaProducerService)
     private kafkaService: KafkaProducerService,
-    @InjectQueue('events_pre')
+    @InjectQueue('{events_pre}')
     private readonly eventPreprocessorQueue: Queue
   ) {
     const session = randomUUID();

@@ -40,7 +40,7 @@ import {
 } from '@/api/webhooks/webhooks.service';
 
 @Injectable()
-@Processor('message.step', {
+@Processor('{message.step}', {
   stalledInterval: process.env.MESSAGE_STEP_PROCESSOR_STALLED_INTERVAL
     ? +process.env.MESSAGE_STEP_PROCESSOR_STALLED_INTERVAL
     : 600000,
@@ -61,16 +61,20 @@ export class MessageStepProcessor extends WorkerHost {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('start.step') private readonly startStepQueue: Queue,
-    @InjectQueue('wait.until.step') private readonly waitUntilStepQueue: Queue,
-    @InjectQueue('message.step') private readonly messageStepQueue: Queue,
-    @InjectQueue('jump.to.step') private readonly jumpToStepQueue: Queue,
-    @InjectQueue('time.delay.step') private readonly timeDelayStepQueue: Queue,
-    @InjectQueue('time.window.step')
+    @InjectQueue('{start.step}') private readonly startStepQueue: Queue,
+    @InjectQueue('{wait.until.step}')
+    private readonly waitUntilStepQueue: Queue,
+    @InjectQueue('{message.step}') private readonly messageStepQueue: Queue,
+    @InjectQueue('{jump.to.step}') private readonly jumpToStepQueue: Queue,
+    @InjectQueue('{time.delay.step}')
+    private readonly timeDelayStepQueue: Queue,
+    @InjectQueue('{time.window.step}')
     private readonly timeWindowStepQueue: Queue,
-    @InjectQueue('multisplit.step') private readonly multisplitStepQueue: Queue,
-    @InjectQueue('experiment.step') private readonly experimentStepQueue: Queue,
-    @InjectQueue('exit.step') private readonly exitStepQueue: Queue,
+    @InjectQueue('{multisplit.step}')
+    private readonly multisplitStepQueue: Queue,
+    @InjectQueue('{experiment.step}')
+    private readonly experimentStepQueue: Queue,
+    @InjectQueue('{exit.step}') private readonly exitStepQueue: Queue,
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,
     @Inject(JourneysService)
@@ -82,7 +86,7 @@ export class MessageStepProcessor extends WorkerHost {
     private accountRepository: Repository<Account>,
     @Inject(WebhooksService)
     private readonly webhooksService: WebhooksService,
-    @InjectQueue('webhooks') private readonly webhooksQueue: Queue
+    @InjectQueue('{webhooks}') private readonly webhooksQueue: Queue
   ) {
     super();
   }

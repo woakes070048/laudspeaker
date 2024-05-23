@@ -29,10 +29,10 @@ function getProvidersList() {
   imports: [
     TypeOrmModule.forFeature([Account, Step]),
     BullModule.registerQueue({
-      name: 'webhooks',
+      name: '{webhooks}',
     }),
     BullModule.registerQueue({
-      name: 'events_pre',
+      name: '{events_pre}',
     }),
     TemplatesModule,
     KafkaModule,

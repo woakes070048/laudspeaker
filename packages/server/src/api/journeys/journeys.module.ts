@@ -50,22 +50,22 @@ import { CacheService } from '@/common/services/cache.service';
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     BullModule.registerQueue({
-      name: 'transition',
+      name: '{transition}',
     }),
     BullModule.registerQueue({
-      name: 'slack',
+      name: '{slack}',
     }),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     BullModule.registerQueue({
-      name: 'events',
+      name: '{events}',
     }),
     BullModule.registerQueue({
-      name: 'enrollment',
+      name: '{enrollment}',
     }),
     AudiencesModule,
     forwardRef(() => CustomersModule),

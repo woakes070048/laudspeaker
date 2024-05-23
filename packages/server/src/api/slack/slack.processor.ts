@@ -13,7 +13,7 @@ import { Repository } from 'typeorm';
 import { Account } from '../accounts/entities/accounts.entity';
 
 @Injectable()
-@Processor('slack', { removeOnComplete: { age: 0, count: 0 } })
+@Processor('{slack}', { removeOnComplete: { age: 0, count: 0 } })
 export class SlackProcessor extends WorkerHost {
   client: WebClient;
   tagEngine: Liquid;

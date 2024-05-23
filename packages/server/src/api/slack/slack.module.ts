@@ -33,16 +33,16 @@ function getProvidersList() {
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'slack',
+      name: '{slack}',
     }),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     BullModule.registerQueue({
-      name: 'events_pre',
+      name: '{events_pre}',
     }),
     TypeOrmModule.forFeature([
       Account,

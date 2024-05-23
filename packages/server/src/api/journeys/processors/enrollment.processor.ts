@@ -20,7 +20,7 @@ import { CustomersService } from '@/api/customers/customers.service';
 import { JourneysService } from '@/api/journeys/journeys.service';
 
 @Injectable()
-@Processor('enrollment', {
+@Processor('{enrollment}', {
   stalledInterval: process.env.ENROLLMENT_PROCESSOR_STALLED_INTERVAL
     ? +process.env.ENROLLMENT_PROCESSOR_STALLED_INTERVAL
     : 600000,
@@ -31,7 +31,7 @@ export class EnrollmentProcessor extends WorkerHost {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('start') private readonly startQueue: Queue,
+    @InjectQueue('{start}') private readonly startQueue: Queue,
     @Inject(StepsService)
     private readonly stepsService: StepsService,
     @Inject(CustomersService)

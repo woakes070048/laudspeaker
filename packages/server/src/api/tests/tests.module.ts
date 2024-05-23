@@ -38,7 +38,7 @@ import { TestsService } from './tests.service';
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     CustomersModule,
     AuthModule,

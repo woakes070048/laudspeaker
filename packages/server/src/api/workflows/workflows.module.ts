@@ -46,16 +46,16 @@ import { SegmentsModule } from '../segments/segments.module';
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     BullModule.registerQueue({
-      name: 'slack',
+      name: '{slack}',
     }),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     BullModule.registerQueue({
-      name: 'events',
+      name: '{events}',
     }),
     AudiencesModule,
     forwardRef(() => CustomersModule),

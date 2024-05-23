@@ -39,7 +39,7 @@ describe('AuthController', () => {
           },
         }),
         BullModule.registerQueue({
-          name: 'message',
+          name: '{message}',
         }),
         WinstonModule.forRootAsync({
           useFactory: () => ({

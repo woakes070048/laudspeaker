@@ -42,7 +42,7 @@ import { OrganizationInvites } from '../organizations/entities/organization-invi
       OrganizationInvites,
     ]),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     CustomersModule,
     forwardRef(() => JourneysModule),

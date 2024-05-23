@@ -28,7 +28,7 @@ import { CacheService } from '@/common/services/cache.service';
 import { CustomersService } from '@/api/customers/customers.service';
 
 @Injectable()
-@Processor('multisplit.step', {
+@Processor('{multisplit.step}', {
   stalledInterval: process.env.MULTISPLIT_STEP_PROCESSOR_STALLED_INTERVAL
     ? +process.env.MULTISPLIT_STEP_PROCESSOR_STALLED_INTERVAL
     : 600000,
@@ -49,16 +49,20 @@ export class MultisplitStepProcessor extends WorkerHost {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('start.step') private readonly startStepQueue: Queue,
-    @InjectQueue('wait.until.step') private readonly waitUntilStepQueue: Queue,
-    @InjectQueue('message.step') private readonly messageStepQueue: Queue,
-    @InjectQueue('jump.to.step') private readonly jumpToStepQueue: Queue,
-    @InjectQueue('time.delay.step') private readonly timeDelayStepQueue: Queue,
-    @InjectQueue('time.window.step')
+    @InjectQueue('{start.step}') private readonly startStepQueue: Queue,
+    @InjectQueue('{wait.until.step}')
+    private readonly waitUntilStepQueue: Queue,
+    @InjectQueue('{message.step}') private readonly messageStepQueue: Queue,
+    @InjectQueue('{jump.to.step}') private readonly jumpToStepQueue: Queue,
+    @InjectQueue('{time.delay.step}')
+    private readonly timeDelayStepQueue: Queue,
+    @InjectQueue('{time.window.step}')
     private readonly timeWindowStepQueue: Queue,
-    @InjectQueue('multisplit.step') private readonly multisplitStepQueue: Queue,
-    @InjectQueue('experiment.step') private readonly experimentStepQueue: Queue,
-    @InjectQueue('exit.step') private readonly exitStepQueue: Queue,
+    @InjectQueue('{multisplit.step}')
+    private readonly multisplitStepQueue: Queue,
+    @InjectQueue('{experiment.step}')
+    private readonly experimentStepQueue: Queue,
+    @InjectQueue('{exit.step}') private readonly exitStepQueue: Queue,
     @InjectModel(Customer.name) public customerModel: Model<CustomerDocument>,
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,

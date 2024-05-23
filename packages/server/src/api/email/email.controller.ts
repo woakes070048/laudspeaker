@@ -29,7 +29,7 @@ import { Resend } from 'resend';
 @Controller('email')
 export class EmailController {
   constructor(
-    @InjectQueue('message') private readonly messageQueue: Queue,
+    @InjectQueue('{message}') private readonly messageQueue: Queue,
     @InjectRepository(Account)
     private usersRepository: Repository<Account>,
     @InjectRepository(Audience)

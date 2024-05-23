@@ -61,7 +61,7 @@ import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity
 import { CacheService } from '@/common/services/cache.service';
 
 @Injectable()
-@Processor('transition', {
+@Processor('{transition}', {
   stalledInterval: process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
     ? +process.env.TRANSITION_PROCESSOR_STALLED_INTERVAL
     : 600000,
@@ -85,8 +85,8 @@ export class TransitionProcessor extends WorkerHost {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('transition') private readonly transitionQueue: Queue,
-    @InjectQueue('webhooks') private readonly webhooksQueue: Queue,
+    @InjectQueue('{transition}') private readonly transitionQueue: Queue,
+    @InjectQueue('{webhooks}') private readonly webhooksQueue: Queue,
     @InjectConnection() private readonly connection: mongoose.Connection,
     @InjectRepository(Workspaces)
     private workspacesRepository: Repository<Workspaces>,

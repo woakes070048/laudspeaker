@@ -53,8 +53,8 @@ export class SlackService {
     private workspacesRepository: Repository<Workspaces>,
     @InjectRepository(Account)
     private readonly accountsRepository: Repository<Account>,
-    @InjectQueue('slack') private readonly slackQueue: Queue,
-    @InjectQueue('message') private readonly messageQueue: Queue,
+    @InjectQueue('{slack}') private readonly slackQueue: Queue,
+    @InjectQueue('{message}') private readonly messageQueue: Queue,
     @Inject(forwardRef(() => CustomersService))
     private readonly customersService: CustomersService
   ) {

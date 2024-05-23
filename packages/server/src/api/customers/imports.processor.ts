@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Injectable } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Job, MetricsTime } from 'bullmq';
 import { Account } from '../accounts/entities/accounts.entity';
 import { S3Service } from '../s3/s3.service';
 import { CustomersService } from './customers.service';
@@ -18,7 +18,23 @@ import { SegmentCustomers } from '../segments/entities/segment-customers.entity'
 import { randomUUID } from 'crypto';
 
 @Injectable()
-@Processor('imports', { removeOnComplete: { count: 100 } })
+@Processor('{imports}', {
+  stalledInterval: process.env.IMPORTS_PROCESSOR_STALLED_INTERVAL
+    ? +process.env.IMPORTS_PROCESSOR_STALLED_INTERVAL
+    : 30000,
+  removeOnComplete: {
+    age: 0,
+    count: process.env.IMPORTS_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.IMPORTS_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
+  metrics: {
+    maxDataPoints: MetricsTime.ONE_WEEK,
+  },
+  concurrency: process.env.IMPORTS_PROCESSOR_CONCURRENCY
+    ? +process.env.IMPORTS_PROCESSOR_CONCURRENCY
+    : 1,
+})
 export class ImportProcessor extends WorkerHost {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)

@@ -91,13 +91,11 @@ export class EventsService {
     public CustomerKeysModel: Model<CustomerKeysDocument>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('message') private readonly messageQueue: Queue,
-    @InjectQueue('events') private readonly eventQueue: Queue,
-    @InjectQueue('events_pre')
+    @InjectQueue('{message}') private readonly messageQueue: Queue,
+    @InjectQueue('{events}') private readonly eventQueue: Queue,
+    @InjectQueue('{events_pre}')
     private readonly eventPreprocessorQueue: Queue,
-    @InjectQueue(JobTypes.slack) private readonly slackQueue: Queue,
-    @InjectQueue(JobTypes.events)
-    private readonly eventsQueue: Queue,
+    @InjectQueue('{slack}') private readonly slackQueue: Queue,
     @InjectModel(Event.name)
     private EventModel: Model<EventDocument>,
     @InjectModel(PosthogEvent.name)
@@ -109,7 +107,7 @@ export class EventsService {
     @InjectModel(PosthogEventType.name)
     private PosthogEventTypeModel: Model<PosthogEventTypeDocument>,
     @InjectConnection() private readonly connection: mongoose.Connection,
-    @InjectQueue('webhooks') private readonly webhooksQueue: Queue,
+    @InjectQueue('{webhooks}') private readonly webhooksQueue: Queue,
     @Inject(forwardRef(() => JourneysService))
     private readonly journeysService: JourneysService
   ) {
@@ -270,7 +268,7 @@ export class EventsService {
     const jobQueues = {
       [JobTypes.email]: this.messageQueue,
       [JobTypes.slack]: this.slackQueue,
-      [JobTypes.events]: this.eventsQueue,
+      [JobTypes.events]: this.eventQueue,
       [JobTypes.webhooks]: this.webhooksQueue,
     };
 

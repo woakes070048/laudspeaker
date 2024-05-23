@@ -25,22 +25,22 @@ import { Workspaces } from '@/api/workspaces/entities/workspaces.entity';
 import { SegmentCustomersService } from '../segment-customers.service';
 
 @Injectable()
-@Processor('segment_update', {
-  // stalledInterval: process.env.SEGMENT_UPDATE_PROCESSOR_STALLED_INTERVAL
-  //   ? +process.env.SEGMENT_UPDATE_PROCESSOR_STALLED_INTERVAL
-  //   : 600000,
-  // removeOnComplete: {
-  //   age: 0,
-  //   count: process.env.SEGMENT_UPDATE_PROCESSOR_REMOVE_ON_COMPLETE
-  //     ? +process.env.SEGMENT_UPDATE_PROCESSOR_REMOVE_ON_COMPLETE
-  //     : 0,
-  // },
-  // metrics: {
-  //   maxDataPoints: MetricsTime.ONE_WEEK,
-  // },
-  // concurrency: process.env.SEGMENT_UPDATE_PROCESSOR_CONCURRENCY
-  //   ? +process.env.SEGMENT_UPDATE_PROCESSOR_CONCURRENCY
-  //   : 1,
+@Processor('{segment_update}', {
+  stalledInterval: process.env.SEGMENT_UPDATE_PROCESSOR_STALLED_INTERVAL
+    ? +process.env.SEGMENT_UPDATE_PROCESSOR_STALLED_INTERVAL
+    : 600000,
+  removeOnComplete: {
+    age: 0,
+    count: process.env.SEGMENT_UPDATE_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.SEGMENT_UPDATE_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
+  metrics: {
+    maxDataPoints: MetricsTime.ONE_WEEK,
+  },
+  concurrency: process.env.SEGMENT_UPDATE_PROCESSOR_CONCURRENCY
+    ? +process.env.SEGMENT_UPDATE_PROCESSOR_CONCURRENCY
+    : 1,
 })
 export class SegmentUpdateProcessor extends WorkerHost {
   private providerMap = {
@@ -56,9 +56,9 @@ export class SegmentUpdateProcessor extends WorkerHost {
     @Inject(forwardRef(() => CustomersService))
     private customersService: CustomersService,
     @InjectConnection() private readonly connection: mongoose.Connection,
-    @InjectQueue('customer_change')
+    @InjectQueue('{customer_change}')
     private readonly customerChangeQueue: Queue,
-    @InjectQueue('imports') private readonly importsQueue: Queue,
+    @InjectQueue('{imports}') private readonly importsQueue: Queue,
     @Inject(SegmentCustomersService)
     private segmentCustomersService: SegmentCustomersService,
     @InjectRepository(SegmentCustomers)

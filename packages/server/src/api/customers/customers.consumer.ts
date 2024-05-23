@@ -18,7 +18,7 @@ export class CustomersConsumerService implements OnApplicationBootstrap {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
     private readonly consumerService: KafkaConsumerService,
-    @InjectQueue('customer_change')
+    @InjectQueue('{customer_change}')
     private readonly customerChangeQueue: Queue
   ) {}
 

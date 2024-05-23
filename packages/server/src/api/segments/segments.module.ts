@@ -51,16 +51,16 @@ function getExportList() {
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'segment_update',
+      name: '{segment_update}',
     }),
     BullModule.registerQueue({
-      name: 'events_pre',
+      name: '{events_pre}',
     }),
     BullModule.registerQueue({
-      name: 'customer_change',
+      name: '{customer_change}',
     }),
     BullModule.registerQueue({
-      name: 'imports',
+      name: '{imports}',
     }),
     TypeOrmModule.forFeature([Segment, SegmentCustomers, Account]),
     forwardRef(() => CustomersModule),

@@ -24,7 +24,7 @@ import { Step } from '../../steps/entities/step.entity';
 const BATCH_SIZE = +process.env.START_BATCH_SIZE;
 
 @Injectable()
-@Processor('start', {
+@Processor('{start}', {
   stalledInterval: process.env.START_PROCESSOR_STALLED_INTERVAL
     ? +process.env.START_PROCESSOR_STALLED_INTERVAL
     : 600000,
@@ -46,8 +46,8 @@ export class StartProcessor extends WorkerHost {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('start.step') private readonly startStepQueue: Queue,
-    @InjectQueue('start') private readonly startQueue: Queue,
+    @InjectQueue('{start.step}') private readonly startStepQueue: Queue,
+    @InjectQueue('{start}') private readonly startQueue: Queue,
     @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(CustomersService)
     private readonly customersService: CustomersService,

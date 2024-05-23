@@ -39,10 +39,10 @@ export enum EventType {
 }
 
 @Injectable()
-@Processor('events', {
+@Processor('{events}', {
   stalledInterval: process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
     ? +process.env.EVENTS_PROCESSOR_STALLED_INTERVAL
-    : 600000,
+    : 30000,
   removeOnComplete: {
     age: 0,
     count: process.env.EVENTS_PROCESSOR_REMOVE_ON_COMPLETE
@@ -75,7 +75,8 @@ export class EventsProcessor extends WorkerHost {
     private readonly audiencesHelper: AudiencesHelper,
     @Inject(WebsocketGateway)
     private websocketGateway: WebsocketGateway,
-    @InjectQueue('wait.until.step') private readonly waitUntilStepQueue: Queue,
+    @InjectQueue('{wait.until.step}')
+    private readonly waitUntilStepQueue: Queue,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
     @InjectRepository(Step) private readonly stepsRepository: Repository<Step>,

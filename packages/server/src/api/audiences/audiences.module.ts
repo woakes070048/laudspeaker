@@ -39,13 +39,13 @@ import { Job } from '../jobs/entities/job.entity';
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     BullModule.registerQueue({
-      name: 'slack',
+      name: '{slack}',
     }),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     forwardRef(() => CustomersModule),
     forwardRef(() => TemplatesModule),

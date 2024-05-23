@@ -42,7 +42,7 @@ describe('EmailService', () => {
         }),
         TypeOrmModule.forRootAsync({ useClass: TypeOrmConfigService }),
         BullModule.registerQueue({
-          name: 'message',
+          name: '{message}',
         }),
         TypeOrmModule.forFeature([Account]),
         TypeOrmModule.forFeature([Audience]),

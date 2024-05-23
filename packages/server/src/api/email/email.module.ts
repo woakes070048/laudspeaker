@@ -27,7 +27,7 @@ function getProvidersList() {
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     TypeOrmModule.forFeature([Account, Audience]),
     MongooseModule.forFeature([
@@ -37,7 +37,7 @@ function getProvidersList() {
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     CustomersModule,
     WebhooksModule,

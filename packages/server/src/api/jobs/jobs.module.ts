@@ -19,13 +19,13 @@ import { Workflow } from '../workflows/entities/workflow.entity';
       { name: Customer.name, schema: CustomerSchema },
     ]),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     BullModule.registerQueue({
-      name: 'slack',
+      name: '{slack}',
     }),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     CustomersModule,
   ],

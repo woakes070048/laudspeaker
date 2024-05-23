@@ -44,7 +44,7 @@ export class SegmentsService {
     private workflowsService: WorkflowsService,
     private readonly audiencesHelper: AudiencesHelper,
     @InjectConnection() private readonly connection: mongoose.Connection,
-    @InjectQueue('segment_update')
+    @InjectQueue('{segment_update}')
     private readonly segmentUpdateQueue: Queue
   ) {}
 

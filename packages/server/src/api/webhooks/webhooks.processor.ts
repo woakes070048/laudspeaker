@@ -1,6 +1,6 @@
 /* eslint-disable no-case-declarations */
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
+import { Job, MetricsTime } from 'bullmq';
 import { Inject, Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -23,7 +23,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Account } from '../accounts/entities/accounts.entity';
 import { Repository } from 'typeorm';
 
-@Processor('webhooks')
+@Processor('{webhooks}', {
+  stalledInterval: process.env.WEBHOOKS_PROCESSOR_STALLED_INTERVAL
+    ? +process.env.WEBHOOKS_PROCESSOR_STALLED_INTERVAL
+    : 600000,
+  removeOnComplete: {
+    age: 0,
+    count: process.env.WEBHOOKS_PROCESSOR_REMOVE_ON_COMPLETE
+      ? +process.env.WEBHOOKS_PROCESSOR_REMOVE_ON_COMPLETE
+      : 0,
+  },
+  metrics: {
+    maxDataPoints: MetricsTime.ONE_WEEK,
+  },
+  concurrency: process.env.WEBHOOKS_PROCESSOR_CONCURRENCY
+    ? +process.env.WEBHOOKS_PROCESSOR_CONCURRENCY
+    : 1,
+})
 @Injectable()
 export class WebhooksProcessor extends WorkerHost {
   private tagEngine = new Liquid();

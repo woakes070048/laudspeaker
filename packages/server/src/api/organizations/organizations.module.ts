@@ -27,7 +27,7 @@ import { BullModule } from '@nestjs/bullmq';
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     TypeOrmModule.forFeature([
       Account,

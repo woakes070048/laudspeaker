@@ -120,11 +120,12 @@ export class CronService {
     @Inject(StepsService) private stepsService: StepsService,
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,
-    @InjectQueue('wait.until.step') private readonly waitUntilStepQueue: Queue,
-    @InjectQueue('time.delay.step') private readonly timeDelayStep: Queue,
-    @InjectQueue('time.window.step') private readonly timeWindowStep: Queue,
-    @InjectQueue('transition') private readonly transitionQueue: Queue,
-    @InjectQueue('start') private readonly startQueue: Queue,
+    @InjectQueue('{wait.until.step}')
+    private readonly waitUntilStepQueue: Queue,
+    @InjectQueue('{time.delay.step}') private readonly timeDelayStep: Queue,
+    @InjectQueue('{time.window.step}') private readonly timeWindowStep: Queue,
+    @InjectQueue('{transition}') private readonly transitionQueue: Queue,
+    @InjectQueue('{start}') private readonly startQueue: Queue,
     @Inject(RedlockService)
     private readonly redlockService: RedlockService,
     @InjectConnection() private readonly connection: mongoose.Connection

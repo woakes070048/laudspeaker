@@ -35,9 +35,9 @@ export class IntegrationsService {
     private integrationsRepository: Repository<Integration>,
     @InjectRepository(Database)
     private databaseRepository: Repository<Database>,
-    @InjectQueue('integrations') private readonly integrationsQueue: Queue
+    @InjectQueue('{integrations}') private readonly integrationsQueue: Queue
   ) {
-    this.queueEvents = new QueueEvents('integrations', {
+    this.queueEvents = new QueueEvents('{integrations}', {
       connection: {
         host: process.env.REDIS_HOST ?? 'localhost',
         port: parseInt(process.env.REDIS_PORT),

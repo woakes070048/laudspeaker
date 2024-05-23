@@ -33,7 +33,7 @@ export class AuthService {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('message') private readonly messageQueue: Queue,
+    @InjectQueue('{message}') private readonly messageQueue: Queue,
     @InjectRepository(Account)
     public readonly accountRepository: Repository<Account>,
     @InjectRepository(Verification)

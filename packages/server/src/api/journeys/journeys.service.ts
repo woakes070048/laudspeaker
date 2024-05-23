@@ -250,9 +250,9 @@ export class JourneysService {
     @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
-    @InjectQueue('transition') private readonly transitionQueue: Queue,
+    @InjectQueue('{transition}') private readonly transitionQueue: Queue,
     @Inject(RedisService) private redisService: RedisService,
-    @InjectQueue('enrollment') private readonly enrollmentQueue: Queue,
+    @InjectQueue('{enrollment}') private readonly enrollmentQueue: Queue,
     @Inject(CacheService) private cacheService: CacheService
   ) {}
 

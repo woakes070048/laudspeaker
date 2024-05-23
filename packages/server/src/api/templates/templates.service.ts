@@ -66,9 +66,9 @@ export class TemplatesService extends QueueEventsHost {
     private websocketGateway: WebsocketGateway,
     @Inject(SlackService) private slackService: SlackService,
     @Inject(ModalsService) private modalsService: ModalsService,
-    @InjectQueue('message') private readonly messageQueue: Queue,
-    @InjectQueue('webhooks') private readonly webhooksQueue: Queue,
-    @InjectQueue('slack') private readonly slackQueue: Queue,
+    @InjectQueue('{message}') private readonly messageQueue: Queue,
+    @InjectQueue('{webhooks}') private readonly webhooksQueue: Queue,
+    @InjectQueue('{slack}') private readonly slackQueue: Queue,
     @Inject(CacheService) private cacheService: CacheService
   ) {
     super();

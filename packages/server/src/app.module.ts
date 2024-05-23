@@ -234,43 +234,43 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
       OrganizationInvites,
     ]),
     BullModule.registerQueue({
-      name: 'integrations',
+      name: '{integrations}',
     }),
     BullModule.registerQueue({
-      name: 'events',
+      name: '{events}',
     }),
     BullModule.registerQueue({
-      name: 'customers',
+      name: '{customers}',
     }),
     BullModule.registerQueue({
-      name: 'message',
+      name: '{message}',
     }),
     BullModule.registerQueue({
-      name: 'slack',
+      name: '{slack}',
     }),
     BullModule.registerQueue({
-      name: 'transition',
+      name: '{transition}',
     }),
     BullModule.registerQueue({
-      name: 'imports',
+      name: '{imports}',
     }),
     BullModule.registerQueue({
-      name: 'start',
+      name: '{start}',
     }),
     BullModule.registerQueue({
-      name: 'wait.until.step',
+      name: '{wait.until.step}',
     }),
     BullModule.registerQueue({
-      name: 'time.delay.step',
+      name: '{time.delay.step}',
     }),
     BullModule.registerQueue({
-      name: 'time.window.step',
+      name: '{time.window.step}',
     }),
     BullModule.registerQueue({
-      name: 'customer_change',
+      name: '{customer_change}',
     }),
     BullModule.registerQueue({
-      name: 'segment_update',
+      name: '{segment_update}',
     }),
     IntegrationsModule,
     CustomersModule,

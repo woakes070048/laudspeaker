@@ -28,7 +28,7 @@ function getProvidersList() {
       { name: Customer.name, schema: CustomerSchema },
     ]),
     BullModule.registerQueue({
-      name: 'integrations',
+      name: '{integrations}',
     }),
   ],
   controllers: [IntegrationsController],

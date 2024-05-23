@@ -40,7 +40,7 @@ export class OrganizationService {
     public readonly helper: AuthHelper,
     @InjectRepository(Account)
     public accountRepository: Repository<Account>,
-    @InjectQueue('message') private readonly messageQueue: Queue,
+    @InjectQueue('{message}') private readonly messageQueue: Queue,
     @Inject(AuthHelper)
     public readonly authHelper: AuthHelper
   ) {}

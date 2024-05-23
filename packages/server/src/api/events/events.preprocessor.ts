@@ -42,10 +42,10 @@ export enum ProviderType {
 }
 
 @Injectable()
-@Processor('events_pre', {
+@Processor('{events_pre}', {
   stalledInterval: process.env.EVENTS_PRE_PROCESSOR_STALLED_INTERVAL
     ? +process.env.EVENTS_PRE_PROCESSOR_STALLED_INTERVAL
-    : 600000,
+    : 30000,
   removeOnComplete: {
     age: 0,
     count: process.env.EVENTS_PRE_PROCESSOR_REMOVE_ON_COMPLETE
@@ -87,7 +87,7 @@ export class EventsPreProcessor extends WorkerHost {
     @InjectModel(PosthogEventType.name)
     private posthogEventTypeModel: Model<PosthogEventTypeDocument>,
     @InjectModel(Customer.name) public customerModel: Model<CustomerDocument>,
-    @InjectQueue('events') private readonly eventsQueue: Queue,
+    @InjectQueue('{events}') private readonly eventsQueue: Queue,
     @InjectRepository(Journey)
     private readonly journeysRepository: Repository<Journey>,
     @Inject(CacheService) private cacheService: CacheService

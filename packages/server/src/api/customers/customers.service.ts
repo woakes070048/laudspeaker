@@ -204,8 +204,8 @@ export class CustomersService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectQueue('customers') private readonly customersQueue: Queue,
-    @InjectQueue('imports') private readonly importsQueue: Queue,
+    @InjectQueue('{customers}') private readonly customersQueue: Queue,
+    @InjectQueue('{imports}') private readonly importsQueue: Queue,
     @InjectModel(Customer.name) public CustomerModel: Model<CustomerDocument>,
     @InjectModel(CustomerKeys.name)
     public CustomerKeysModel: Model<CustomerKeysDocument>,

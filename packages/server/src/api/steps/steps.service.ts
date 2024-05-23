@@ -46,8 +46,8 @@ export class StepsService {
     public stepsRepository: Repository<Step>,
     @InjectRepository(Requeue)
     public requeueRepository: Repository<Requeue>,
-    @InjectQueue('transition') private readonly transitionQueue: Queue,
-    @InjectQueue('start') private readonly startQueue: Queue,
+    @InjectQueue('{transition}') private readonly transitionQueue: Queue,
+    @InjectQueue('{start}') private readonly startQueue: Queue,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
     @Inject(forwardRef(() => CustomersService))
