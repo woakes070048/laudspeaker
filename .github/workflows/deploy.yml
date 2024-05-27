@@ -14,7 +14,7 @@ on:
       env:
         description: Environment to deploy docker. Either prod or staging.
         required: true
-        type: boolean
+        type: string
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
