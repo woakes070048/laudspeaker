@@ -5155,7 +5155,7 @@ export class CustomersService {
       } else if (time && time.comparisonType === 'after' && time.timeAfter) {
         const timeAfter = new Date(time.timeAfter).toISOString();
         const formattedTimeAfter = timeAfter.split('.')[0];
-        sqlQuery += `AND createdAt >= '${timeAfter}' `;
+        sqlQuery += `AND createdAt >= '${formattedTimeAfter}' `;
       }
       this.debug(
         `the final SQL query is:\n ${sqlQuery}`,
