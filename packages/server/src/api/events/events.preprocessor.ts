@@ -34,6 +34,7 @@ import { Account } from '../accounts/entities/accounts.entity';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { EventsService } from './events.service';
 import { CacheService } from '@/common/services/cache.service';
+import { FindType } from '../customers/enums/FindType.enum';
 
 export enum ProviderType {
   LAUDSPEAKER = 'laudspeaker',
@@ -185,7 +186,7 @@ export class EventsPreProcessor extends WorkerHost {
       const {
         customer,
         findType,
-      }: { customer: CustomerDocument; findType: number } =
+      }: { customer: CustomerDocument; findType: FindType } =
         await this.eventsService.findOrCreateCustomer(
           job.data.workspace.id,
           job.data.session,

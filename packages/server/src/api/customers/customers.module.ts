@@ -29,6 +29,7 @@ import { SegmentsService } from '../segments/segments.service';
 import { Segment } from '../segments/entities/segment.entity';
 import { SegmentCustomers } from '../segments/entities/segment-customers.entity';
 import { CustomerChangeProcessor } from './processors/customers.processor';
+import { CacheService } from '@/common/services/cache.service';
 
 function getProvidersList() {
   let providerList: Array<any> = [
@@ -36,6 +37,7 @@ function getProvidersList() {
     AudiencesHelper,
     S3Service,
     JourneyLocationsService,
+    CacheService
   ];
 
   if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
