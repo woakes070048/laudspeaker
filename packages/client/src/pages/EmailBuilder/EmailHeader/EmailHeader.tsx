@@ -90,18 +90,6 @@ const EmailHeader = (props: IEmailHeaderProps) => {
           >
             Save Draft
           </GenericButton>
-          <GenericButton
-            onClick={onPersonalize}
-            customClasses="ml-[10px]"
-            style={{
-              maxWidth: "158px",
-              maxHeight: "48px",
-            }}
-            disabled={loading}
-            loading={loading}
-          >
-            Personalize
-          </GenericButton>
           {/* {onAddApiCallClick && (
             <GenericButton
               onClick={onAddApiCallClick}

@@ -57,7 +57,8 @@ const JavascriptSnippetSettings = () => {
 
         <div className="bg-white p-5 flex flex-col gap-5">
           <div className="text-[#4B5563]">
-            You can copy this code snippet to try out firing events{" "}
+            You can copy this code snippet to try out firing events. You need to
+            update the correlationKey to match your primary key{" "}
             <button className="text-[#111827] font-bold underline">
               Documentation
             </button>

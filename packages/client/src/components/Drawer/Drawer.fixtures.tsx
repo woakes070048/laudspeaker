@@ -5,6 +5,8 @@ import templateBuilderIcon from "./DrawerIcons/templateBuilder.svg";
 import audienceIcon from "./DrawerIcons/audience.svg";
 import dataIcon from "./DrawerIcons/data.svg";
 import settingsIcon from "./DrawerIcons/settings.svg";
+import activityIcon from "./DrawerIcons/activity.svg";
+import segmentIcon from "./DrawerIcons/pie-chart.svg";
 
 export const dataSubArray = [
   {
@@ -36,7 +38,7 @@ export const dataSubArray = [
       },
       {
         id: "event-tracker",
-        imgIcon: templateBuilderIcon,
+        imgIcon: activityIcon,
         text: "Event Tracker",
         type: "menu",
         link: "/event-tracker",
@@ -58,7 +60,7 @@ export const dataSubArray = [
       },
       {
         id: "segments",
-        imgIcon: audienceIcon,
+        imgIcon: segmentIcon,
         text: "Segments",
         type: "menu",
         link: "/segment",
@@ -67,7 +69,7 @@ export const dataSubArray = [
   },
   {
     id: "data",
-    imgIcon: audienceIcon,
+    imgIcon: dataIcon,
     text: "Data",
     type: "group",
     children: [
