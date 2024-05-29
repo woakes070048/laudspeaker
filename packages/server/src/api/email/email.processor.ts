@@ -205,7 +205,7 @@ export class MessageProcessor extends WorkerHost {
         [
           {
             stepId: job.data.stepId,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             customerId: job.data.customerId,
             event: 'error',
             eventProvider: job.data.eventProvider,
@@ -251,7 +251,7 @@ export class MessageProcessor extends WorkerHost {
             [
               {
                 stepId: job.data.stepId,
-                createdAt: new Date().toISOString(),
+                createdAt: new Date(),
                 customerId: job.data.customerId,
                 event: 'sent',
                 eventProvider: ClickHouseEventProvider.SENDGRID,
@@ -308,7 +308,7 @@ export class MessageProcessor extends WorkerHost {
             [
               {
                 stepId: job.data.stepId,
-                createdAt: new Date().toISOString(),
+                createdAt: new Date(),
                 customerId: job.data.customerId,
                 event: 'sent',
                 eventProvider: ClickHouseEventProvider.MAILGUN,
@@ -385,7 +385,7 @@ export class MessageProcessor extends WorkerHost {
         [
           {
             stepId: job.data.stepId,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             customerId: job.data.customerId,
             event: 'error',
             eventProvider: ClickHouseEventProvider.TWILIO,
@@ -411,7 +411,7 @@ export class MessageProcessor extends WorkerHost {
         [
           {
             stepId: job.data.stepId,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             customerId: job.data.customerId,
             event: 'sent',
             eventProvider: ClickHouseEventProvider.TWILIO,
@@ -488,7 +488,7 @@ export class MessageProcessor extends WorkerHost {
           {
             workspaceId: workspace?.id,
             event: 'error',
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             eventProvider: ClickHouseEventProvider.PUSH,
             messageId: null,
             stepId: job.data.args.stepId,
@@ -546,7 +546,7 @@ export class MessageProcessor extends WorkerHost {
           {
             stepId: job.data.stepId,
             customerId: job.data.customerId,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             event: 'sent',
             eventProvider: ClickHouseEventProvider.PUSH,
             messageId: messageId,

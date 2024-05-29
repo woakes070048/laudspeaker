@@ -299,7 +299,7 @@ export class MessageSender {
       return [
         {
           stepId: stepID,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
           customerId: customerID,
           event: 'error',
           eventProvider: eventProvider,
@@ -349,7 +349,7 @@ export class MessageSender {
         ret = [
           {
             stepId: stepID,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             customerId: customerID,
             event: 'sent',
             eventProvider: ClickHouseEventProvider.SENDGRID,
@@ -402,7 +402,7 @@ export class MessageSender {
         ret = [
           {
             stepId: stepID,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             customerId: customerID,
             event: 'sent',
             eventProvider: ClickHouseEventProvider.RESEND,
@@ -443,7 +443,7 @@ export class MessageSender {
         ret = [
           {
             stepId: stepID,
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             customerId: customerID,
             event: 'sent',
             eventProvider: ClickHouseEventProvider.MAILGUN,
@@ -525,7 +525,7 @@ export class MessageSender {
       return [
         {
           stepId: stepID,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
           customerId: customerID,
           event: 'error',
           eventProvider: ClickHouseEventProvider.TWILIO,
@@ -558,7 +558,7 @@ export class MessageSender {
     ret = [
       {
         stepId: stepID,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
         customerId: customerID,
         event: 'sent',
         eventProvider: ClickHouseEventProvider.TWILIO,
@@ -641,7 +641,7 @@ export class MessageSender {
         {
           workspaceId: workspace.id,
           event: 'error',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
           eventProvider: ClickHouseEventProvider.PUSH,
           messageId: null,
           stepId: stepID,
@@ -667,7 +667,7 @@ export class MessageSender {
           {
             workspaceId: workspace.id,
             event: 'error',
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             eventProvider: ClickHouseEventProvider.PUSH,
             messageId: null,
             stepId: stepID,
@@ -745,7 +745,7 @@ export class MessageSender {
       {
         stepId: stepID,
         customerId: customerID,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
         event: 'sent',
         eventProvider: ClickHouseEventProvider.PUSH,
         messageId: messageId,
@@ -825,7 +825,7 @@ export class MessageSender {
         {
           workspaceId: workspace.id,
           event: 'error',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
           eventProvider: ClickHouseEventProvider.PUSH,
           messageId: null,
           stepId: stepID,
@@ -851,7 +851,7 @@ export class MessageSender {
           {
             workspaceId: workspace.id,
             event: 'error',
-            createdAt: new Date().toISOString(),
+            createdAt: new Date(),
             eventProvider: ClickHouseEventProvider.PUSH,
             messageId: null,
             stepId: stepID,
@@ -925,7 +925,7 @@ export class MessageSender {
       {
         stepId: stepID,
         customerId: customerID,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
         event: 'sent',
         eventProvider: ClickHouseEventProvider.PUSH,
         messageId: messageId,
@@ -988,7 +988,7 @@ export class MessageSender {
         {
           workspaceId: workspace.id,
           event: 'sent',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
           eventProvider: ClickHouseEventProvider.SLACK,
           messageId: String(message.ts),
           stepId: stepID,
@@ -1002,7 +1002,7 @@ export class MessageSender {
         {
           workspaceId: workspace.id,
           event: 'error',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
           eventProvider: ClickHouseEventProvider.SLACK,
           messageId: '',
           stepId: stepID,
@@ -1101,7 +1101,7 @@ export class MessageSender {
   //       await this.webhooksService.insertMessageStatusToClickhouse([
   //         {
   //           event: 'error',
-  //           createdAt: new Date().toISOString(),
+  //           createdAt: new Date(),
   //           eventProvider: ClickHouseEventProvider.WEBHOOKS,
   //           messageId: '',
   //           audienceId: job.data.audienceId,
@@ -1119,7 +1119,7 @@ export class MessageSender {
   //       await this.webhooksService.insertMessageStatusToClickhouse([
   //         {
   //           event: 'sent',
-  //           createdAt: new Date().toISOString(),
+  //           createdAt: new Date(),
   //           eventProvider: ClickHouseEventProvider.WEBHOOKS,
   //           messageId: '',
   //           audienceId: job.data.audienceId,

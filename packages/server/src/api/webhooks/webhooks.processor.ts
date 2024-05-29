@@ -265,7 +265,7 @@ export class WebhooksProcessor extends WorkerHost {
           [
             {
               event: 'error',
-              createdAt: new Date().toISOString(),
+              createdAt: new Date(),
               eventProvider: ClickHouseEventProvider.WEBHOOKS,
               messageId: '',
               stepId: job.data.stepId,
@@ -288,7 +288,7 @@ export class WebhooksProcessor extends WorkerHost {
           [
             {
               event: 'sent',
-              createdAt: new Date().toISOString(),
+              createdAt: new Date(),
               eventProvider: ClickHouseEventProvider.WEBHOOKS,
               messageId: '',
               stepId: job.data.stepId,

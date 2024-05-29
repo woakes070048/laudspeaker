@@ -17,7 +17,6 @@ import {
 import { CustomersModule } from '../customers/customers.module';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { Step } from '../steps/entities/step.entity';
-import { KafkaModule } from '../kafka/kafka.module';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 
 function getProvidersList() {
@@ -57,7 +56,6 @@ function getProvidersList() {
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
     ]),
     forwardRef(() => CustomersModule),
-    KafkaModule,
   ],
   controllers: [SlackController],
   providers: getProvidersList(),

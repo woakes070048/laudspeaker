@@ -1197,7 +1197,7 @@ export class EventsService {
               event: thisEvent.event === '$delivered' ? 'delivered' : 'opened',
               eventProvider: ClickHouseEventProvider.PUSH,
               processed: false,
-              createdAt: new Date().toISOString(),
+              createdAt: new Date(),
             };
             await this.webhooksService.insertMessageStatusToClickhouse(
               [clickHouseRecord],

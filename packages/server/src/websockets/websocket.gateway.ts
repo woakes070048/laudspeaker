@@ -414,7 +414,7 @@ export class WebsocketGateway implements OnGatewayConnection {
           [
             {
               stepId: customer.customComponents[key].step,
-              createdAt: new Date().toISOString(),
+              createdAt: new Date(),
               customerId: customer.id,
               event: 'delivered',
               eventProvider: ClickHouseEventProvider.TRACKER,
