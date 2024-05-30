@@ -121,17 +121,34 @@ export class EnrollmentProcessor extends WorkerHost {
       collectionName: string;
       job: { name: string; data: any };
     };
-    const queryRunner = await this.dataSource.createQueryRunner();
-    const client = await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const { collectionName, count } =
+    let collectionName: string;
+    let count: number;
+
+    try
+    {
+      ({ collectionName, count } =
         await this.customersService.getAudienceSize(
           job.data.account,
           job.data.journey.inclusionCriteria,
           job.data.session,
           null
-        );
+        )
+      );
+    }
+    catch(error) {
+      this.error(
+        error,
+        this.process.name,
+        job.data.session,
+        job.data.account.email
+      );
+
+      throw error;
+    }
+    const queryRunner = await this.dataSource.createQueryRunner();
+    const client = await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
       triggerStartTasks = await this.stepsService.triggerStart(
         job.data.account,
         job.data.journey,
