@@ -176,13 +176,13 @@ export class CustomerChangeProcessor extends WorkerHost {
     const clientSession = await this.connection.startSession();
     await clientSession.startTransaction();
     try {
-      const messObj = JSON.parse(
-        Buffer.from(job.data.changeMessage.message.value).toString()
-      );
-      let message: ChangeStreamDocument<Customer> = JSON.parse(messObj);
-      if (typeof message === 'string') {
-        message = JSON.parse(message); //double parse if kafka record is published as string not object
+      let message: ChangeStreamDocument<Customer> | String = Buffer.from(job.data.changeMessage.message.value).toString();
+
+      // keep parsing until the kafka payload is turned into an object
+      while(typeof message === 'string' || message instanceof String) {
+        message = JSON.parse(message.toString());
       }
+
       let account: Account;
       let customer: CustomerDocument;
       switch (message.operationType) {
