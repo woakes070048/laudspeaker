@@ -795,13 +795,13 @@ export class TransitionProcessor extends WorkerHost {
       switch (template.type) {
         case TemplateType.EMAIL:
           const mailgunChannel = workspace.mailgunConnections.find(
-            (connection) => connection.id === step.metadata.connectionId
+            (connection) => connection.id === step?.metadata?.connectionId
           );
           const sendgridChannel = workspace.sendgridConnections.find(
-            (connection) => connection.id === step.metadata.connectionId
+            (connection) => connection.id === step?.metadata?.connectionId
           );
           const resendChannel = workspace.resendConnections.find(
-            (connection) => connection.id === step.metadata.connectionId
+            (connection) => connection.id === step?.metadata?.connectionId
           );
 
           const emailProvider = mailgunChannel

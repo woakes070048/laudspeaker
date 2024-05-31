@@ -375,26 +375,44 @@ export class MessageStepProcessor extends WorkerHost {
 
           switch (template.type) {
             case TemplateType.EMAIL:
-              if (workspace.emailProvider === 'free3') {
-                if (workspace.freeEmailsCount === 0)
-                  throw new HttpException(
-                    'You exceeded limit of 3 emails',
-                    HttpStatus.PAYMENT_REQUIRED
-                  );
-                sendingDomain = process.env.MAILGUN_TEST_DOMAIN;
-                key = process.env.MAILGUN_API_KEY;
-                from = testSendingName;
-                sendingEmail = testSendingEmail;
-                workspace.freeEmailsCount--;
-              }
+              const mailgunChannel = workspace.mailgunConnections.find(
+                (connection) => connection.id === job.data.step?.metadata?.connectionId
+              );
+              const sendgridChannel = workspace.sendgridConnections.find(
+                (connection) => connection.id === job.data.step?.metadata?.connectionId
+              );
+              const resendChannel = workspace.resendConnections.find(
+                (connection) => connection.id === job.data.step?.metadata?.connectionId
+              );
 
-              if (workspace.emailProvider === 'resend') {
+              const emailProvider = mailgunChannel
+                ? 'mailgun'
+                : sendgridChannel
+                ? 'sendgrid'
+                : resendChannel
+                ? 'resend'
+                : undefined;
+
+              // if (emailProvider === 'free3') {
+              //   if (workspace.freeEmailsCount === 0)
+              //     throw new HttpException(
+              //       'You exceeded limit of 3 emails',
+              //       HttpStatus.PAYMENT_REQUIRED
+              //     );
+              //   sendingDomain = process.env.MAILGUN_TEST_DOMAIN;
+              //   key = process.env.MAILGUN_API_KEY;
+              //   from = testSendingName;
+              //   sendingEmail = testSendingEmail;
+              //   workspace.freeEmailsCount--;
+              // }
+
+              if (emailProvider === 'resend') {
                 sendingDomain = workspace.resendSendingDomain;
                 key = workspace.resendAPIKey;
                 from = workspace.resendSendingName;
                 sendingEmail = workspace.resendSendingEmail;
               }
-              if (workspace.emailProvider === 'sendgrid') {
+              if (emailProvider === 'sendgrid') {
                 key = sendgridApiKey;
                 from = sendgridFromEmail;
               }
@@ -422,19 +440,23 @@ export class MessageStepProcessor extends WorkerHost {
                 ),
                 tags: filteredTags,
                 templateID: template.id,
-                eventProvider: workspace.emailProvider,
+                eventProvider: emailProvider,
                 session: job.data.session,
               });
               await this.webhooksService.insertMessageStatusToClickhouse(
                 ret,
                 job.data.session
               );
-              if (workspace.emailProvider === 'free3') {
-                await job.data.owner.save();
-                await workspace.save();
-              }
+              // if (emailProvider === 'free3') {
+              //   await job.data.owner.save();
+              //   await workspace.save();
+              // }
               break;
             case TemplateType.PUSH:
+              const pushChannel = workspace.pushConnections.find(
+                (connection) => connection.id === job.data.step?.metadata?.connectionId
+              );
+
               switch (job.data.step.metadata.selectedPlatform) {
                 case 'All':
                   await this.webhooksService.insertMessageStatusToClickhouse(
@@ -444,7 +466,7 @@ export class MessageStepProcessor extends WorkerHost {
                       stepID: job.data.step.id,
                       customerID: job.data.customer._id,
                       firebaseCredentials:
-                        workspace.pushPlatforms.Android.credentials,
+                        pushChannel?.pushPlatforms?.Android?.credentials,
                       deviceToken: job.data.customer.androidDeviceToken,
                       pushTitle: template.pushObject.settings.Android.title,
                       pushText:
@@ -468,7 +490,7 @@ export class MessageStepProcessor extends WorkerHost {
                       stepID: job.data.step.id,
                       customerID: job.data.customer._id,
                       firebaseCredentials:
-                        workspace.pushPlatforms.iOS.credentials,
+                        pushChannel?.pushPlatforms?.iOS?.credentials,
                       deviceToken: job.data.customer.iosDeviceToken,
                       pushTitle: template.pushObject.settings.iOS.title,
                       pushText: template.pushObject.settings.iOS.description,
@@ -493,7 +515,7 @@ export class MessageStepProcessor extends WorkerHost {
                       stepID: job.data.step.id,
                       customerID: job.data.customer._id,
                       firebaseCredentials:
-                        workspace.pushPlatforms.iOS.credentials,
+                        pushChannel?.pushPlatforms?.iOS?.credentials,
                       deviceToken: job.data.customer.iosDeviceToken,
                       pushTitle: template.pushObject.settings.iOS.title,
                       pushText: template.pushObject.settings.iOS.description,
@@ -518,7 +540,7 @@ export class MessageStepProcessor extends WorkerHost {
                       stepID: job.data.step.id,
                       customerID: job.data.customer._id,
                       firebaseCredentials:
-                        workspace.pushPlatforms.Android.credentials,
+                        pushChannel?.pushPlatforms?.Android?.credentials,
                       deviceToken: job.data.customer.androidDeviceToken,
                       pushTitle: template.pushObject.settings.Android.title,
                       pushText:
