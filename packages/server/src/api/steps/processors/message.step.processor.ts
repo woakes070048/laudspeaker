@@ -420,16 +420,41 @@ export class MessageStepProcessor extends WorkerHost {
               //   workspace.freeEmailsCount--;
               // }
 
-              if (emailProvider === 'resend') {
-                sendingDomain = workspace.resendSendingDomain;
-                key = workspace.resendAPIKey;
-                from = workspace.resendSendingName;
-                sendingEmail = workspace.resendSendingEmail;
+              let key: string,
+                sendingDomain: string,
+                from: string,
+                sendingEmail: string;
+
+              switch (emailProvider) {
+                case 'mailgun':
+                  key = mailgunChannel.apiKey;
+                  sendingDomain = mailgunChannel.sendingDomain;
+                  const mailgunSendingOption = mailgunChannel.sendingOptions.find(
+                    ({ id }) => id === job.data.step?.metadata?.sendingOptionId
+                  );
+                  from = mailgunSendingOption.sendingName;
+                  sendingEmail = mailgunSendingOption.sendingEmail;
+                  break;
+                case 'sendgrid':
+                  key = sendgridChannel.apiKey;
+                  const sendgridSendingOption = sendgridChannel.sendingOptions.find(
+                    ({ id }) => id === job.data.step?.metadata?.sendingOptionId
+                  );
+                  from = sendgridSendingOption.sendingEmail;
+                  break;
+                case 'resend':
+                  sendingDomain = resendChannel.sendingDomain;
+                  key = resendChannel.apiKey;
+                  const resendSendingOption = resendChannel.sendingOptions.find(
+                    ({ id }) => id === job.data.step?.metadata?.sendingOptionId
+                  );
+                  from = resendSendingOption.sendingName;
+                  sendingEmail = resendSendingOption.sendingEmail;
+                  break;
+                default:
+                  break;
               }
-              if (emailProvider === 'sendgrid') {
-                key = sendgridApiKey;
-                from = sendgridFromEmail;
-              }
+
               const ret = await sender.process({
                 name: TemplateType.EMAIL,
                 accountID: job.data.owner.id,
@@ -457,6 +482,12 @@ export class MessageStepProcessor extends WorkerHost {
                 eventProvider: emailProvider,
                 session: job.data.session,
               });
+              this.debug(
+                `${JSON.stringify(ret)}`,
+                this.process.name,
+                job.data.session
+              );
+
               await this.webhooksService.insertMessageStatusToClickhouse(
                 ret,
                 job.data.session
