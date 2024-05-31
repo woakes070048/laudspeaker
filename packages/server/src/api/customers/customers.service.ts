@@ -85,6 +85,7 @@ import { IdentifyCustomerDTO } from './dto/identify-customer.dto';
 import { SetCustomerPropsDTO } from './dto/set-customer-props.dto';
 import { SendFCMDto } from './dto/send-fcm.dto';
 import { PushPlatforms } from '../templates/entities/template.entity';
+import { Organization } from '../organizations/entities/organization.entity';
 import * as Sentry from '@sentry/node';
 import { CacheService } from '@/common/services/cache.service';
 
@@ -318,6 +319,31 @@ export class CustomersService {
     );
   }
 
+  async checkCustomerLimit(organization: Organization, customersToAdd = 1) {
+
+    this.debug(`in checkCustomerLimte`, this.checkCustomerLimit.name, "session");
+
+    const customersInOrganization = await this.CustomerModel.count({
+      workspaceId: {
+        $in: organization.workspaces.map((workspace) => workspace.id),
+      },
+    });
+
+    if(organization.plan.customerLimit != -1){
+      if (
+        customersInOrganization + customersToAdd >
+        organization.plan.customerLimit
+      ) {
+        throw new HttpException(
+          'Customers limit has been exceeded',
+          HttpStatus.PAYMENT_REQUIRED
+        );
+      }
+    }
+    
+    return customersInOrganization;
+  }
+
   async create(
     account: Account,
     createCustomerDto: any,
@@ -329,7 +355,10 @@ export class CustomersService {
         _id: Types.ObjectId;
       }
   > {
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    const organization = account?.teams?.[0]?.organization;
+    const workspace = organization?.workspaces?.[0];
+
+    await this.checkCustomerLimit(organization);
 
     const createdCustomer = new this.CustomerModel({
       _id: randomUUID(),
@@ -373,7 +402,8 @@ export class CustomersService {
   }
 
   async addPhCustomers(data: any[], account: Account) {
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    const organization = account?.teams?.[0]?.organization;
+    const workspace = organization?.workspaces?.[0];
 
     for (let index = 0; index < data.length; index++) {
       const addedBefore = await this.CustomerModel.find({
@@ -415,6 +445,8 @@ export class CustomersService {
             data[index]?.properties[firebaseDeviceTokenKey];
         }
       }
+
+      await this.checkCustomerLimit(organization);
       await createdCustomer.save();
     }
   }
@@ -836,13 +868,16 @@ export class CustomersService {
     account: Account,
     id: string
   ): Promise<CustomerDocument> {
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    const organization = account?.teams?.[0]?.organization;
+    const workspace = organization?.workspaces?.[0];
 
     const customers = await this.CustomerModel.find({
       workspaceId: workspace.id,
       externalId: id,
     }).exec();
     if (customers.length < 1) {
+      await this.checkCustomerLimit(organization);
+
       const createdCustomer = new this.CustomerModel({
         workspaceId: workspace.id,
         externalId: id,
@@ -852,13 +887,16 @@ export class CustomersService {
   }
 
   async findByCustomEvent(account: Account, id: string): Promise<Correlation> {
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    const organization = account?.teams?.[0]?.organization;
+    const workspace = organization?.workspaces?.[0];
 
     const customers = await this.CustomerModel.find({
       workspaceId: workspace.id,
       slackId: id,
     }).exec();
     if (customers.length < 1) {
+      await this.checkCustomerLimit(organization);
+
       const createdCustomer = new this.CustomerModel({
         workspaceId: workspace.id,
         slackId: id,
@@ -890,7 +928,8 @@ export class CustomersService {
     mapping?: (event: any) => any
   ): Promise<Correlation> {
     let customer, createdCustomer: CustomerDocument;
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    const organization = account?.teams?.[0]?.organization;
+    const workspace = organization?.workspaces?.[0];
 
     const queryParam: any = {
       workspaceId: workspace.id,
@@ -917,6 +956,8 @@ export class CustomersService {
       .session(transactionSession)
       .exec();
     if (!customer) {
+      await this.checkCustomerLimit(organization);
+
       this.debug(
         `Customer not found, creating new customer...`,
         this.findBySpecifiedEvent.name,
@@ -1163,62 +1204,62 @@ export class CustomersService {
     return Promise.resolve(customer);
   }
 
-  async findOrCreateByCorrelationKVPair(
-    workspace: Workspaces,
-    dto: EventDto,
-    transactionSession: ClientSession
-  ): Promise<Correlation> {
-    let customer: CustomerDocument; // Found customer
-    let queryParam = {
-      workspaceId: workspace.id,
-      $or: [
-        { [dto.correlationKey]: dto.correlationValue },
-        { other_ids: dto.correlationValue },
-      ],
-    };
-    try {
-      customer = await this.CustomerModel.findOne(queryParam)
-        .session(transactionSession)
-        .exec();
-    } catch (err) {
-      return Promise.reject(err);
-    }
-    if (!customer) {
-      // When no customer is found with the given correlation, create a new one
-      // If the correlationKey is '_id', use it to set the _id of the new customer
-      let newCustomerData: any = {
-        workspaceId: workspace.id,
-        createdAt: new Date(),
-      };
-      if (dto.correlationKey === '_id') {
-        newCustomerData._id = dto.correlationValue;
-      } else {
-        // If correlationKey is not '_id',
-        newCustomerData._id = randomUUID();
-      }
-      const createdCustomer = new this.CustomerModel(newCustomerData);
-      return {
-        cust: await createdCustomer.save({ session: transactionSession }),
-        found: false,
-      };
-    } else {
-      return { cust: customer, found: true };
-    }
-    /*
-    if (!customer) {
+  // async findOrCreateByCorrelationKVPair(
+  //   workspace: Workspaces,
+  //   dto: EventDto,
+  //   transactionSession: ClientSession
+  // ): Promise<Correlation> {
+  //   let customer: CustomerDocument; // Found customer
+  //   const queryParam = {
+  //     workspaceId: workspace.id,
+  //     $or: [
+  //       { [dto.correlationKey]: dto.correlationValue },
+  //       { other_ids: dto.correlationValue },
+  //     ],
+  //   };
+  //   try {
+  //     customer = await this.CustomerModel.findOne(queryParam)
+  //       .session(transactionSession)
+  //       .exec();
+  //   } catch (err) {
+  //     return Promise.reject(err);
+  //   }
+  //   if (!customer) {
+  //     // When no customer is found with the given correlation, create a new one
+  //     // If the correlationKey is '_id', use it to set the _id of the new customer
+  //     const newCustomerData: any = {
+  //       workspaceId: workspace.id,
+  //       createdAt: new Date(),
+  //     };
+  //     if (dto.correlationKey === '_id') {
+  //       newCustomerData._id = dto.correlationValue;
+  //     } else {
+  //       // If correlationKey is not '_id',
+  //       newCustomerData._id = randomUUID();
+  //     }
+  //     const createdCustomer = new this.CustomerModel(newCustomerData);
+  //     return {
+  //       cust: await createdCustomer.save({ session: transactionSession }),
+  //       found: false,
+  //     };
+  //   } else {
+  //     return { cust: customer, found: true };
+  //   }
+  //   /*
+  //   if (!customer) {
 
-      if (!queryParam._id) {
-        queryParam._id = randomUUID();
-      }
+  //     if (!queryParam._id) {
+  //       queryParam._id = randomUUID();
+  //     }
 
-      const createdCustomer = new this.CustomerModel(queryParam);
-      return {
-        cust: await createdCustomer.save({ session: transactionSession }),
-        found: false,
-      };
-    } else return { cust: customer, found: true };
-    */
-  }
+  //     const createdCustomer = new this.CustomerModel(queryParam);
+  //     return {
+  //       cust: await createdCustomer.save({ session: transactionSession }),
+  //       found: false,
+  //     };
+  //   } else return { cust: customer, found: true };
+  //   */
+  // }
 
   // get keys that weren't marked as primary but may be used
   // as channels for sending messages (e.g. email, email_address,
@@ -1579,6 +1620,7 @@ export class CustomersService {
    * @param session
    * @returns
    */
+  //to do add customer limit check here
   async upsert(
     auth: { account: Account; workspace: Workspaces },
     upsertCustomerDto: UpsertCustomerDto,
@@ -6306,6 +6348,7 @@ export class CustomersService {
     if (!body.token)
       throw new HttpException('No FCM token given', HttpStatus.BAD_REQUEST);
 
+    const organization = auth.account.teams[0].organization;
     const workspace = auth.workspace;
 
     let customer = await this.CustomerModel.findOne({
@@ -6314,6 +6357,8 @@ export class CustomersService {
     });
 
     if (!customer) {
+      await this.checkCustomerLimit(organization);
+
       this.error('Customer not found', this.sendFCMToken.name, session);
 
       customer = await this.CustomerModel.create({
@@ -6349,6 +6394,7 @@ export class CustomersService {
       return;
     }
 
+    const organization = auth.account.teams[0].organization;
     const workspace = auth.workspace;
 
     let customer = await this.CustomerModel.findOne({
@@ -6357,6 +6403,8 @@ export class CustomersService {
     });
 
     if (!customer) {
+      await this.checkCustomerLimit(organization);
+
       this.error(
         'Invalid customer id. Creating new anonymous customer...',
         this.identifyCustomer.name,

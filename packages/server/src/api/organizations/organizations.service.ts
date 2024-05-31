@@ -5,6 +5,8 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue, tryCatch } from 'bullmq';
@@ -21,9 +23,25 @@ import { UpdateOrganizationDTO } from './dto/update-organization.dto';
 import { OrganizationInvites } from './entities/organization-invites.entity';
 import { OrganizationTeam } from './entities/organization-team.entity';
 import { Organization } from './entities/organization.entity';
+import {
+  DEFAULT_PLAN,
+  OrganizationPlan,
+} from './entities/organization-plan.entity';
+import { createClient } from '@clickhouse/client';
 
 @Injectable()
 export class OrganizationService {
+  private clickhouseClient = createClient({
+    host: process.env.CLICKHOUSE_HOST
+      ? process.env.CLICKHOUSE_HOST.includes('http')
+        ? process.env.CLICKHOUSE_HOST
+        : `http://${process.env.CLICKHOUSE_HOST}`
+      : 'http://localhost:8123',
+    username: process.env.CLICKHOUSE_USER ?? 'default',
+    password: process.env.CLICKHOUSE_PASSWORD ?? '',
+    database: process.env.CLICKHOUSE_DB ?? 'default',
+  });
+
   constructor(
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -32,12 +50,12 @@ export class OrganizationService {
     public journeysRepository: Repository<Organization>,
     @InjectRepository(Workspaces)
     public workspacesRepository: Repository<Workspaces>,
+    @InjectRepository(Organization)
+    public organizationRepository: Repository<Organization>,
     @InjectRepository(OrganizationInvites)
     public organizationInvitesRepository: Repository<OrganizationInvites>,
     @InjectRepository(OrganizationTeam)
     public organizationTeamRepository: Repository<OrganizationTeam>,
-    @Inject(AuthHelper)
-    public readonly helper: AuthHelper,
     @InjectRepository(Account)
     public accountRepository: Repository<Account>,
     @InjectQueue('{message}') private readonly messageQueue: Queue,
@@ -159,13 +177,17 @@ export class OrganizationService {
       await queryRunner.connect();
       await queryRunner.startTransaction();
 
-      const organization = await queryRunner.manager.create(Organization, {
+      const plan = await queryRunner.manager.save(OrganizationPlan, {
+        ...DEFAULT_PLAN,
+      });
+
+      const organization = await queryRunner.manager.save(Organization, {
         companyName: body.name,
         owner: {
           id: account.id,
         },
+        plan: { id: plan.id },
       });
-      await queryRunner.manager.save(organization);
 
       const workspace = await queryRunner.manager.create(Workspaces, {
         name: organization.companyName + ' workspace',
@@ -186,7 +208,7 @@ export class OrganizationService {
       });
       await queryRunner.manager.save(team);
 
-      await this.helper.generateDefaultData(account, queryRunner, session);
+      await this.authHelper.generateDefaultData(account, queryRunner, session);
 
       await queryRunner.commitTransaction();
     } catch (err) {
@@ -241,6 +263,23 @@ export class OrganizationService {
     session: string
   ) {
     const team = account.teams?.[0];
+
+    const organization = team.organization;
+    const plan = organization.plan;
+
+    const teamMembersCount = await this.accountRepository.countBy({
+      teams: { id: team.id },
+    });
+
+    if (plan.seatLimit != -1) {
+      if (teamMembersCount + 1 > plan.seatLimit) {
+        throw new HttpException(
+          'Seat limit has been exceeded',
+          HttpStatus.PAYMENT_REQUIRED
+        );
+      }
+    }
+
     const invite = await this.organizationInvitesRepository.findOne({
       where: {
         organization: {
@@ -264,6 +303,7 @@ export class OrganizationService {
         HttpStatus.BAD_REQUEST
       );
     }
+
     const queryRunner = await this.dataSource.createQueryRunner();
 
     try {
@@ -435,5 +475,34 @@ export class OrganizationService {
     }
 
     return invite;
+  }
+
+  public async checkOrganizationMessageLimit(workspaceIds: string[], messagesToSend = 1, customerMessageLimit: number) {
+    
+    if (workspaceIds.length === 0) {
+      return;
+    }
+    
+    const res = await this.clickhouseClient.query({
+      query: `SELECT COUNT(*) FROM message_status WHERE workspaceId IN {workspaceIds:String}`,
+      query_params: {
+        workspaceIds: `(${workspaceIds.join(',')})`,
+      },
+    });
+
+    const messagesCountResponseData = (
+      await res.json<{ data: { 'count()': string }[] }>()
+    )?.data;
+
+    const messagesCount = +messagesCountResponseData?.[0]?.['count()'] || 0;
+
+    if (messagesCount + messagesToSend > customerMessageLimit) {
+      throw new HttpException(
+        'Message limit has been exceeded',
+         HttpStatus.PAYMENT_REQUIRED
+      );
+    }
+
+    return messagesCount;
   }
 }

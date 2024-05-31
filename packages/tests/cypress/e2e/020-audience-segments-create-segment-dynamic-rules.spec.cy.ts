@@ -30,6 +30,7 @@ describe("Segment Correctness", { retries: 2 }, () => {
 
     cy.wait(10000);
     cy.visit("/home");
+    cy.wait(500);
     cy.url().should("include", "/home");
 
     uploadCSV("correctness_testing.csv", mapAttributesToNewFields, 0);

@@ -41,7 +41,13 @@ jobs:
         npm install -w packages/tests
     - name: Run cypress tests
       run: |
-        TESTS_BASE_URL=http://localhost:8080 TESTS_API_BASE_URL=http://localhost:8080/api TESTS_INTERNAL_API_BASE_URL=http://laudspeaker-web:8080/api npm run tests:run
+        TESTS_BASE_URL=http://localhost:8080 TESTS_API_BASE_URL=http://localhost:8080/api TESTS_INTERNAL_API_BASE_URL=http://laudspeaker-web:8080/api npm run tests:run 
+    - name: Docker logs
+      run: docker logs laudspeaker-web
+      if: always()
+    - name: Docker logs
+      run: docker logs -n 100 laudspeaker-web
+      if: always()  
     - name: Publish Test Report
       uses: mikepenz/action-junit-report@v4
       if: always()

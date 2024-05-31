@@ -75,12 +75,8 @@ export class EventsPreProcessor extends WorkerHost {
     private readonly logger: Logger,
     private dataSource: DataSource,
     @InjectConnection() private readonly connection: mongoose.Connection,
-    @Inject(forwardRef(() => CustomersService))
-    private readonly customersService: CustomersService,
     @Inject(forwardRef(() => EventsService))
     private readonly eventsService: EventsService,
-    @Inject(forwardRef(() => JourneysService))
-    private readonly journeysService: JourneysService,
     @InjectModel(Event.name)
     private eventModel: Model<EventDocument>,
     @InjectModel(PosthogEvent.name)

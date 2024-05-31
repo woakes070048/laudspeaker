@@ -28,8 +28,6 @@ export class AuthHelper extends BaseJwtHelper {
   @Inject(StepsService) private readonly stepsService: StepsService;
   @InjectRepository(Account)
   private readonly repository: Repository<Account>;
-  @InjectRepository(OrganizationTeam)
-  private readonly organizationTeamRepository: Repository<OrganizationTeam>;
   @Inject(WINSTON_MODULE_NEST_PROVIDER)
   private readonly logger: LoggerService;
 
@@ -122,6 +120,7 @@ export class AuthHelper extends BaseJwtHelper {
       where: { id: decoded.id },
       relations: [
         'teams.organization.workspaces',
+        'teams.organization.plan',
         'teams.organization.workspaces.mailgunConnections.sendingOptions',
         'teams.organization.workspaces.sendgridConnections.sendingOptions',
         'teams.organization.workspaces.resendConnections.sendingOptions',

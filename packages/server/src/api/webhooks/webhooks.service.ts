@@ -23,7 +23,13 @@ import { Queue } from 'bullmq';
 import { Webhook } from 'svix';
 import fetch from 'node-fetch'; // Ensure you have node-fetch if you're using Node.js
 import { ProviderType } from '../events/events.preprocessor';
+import { Organization } from '../organizations/entities/organization.entity';
+import {
+  DEFAULT_PLAN,
+  OrganizationPlan,
+} from '../organizations/entities/organization-plan.entity';
 import * as Sentry from '@sentry/node';
+import Stripe from 'stripe';
 
 export enum ClickHouseEventProvider {
   MAILGUN = 'mailgun',
@@ -66,6 +72,7 @@ export class WebhooksService {
     open: 'opened',
   };
 
+  private stripeClient = new Stripe.Stripe(process.env.STRIPE_SECRET_KEY);
   private clickhouseClient = createClient({
     host: process.env.CLICKHOUSE_HOST
       ? process.env.CLICKHOUSE_HOST.includes('http')
@@ -84,6 +91,10 @@ export class WebhooksService {
     private stepRepository: Repository<Step>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
+    @InjectRepository(OrganizationPlan)
+    private organizationPlanRepository: Repository<OrganizationPlan>,
     @InjectQueue('{events_pre}')
     private readonly eventPreprocessorQueue: Queue
   ) {
@@ -487,4 +498,75 @@ export class WebhooksService {
       }
     );
   }
+
+  public async processStripePayment(payload: Buffer, signature: string, session: string): Promise<any> {
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event: Stripe.Event;
+    try {
+      // Verify the event by constructing it using the Stripe library
+      event = this.stripeClient.webhooks.constructEvent(payload, signature, endpointSecret);
+    } catch (err) {
+      // If the event is unverified, throw an error with a suggestion to retry
+      //throw new HttpException('Webhook Error: Unable to verify Stripe signature.', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      // Handle the verified event type
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          const paymentIntent: Stripe.PaymentIntent = event.data.object as Stripe.PaymentIntent;
+          //this.handlePaymentIntentSucceeded(paymentIntent);
+          break;
+        case 'payment_intent.payment_failed':
+          const paymentIntentFailed: Stripe.PaymentIntent = event.data.object as Stripe.PaymentIntent;
+          //this.handlePaymentIntentFailed(paymentIntentFailed);
+          break;
+        // Add more handlers as necessary
+        case 'checkout.session.completed':
+          //console.log('this is the event we care about');
+          //console.log(JSON.stringify(event,null, 2));
+          
+          //console.log('^^ is the event we care about');
+          const accountId = event.data.object.metadata.accountId
+          if (!accountId) {
+            this.logger.warn('No accountId found in metadata for checkout.session.completed');
+            return;
+          }
+          this.debug(
+            `the checkout session event is ${JSON.stringify(event,null, 2)})}`,
+            this.processStripePayment.name,
+            session,
+            accountId
+          );
+          // Find the related organization using the accountId
+          const organization = await this.organizationRepository.findOne({
+            where: { owner: { id: accountId } },
+            relations: ['plan']
+          });
+
+          if (!organization) {
+            this.logger.warn(`No organization found for accountId: ${accountId}`);
+            return;
+          }
+          // Update the plan to subscribed and active
+          const plan = organization.plan;
+          plan.subscribed = true;
+          plan.activePlan = true;
+          await this.organizationPlanRepository.save(plan);
+          this.logger.log(`Updated plan for organization ${organization.id} to active and subscribed`);
+          break;
+        default:
+          //console.log(`Unhandled event type: ${event.type}`);
+          this.logger.log(`Unhandled event type: ${event.type}`);
+      }
+    } catch (err) {
+      // Handle errors that arise during event processing
+      // throw new HttpException(`Webhook Handler Error: ${err.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // Return a generic response or something more specific if you prefer
+    return { received: true };
+  }
+
 }

@@ -38,6 +38,7 @@ import {
   ClickHouseEventProvider,
   WebhooksService,
 } from '@/api/webhooks/webhooks.service';
+import { OrganizationService } from '@/api/organizations/organizations.service';
 
 @Injectable()
 @Processor('{message.step}', {
@@ -82,6 +83,8 @@ export class MessageStepProcessor extends WorkerHost {
     @Inject(StepsService) private stepsService: StepsService,
     @Inject(CacheService) private cacheService: CacheService,
     @Inject(TemplatesService) private templatesService: TemplatesService,
+    @Inject(OrganizationService)
+    private organizationService: OrganizationService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WebhooksService)
@@ -223,6 +226,17 @@ export class MessageStepProcessor extends WorkerHost {
         let nextJob;
         const workspace =
           job.data.owner.teams?.[0]?.organization?.workspaces?.[0];
+        
+        const workspaceIds = job.data.owner.teams?.[0]?.organization?.workspaces?.map(workspace => workspace.id);
+
+        if(job.data.owner.teams?.[0]?.organization.plan.messageLimit != -1){
+          //off for now for perf reasons
+          // to do 
+
+          //await this.organizationService.checkOrganizationMessageLimit(
+          //  workspaceIds || [], 1 , job.data.owner.teams?.[0]?.organization.plan.messageLimit
+          //);
+        }
 
         // Rate limiting and sending quiet hours will be stored here
         type MessageSendType =

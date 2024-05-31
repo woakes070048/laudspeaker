@@ -59,6 +59,7 @@ import { MultisplitStepProcessor } from '../steps/processors/multisplit.step.pro
 import { StartStepProcessor } from '../steps/processors/start.step.processor';
 import { TimeDelayStepProcessor } from '../steps/processors/time.delay.step.processor';
 import { TimeWindowStepProcessor } from '../steps/processors/time.window.step.processor';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 function getProvidersList() {
   let providerList: Array<any> = [
@@ -177,6 +178,7 @@ function getProvidersList() {
     SlackModule,
     forwardRef(() => RedlockModule),
     forwardRef(() => StepsModule),
+    forwardRef(() => OrganizationsModule),
   ],
   controllers: [EventsController],
   providers: getProvidersList(),

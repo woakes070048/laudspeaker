@@ -13,6 +13,8 @@ import { WebhooksProcessor } from './webhooks.processor';
 import { BullModule } from '@nestjs/bullmq';
 import { TemplatesModule } from '../templates/templates.module';
 import { Step } from '../steps/entities/step.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { OrganizationPlan } from '../organizations/entities/organization-plan.entity';
 
 function getProvidersList() {
   let providerList: Array<any> = [WebhooksService];
@@ -26,7 +28,7 @@ function getProvidersList() {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Account, Step]),
+    TypeOrmModule.forFeature([Account, Step, Organization, OrganizationPlan]),
     BullModule.registerQueue({
       name: '{webhooks}',
     }),

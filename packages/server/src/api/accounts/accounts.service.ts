@@ -32,18 +32,23 @@ import {
 import onboardingJourneyFixtures from './onboarding-journey';
 import { StepsService } from '../steps/steps.service';
 import { StepType } from '../steps/types/step.interface';
-import { randomUUID } from 'crypto';
 import admin from 'firebase-admin';
-import { update } from 'lodash';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationTeam } from '../organizations/entities/organization-team.entity';
+import {
+  DEFAULT_PLAN,
+  OrganizationPlan,
+} from '../organizations/entities/organization-plan.entity';
+import Stripe from 'stripe';
 import { WorkspaceMailgunConnection } from '../workspaces/entities/workspace-mailgun-connection.entity';
 
 @Injectable()
 export class AccountsService extends BaseJwtHelper {
   private sgMailService = new MailService();
   private sgClient = new Client();
+
+  private stripeClient = new Stripe.Stripe(process.env.STRIPE_SECRET_KEY);
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -53,6 +58,10 @@ export class AccountsService extends BaseJwtHelper {
     public accountsRepository: Repository<Account>,
     @InjectRepository(Workspaces)
     public workspacesRepository: Repository<Workspaces>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
+    @InjectRepository(OrganizationPlan)
+    private organizationPlanRepository: Repository<OrganizationPlan>,
     @Inject(forwardRef(() => CustomersService))
     private customersService: CustomersService,
     @Inject(forwardRef(() => AuthService)) private authService: AuthService,
@@ -621,11 +630,16 @@ export class AccountsService extends BaseJwtHelper {
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
+        const plan = await queryRunner.manager.save(OrganizationPlan, {
+          ...DEFAULT_PLAN,
+        });
+
         const organization = await queryRunner.manager.create(Organization, {
           companyName: 'OnboardingOrg',
           owner: {
             id: account.id,
           },
+          plan: { id: plan.id },
         });
         await queryRunner.manager.save(organization);
 
@@ -825,6 +839,109 @@ export class AccountsService extends BaseJwtHelper {
         'Error during message processing.',
         HttpStatus.BAD_REQUEST
       );
+    }
+  }
+
+  /*
+   * Get the priceId from stripe by searcing for a product
+   */
+  async findPriceIdByProductName(productName: string): Promise<string | null> {
+    try {
+      // List all products (consider pagination if you have many products)
+      const products = await this.stripeClient.products.list({
+        limit: 100, // Adjust based on your needs
+      });
+      //console.log("products are",JSON.stringify(products,null, 2))
+
+      // Find the product by name
+      const product = products.data.find(p => p.name === productName);
+
+      if (!product) {
+        throw new Error('Product not found');
+      }
+
+      // Now, get the prices associated with this product
+      const prices = await this.stripeClient.prices.list({
+        product: product.id,
+        limit: 1, // You can adjust this based on how you structure your prices
+      });
+      //console.log("prices are",JSON.stringify(prices,null, 2))
+
+      // Return the first price's ID or null if no prices
+      return prices.data.length > 0 ? prices.data[0].id : null;
+    } catch (error) {
+      throw new Error('Failed to find price ID: ' + error);
+    }
+  }
+
+  async createCheckoutSession(accountId: string, productName: string, trialDays: number, session: string) {
+
+    const priceId = await this.findPriceIdByProductName(productName);
+    //console.log("price id is", priceId);
+    
+    try {
+      const paymentLink = await this.stripeClient.paymentLinks.create({
+        line_items: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        metadata: {
+          accountId,
+        },
+        payment_method_collection: 'if_required',
+        allow_promotion_codes: true,
+        automatic_tax: {enabled: true},
+        // Set up subscription details
+        subscription_data: {
+          trial_period_days: trialDays,
+          trial_settings: {
+            end_behavior: {
+              missing_payment_method: 'pause'
+            }
+          }
+        },
+        after_completion: {
+          type: 'redirect', 
+          redirect: {
+            url: "http://" + process.env.FRONTEND_URL + "/payment-gate"
+          }
+        }
+        //success_url: 'http://your_success_url_here',
+        //cancel_url: 'http://your_cancel_url_here',
+      });
+      this.debug(
+        `the created payment link is ${paymentLink.url})}`,
+        this.createCheckoutSession.name,
+        session,
+        accountId
+      );
+      //console.log("the created payment link is", paymentLink.url);
+      return paymentLink.url;
+    } catch (error) {
+      throw new Error('Failed to create payment link: ' + error);
+    }
+  }
+
+  async checkActivePlanForUser(userId: string, session: string): Promise<boolean> {
+    this.debug(`Checking active plan for user ${userId}`, this.checkActivePlanForUser.name, session, userId);
+    try {
+      // Find the related organization using the userId as the owner
+      const organization = await this.organizationRepository.findOne({
+        where: { owner: { id: userId } },
+        relations: ['plan'],
+      });
+  
+      if (!organization) {
+        this.warn('User does not own any organization', this.checkActivePlanForUser.name, session, userId);
+        return false;
+      }
+  
+      // Check if the organization's plan is active
+      const isActive = organization.plan && organization.plan.activePlan == true;
+      return isActive;
+    } catch (error) {
+      this.error(error, this.checkActivePlanForUser.name, session, userId);
+      throw new HttpException('Error checking active plan', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

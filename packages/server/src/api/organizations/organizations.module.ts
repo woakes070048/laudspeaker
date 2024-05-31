@@ -37,7 +37,7 @@ import { BullModule } from '@nestjs/bullmq';
       OrganizationInvites,
     ]),
     forwardRef(() => AuthModule),
-    WebhooksModule,
+    forwardRef(() => WebhooksModule),
   ],
   controllers: [OrganizationsController],
   providers: [S3Service, OrganizationService],

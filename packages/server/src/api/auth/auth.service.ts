@@ -212,7 +212,7 @@ export class AuthService {
       where: {
         apiKey,
       },
-      relations: ['organization.owner.teams.organization.workspaces'],
+      relations: ['organization.owner.teams.organization.workspaces','organization.owner.teams.organization.plan'],
     });
     return { account: workspace.organization.owner, workspace: workspace };
   }

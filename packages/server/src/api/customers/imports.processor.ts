@@ -283,7 +283,9 @@ export class ImportProcessor extends WorkerHost {
     const withoutDuplicateKeys = Array.from(
       new Set(data.map((el) => el.pkKeyValue))
     );
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+
+    const organization = account?.teams?.[0]?.organization;
+    const workspace = organization?.workspaces?.[0];
 
     const foundExisting = await this.CustomerModel.find({
       workspaceId: workspace.id,
@@ -305,6 +307,11 @@ export class ImportProcessor extends WorkerHost {
         ...el.create,
         ...el.update,
       }));
+
+    await this.customersService.checkCustomerLimit(
+      organization,
+      toCreate.length
+    );
 
     const addToSegment = [];
 

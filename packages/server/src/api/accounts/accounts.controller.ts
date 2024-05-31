@@ -158,12 +158,27 @@ export class AccountsController {
       delete workspace?.pushPlatforms?.Android?.credentials;
       delete workspace?.pushPlatforms?.iOS?.credentials;
 
+      if(process.env.PAYMENTS_ENABLED !== 'true'){
+        return {
+          ...data?.[0],
+          workspace: {
+            ...workspace,
+            pk,
+          },
+          isActive: true,
+        };
+        //return { isActive: true };
+      }
+      const isActive = await this.accountsService.checkActivePlanForUser((<Account>user).id, session);
+
+      //to do
       return {
         ...data?.[0],
         workspace: {
           ...workspace,
           pk,
         },
+        isActive,
       };
     } catch (e) {
       this.error(e, this.findOne.name, session, (<Account>user).id);
@@ -332,5 +347,55 @@ export class AccountsController {
   @UseInterceptors(ClassSerializerInterceptor, new RavenInterceptor())
   async deleteMedia(@Req() { user }: Request, @Param('key') key: string) {
     return this.s3Service.deleteFile(key, <Account>user);
+  }
+
+  @Post('/create-checkout-session')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(ClassSerializerInterceptor, new RavenInterceptor())
+  async createCheckoutSession(@Req() { user }: Request) {
+    const session = randomUUID();
+    this.debug(
+      `Creating checkout session for ${JSON.stringify({ id: (<Account>user).id })}`,
+      this.createCheckoutSession.name,
+      session,
+      (<Account>user).id
+    );
+
+    try {
+      const url = await this.accountsService.createCheckoutSession(
+        (<Account>user).id,
+        process.env.PRODUCT_NAME,
+        +process.env.PRODUCT_TRIAL,
+        session
+      );
+      return { url };
+    } catch (e) {
+      this.error(e, this.createCheckoutSession.name, session, (<Account>user).id);
+      throw e;
+    }
+  }
+
+  @Get('/check-active-plan')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(ClassSerializerInterceptor, new RavenInterceptor())
+  async checkActiveOrganizationPlan(@Req() { user }: Request) {
+    const session = randomUUID();
+    this.debug(
+      `Checking active organization plan for user ${JSON.stringify({ id: (<Account>user).id })}`,
+      this.checkActiveOrganizationPlan.name,
+      session,
+      (<Account>user).id
+    );
+    try {
+      //env flag so self-deploy do not need to pay
+      if(process.env.PAYMENTS_ENABLED !== 'true'){
+        return { isActive: true };
+      }
+      const isActive = await this.accountsService.checkActivePlanForUser((<Account>user).id, session);
+      return { isActive };
+    } catch (e) {
+      this.error(e, this.checkActiveOrganizationPlan.name, session, (<Account>user).id);
+      throw e;
+    }
   }
 }

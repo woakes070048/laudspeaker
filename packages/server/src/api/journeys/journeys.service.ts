@@ -5,6 +5,7 @@ import {
   HttpException,
   NotFoundException,
   forwardRef,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -1728,7 +1729,26 @@ export class JourneysService {
 
     try {
       if (!account) throw new HttpException('User not found', 404);
-      const workspace = account.teams?.[0]?.organization?.workspaces?.[0];
+
+      const organization = account.teams?.[0]?.organization;
+      const workspace = organization.workspaces?.[0];
+
+      const activeJourneysCount = await queryRunner.manager.countBy(Journey, {
+        workspace: {
+          id: In(organization.workspaces.map((workspace) => workspace.id)),
+        },
+        isActive: true,
+      });
+
+      if(organization.plan.activeJourneyLimit != -1){
+        if (activeJourneysCount + 1 > organization.plan.activeJourneyLimit) {
+          throw new HttpException(
+            'Active journeys limit has been exceeded',
+            HttpStatus.PAYMENT_REQUIRED
+          );
+        }
+      }
+      
       const accountWithConnections = await queryRunner.manager.findOne(
         Account,
         {

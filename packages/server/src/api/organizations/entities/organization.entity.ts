@@ -10,6 +10,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { OrganizationTeam } from './organization-team.entity';
+import { OrganizationPlan } from './organization-plan.entity';
 
 export enum PlanType {
   FREE = 'free',
@@ -30,6 +31,14 @@ export class Organization extends BaseEntity {
   })
   public teams: OrganizationTeam[];
 
+  @JoinColumn()
+  @OneToOne(() => OrganizationPlan, (organizationPlan) => organizationPlan.organization, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+    nullable: false,
+  })
+  public plan: OrganizationPlan;
+
   @OneToMany(() => Workspaces, (workspace) => workspace.organization, {
     onDelete: 'CASCADE',
   })
@@ -38,4 +47,5 @@ export class Organization extends BaseEntity {
   @JoinColumn()
   @OneToOne(() => Account, (account) => account.id, { onDelete: 'CASCADE' })
   public owner: Account;
+
 }

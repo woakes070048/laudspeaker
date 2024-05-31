@@ -681,7 +681,7 @@ export class MessageSender {
 
     const messaging = admin.messaging(firebaseApp);
 
-    let data = {
+    const data = {
       stepID,
       customerID,
       messageID: randomUUID(),
@@ -865,7 +865,7 @@ export class MessageSender {
 
     const messaging = admin.messaging(firebaseApp);
 
-    let data = {
+    const data = {
       title: titleWithInsertedTags.slice(0, this.MAXIMUM_PUSH_TITLE_LENGTH),
       body: textWithInsertedTags.slice(0, this.MAXIMUM_PUSH_LENGTH),
       stepID,
