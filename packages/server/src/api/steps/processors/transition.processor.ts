@@ -1,5 +1,11 @@
 /* eslint-disable no-case-declarations */
-import { HttpException, HttpStatus, Inject, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Logger,
+  forwardRef,
+} from '@nestjs/common';
 import * as http from 'node:http';
 import https from 'https';
 import { Injectable } from '@nestjs/common';
@@ -57,6 +63,7 @@ import { StepsService } from '../steps.service';
 import { Journey } from '@/api/journeys/entities/journey.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Workspaces } from '@/api/workspaces/entities/workspaces.entity';
+import { WorkspacesService } from '@/api/workspaces/workspaces.service';
 import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity';
 import { CacheService } from '@/common/services/cache.service';
 
@@ -108,6 +115,8 @@ export class TransitionProcessor extends WorkerHost {
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,
     @Inject(StepsService) private stepsService: StepsService,
+    @Inject(forwardRef(() => WorkspacesService))
+    private workspacesService: WorkspacesService,
     @Inject(CacheService) private cacheService: CacheService
   ) {
     super();
@@ -779,54 +788,78 @@ export class TransitionProcessor extends WorkerHost {
       //send message here
 
       const { email } = owner;
-
-      const {
-        mailgunAPIKey,
-        sendingName,
-        testSendingEmail,
-        testSendingName,
-        sendgridApiKey,
-        sendgridFromEmail,
-        resendSendingDomain,
-        resendAPIKey,
-        resendSendingName,
-        resendSendingEmail,
-      } = workspace;
-
-      let { sendingDomain, sendingEmail } = workspace;
-
-      let key = mailgunAPIKey;
-      let from = sendingName;
-
       const { _id, workspaceId, workflows, journeys, ...tags } = customer;
       const filteredTags = cleanTagsForSending(tags);
       const sender = new MessageSender(this.logger, this.accountRepository);
 
       switch (template.type) {
         case TemplateType.EMAIL:
-          if (workspace.emailProvider === 'free3') {
-            if (workspace.freeEmailsCount === 0)
-              throw new HttpException(
-                'You exceeded limit of 3 emails',
-                HttpStatus.PAYMENT_REQUIRED
+          const mailgunChannel = workspace.mailgunConnections.find(
+            (connection) => connection.id === step.metadata.connectionId
+          );
+          const sendgridChannel = workspace.sendgridConnections.find(
+            (connection) => connection.id === step.metadata.connectionId
+          );
+          const resendChannel = workspace.resendConnections.find(
+            (connection) => connection.id === step.metadata.connectionId
+          );
+
+          const emailProvider = mailgunChannel
+            ? 'mailgun'
+            : sendgridChannel
+            ? 'sendgrid'
+            : resendChannel
+            ? 'resend'
+            : undefined;
+
+          // if (emailProvider === 'free3') {
+          //   if (workspace.freeEmailsCount === 0)
+          //     throw new HttpException(
+          //       'You exceeded limit of 3 emails',
+          //       HttpStatus.PAYMENT_REQUIRED
+          //     );
+          //   sendingDomain = process.env.MAILGUN_TEST_DOMAIN;
+          //   key = process.env.MAILGUN_API_KEY;
+          //   from = testSendingName;
+          //   sendingEmail = testSendingEmail;
+          //   workspace.freeEmailsCount--;
+          // }
+
+          let key: string,
+            sendingDomain: string,
+            from: string,
+            sendingEmail: string;
+
+          switch (emailProvider) {
+            case 'mailgun':
+              key = mailgunChannel.apiKey;
+              sendingDomain = mailgunChannel.sendingDomain;
+              const mailgunSendingOption = mailgunChannel.sendingOptions.find(
+                ({ id }) => id === step.metadata.sendingOptionId
               );
-            sendingDomain = process.env.MAILGUN_TEST_DOMAIN;
-            key = process.env.MAILGUN_API_KEY;
-            from = testSendingName;
-            sendingEmail = testSendingEmail;
-            workspace.freeEmailsCount--;
+              from = mailgunSendingOption.sendingName;
+              sendingEmail = mailgunSendingOption.sendingEmail;
+              break;
+            case 'sendgrid':
+              key = sendgridChannel.apiKey;
+              const sendgridSendingOption = sendgridChannel.sendingOptions.find(
+                ({ id }) => id === step.metadata.sendingOptionId
+              );
+              from = sendgridSendingOption.sendingEmail;
+              break;
+            case 'resend':
+              sendingDomain = resendChannel.sendingDomain;
+              key = resendChannel.apiKey;
+              const resendSendingOption = resendChannel.sendingOptions.find(
+                ({ id }) => id === step.metadata.sendingOptionId
+              );
+              from = resendSendingOption.sendingName;
+              sendingEmail = resendSendingOption.sendingEmail;
+              break;
+            default:
+              break;
           }
 
-          if (workspace.emailProvider === 'resend') {
-            sendingDomain = workspace.resendSendingDomain;
-            key = workspace.resendAPIKey;
-            from = workspace.resendSendingName;
-            sendingEmail = workspace.resendSendingEmail;
-          }
-          if (workspace.emailProvider === 'sendgrid') {
-            key = sendgridApiKey;
-            from = sendgridFromEmail;
-          }
           const ret = await sender.process({
             name: TemplateType.EMAIL,
             accountID: owner.id,
@@ -849,7 +882,7 @@ export class TransitionProcessor extends WorkerHost {
             ),
             tags: filteredTags,
             templateID: template.id,
-            eventProvider: workspace.emailProvider,
+            eventProvider: emailProvider,
             session,
           });
           this.debug(
@@ -861,12 +894,16 @@ export class TransitionProcessor extends WorkerHost {
             ret,
             session
           );
-          if (workspace.emailProvider === 'free3') {
-            await owner.save();
-            await workspace.save();
-          }
+          // if (emailProvider === 'free3') {
+          //   await owner.save();
+          //   await workspace.save();
+          // }
           break;
         case TemplateType.PUSH:
+          const pushChannel = workspace.pushConnections.find(
+            (connection) => connection.id === step.metadata.connectionId
+          );
+
           switch (step.metadata.selectedPlatform) {
             case 'All':
               await this.webhooksService.insertMessageStatusToClickhouse(
@@ -876,7 +913,7 @@ export class TransitionProcessor extends WorkerHost {
                   stepID: step.id,
                   customerID: customer._id,
                   firebaseCredentials:
-                    workspace.pushPlatforms.Android.credentials,
+                    pushChannel.pushPlatforms.Android.credentials,
                   deviceToken: customer.androidDeviceToken,
                   pushTitle: template.pushObject.settings.Android.title,
                   pushText: template.pushObject.settings.Android.description,
@@ -897,7 +934,8 @@ export class TransitionProcessor extends WorkerHost {
                   accountID: owner.id,
                   stepID: step.id,
                   customerID: customer._id,
-                  firebaseCredentials: workspace.pushPlatforms.iOS.credentials,
+                  firebaseCredentials:
+                    pushChannel.pushPlatforms.iOS.credentials,
                   deviceToken: customer.iosDeviceToken,
                   pushTitle: template.pushObject.settings.iOS.title,
                   pushText: template.pushObject.settings.iOS.description,
@@ -920,7 +958,8 @@ export class TransitionProcessor extends WorkerHost {
                   accountID: owner.id,
                   stepID: step.id,
                   customerID: customer._id,
-                  firebaseCredentials: workspace.pushPlatforms.iOS.credentials,
+                  firebaseCredentials:
+                    pushChannel.pushPlatforms.iOS.credentials,
                   deviceToken: customer.iosDeviceToken,
                   pushTitle: template.pushObject.settings.iOS.title,
                   pushText: template.pushObject.settings.iOS.description,
@@ -944,7 +983,7 @@ export class TransitionProcessor extends WorkerHost {
                   stepID: step.id,
                   customerID: customer._id,
                   firebaseCredentials:
-                    workspace.pushPlatforms.Android.credentials,
+                    pushChannel.pushPlatforms.Android.credentials,
                   deviceToken: customer.androidDeviceToken,
                   pushTitle: template.pushObject.settings.Android.title,
                   pushText: template.pushObject.settings.Android.description,
@@ -999,6 +1038,10 @@ export class TransitionProcessor extends WorkerHost {
           );
           break;
         case TemplateType.SMS:
+          const twilioChannel = workspace.twilioConnections.find(
+            (connection) => connection.id === step.metadata.connectionId
+          );
+
           await this.webhooksService.insertMessageStatusToClickhouse(
             await sender.process({
               name: TemplateType.SMS,
@@ -1006,15 +1049,15 @@ export class TransitionProcessor extends WorkerHost {
               stepID: step.id,
               customerID: customer._id,
               templateID: template.id,
-              from: workspace.smsFrom,
-              sid: workspace.smsAccountSid,
+              from: twilioChannel.from,
+              sid: twilioChannel.sid,
               tags: filteredTags,
               text: await this.templatesService.parseApiCallTags(
                 template.smsText,
                 filteredTags
               ),
               to: customer.phPhoneNumber || customer.phone,
-              token: workspace.smsAuthToken,
+              token: twilioChannel.token,
               trackingEmail: email,
               session,
             }),

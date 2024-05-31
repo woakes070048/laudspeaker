@@ -236,6 +236,8 @@ export interface MessageNodeData<T extends MessageType = MessageType>
       pushBuilder?: MessageTemplatePushbuilderData;
     };
   };
+  connectionId?: string;
+  sendingOptionId?: string;
 }
 
 export interface WaitUntilNodeData extends CommonNodeData {

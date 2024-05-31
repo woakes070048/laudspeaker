@@ -17,6 +17,11 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { WorkspaceMailgunConnection } from './workspace-mailgun-connection.entity';
+import { WorkspaceSendgridConnection } from './workspace-sendgrid-connection.entity';
+import { WorkspaceTwilioConnection } from './workspace-twilio-connection.entity';
+import { WorkspacePushConnection } from './workspace-push-connection.entity';
+import { WorkspaceResendConnection } from './workspace-resend-connection.entity';
 
 export enum PlanType {
   FREE = 'free',
@@ -164,4 +169,34 @@ export class Workspaces extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   resendSendingEmail?: string;
+
+  @OneToMany(
+    () => WorkspaceMailgunConnection,
+    (connection) => connection.workspace
+  )
+  mailgunConnections: WorkspaceMailgunConnection[];
+
+  @OneToMany(
+    () => WorkspaceSendgridConnection,
+    (connection) => connection.workspace
+  )
+  sendgridConnections: WorkspaceSendgridConnection[];
+
+  @OneToMany(
+    () => WorkspaceResendConnection,
+    (connection) => connection.workspace
+  )
+  resendConnections: WorkspaceResendConnection[];
+
+  @OneToMany(
+    () => WorkspaceTwilioConnection,
+    (connection) => connection.workspace
+  )
+  twilioConnections: WorkspaceTwilioConnection[];
+
+  @OneToMany(
+    () => WorkspacePushConnection,
+    (connection) => connection.workspace
+  )
+  pushConnections: WorkspacePushConnection[];
 }

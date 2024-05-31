@@ -38,6 +38,7 @@ import { update } from 'lodash';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationTeam } from '../organizations/entities/organization-team.entity';
+import { WorkspaceMailgunConnection } from '../workspaces/entities/workspace-mailgun-connection.entity';
 
 @Injectable()
 export class AccountsService extends BaseJwtHelper {
@@ -418,6 +419,7 @@ export class AccountsService extends BaseJwtHelper {
         resendSigningSecret,
         resendSendingName,
         resendSendingEmail,
+        emailConnections,
       } = updateUserDto;
 
       const newPushPlatforms = {

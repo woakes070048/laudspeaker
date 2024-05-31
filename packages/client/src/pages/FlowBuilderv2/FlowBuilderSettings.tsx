@@ -343,7 +343,7 @@ const FlowBuilderSettings: FC<FlowBuilderSettingsProps> = ({
             </div>
           )}
         </div>
-        <div className="w-[calc(100%+40px)] h-[1px] bg-[#E5E7EB] -translate-x-[20px]" />
+        {/* <div className="w-[calc(100%+40px)] h-[1px] bg-[#E5E7EB] -translate-x-[20px]" />
         <div className="flex flex-col gap-[10px]">
           <div className="flex items-center">
             <span
@@ -375,7 +375,7 @@ const FlowBuilderSettings: FC<FlowBuilderSettingsProps> = ({
               onClick={() => {
                 return void 0;
               }}
-              /*
+              
               onClick={() => {
                 window.open(
                   "/settings?tab=FREQUENCY_CAPPING",
@@ -383,13 +383,13 @@ const FlowBuilderSettings: FC<FlowBuilderSettingsProps> = ({
                   "noopener,noreferrer"
                 );
               }}
-              */
+              
               className="w-fit"
             >
               Frequency capping rules
             </Button>
           )}
-        </div>
+        </div> */}
 
         {(onSave || onCancel) && (
           <>
