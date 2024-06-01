@@ -868,7 +868,7 @@ const RouteComponent: React.FC = () => {
           }
         />
         <Route
-          path="/settings/push"
+          path="/settings/push/:id"
           element={
             <Protected>
               <VerificationProtected>

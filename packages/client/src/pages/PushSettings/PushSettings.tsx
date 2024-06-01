@@ -117,18 +117,18 @@ const PushSettings = () => {
   };
 
   const clarifyData = async () => {
-    // setIsLoadingSettings(true);
-    // try {
-    //   const { data } = await ApiService.get<Account>({ url: "/accounts" });
-    //   const { pushPlatforms } = data.workspace;
-    //   handleUpdateConfig({
-    //     connectedPlatforms: {
-    //       iOS: pushPlatforms?.iOS,
-    //       Android: pushPlatforms?.Android,
-    //     },
-    //   });
-    // } catch (error) {}
-    // setIsLoadingSettings(false);
+    setIsLoadingSettings(true);
+    try {
+      const { data } = await ApiService.get<Account>({ url: "/accounts" });
+      const { pushPlatforms } = data.workspace;
+      handleUpdateConfig({
+        connectedPlatforms: {
+          iOS: pushPlatforms?.iOS,
+          Android: pushPlatforms?.Android,
+        },
+      });
+    } catch (error) {}
+    setIsLoadingSettings(false);
   };
 
   const handleDisconnectFirebase = async () => {
