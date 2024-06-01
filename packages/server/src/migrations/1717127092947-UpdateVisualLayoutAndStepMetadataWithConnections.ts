@@ -30,88 +30,96 @@ export class UpdateVisualLayoutAndStepMetadataWithConnections1717127092947
         LEFT JOIN "workspace_push_connection" ON workspaces.id = "workspace_push_connection"."workspaceId"`
     );
 
-    for await (const record of stream) {
-      const visualLayout = record.visualLayout;
-      if (!visualLayout) continue;
+    stream.on('error', async () => {
+      throw "Error running migration";
+    });
 
-      for (const node of visualLayout.nodes) {
-        if (
-          (node.type === 'message' || node.type === 'push') &&
-          (node.data.type === 'message' || node.data.type === 'push')
-        ) {
-          switch (node.data?.template?.type) {
-            case 'email':
-              let connectionId: string;
-              let sendingOptionId: string;
-              switch (record.emailProvider) {
-                case 'mailgun':
-                  connectionId = record.mailgunConnectionId;
-                  sendingOptionId = record.mailgunSendingOptionId;
-                  break;
-                case 'sendgrid':
-                  connectionId = record.sendgridConnectionId;
-                  sendingOptionId = record.sendgridSendingOptionId;
-                  break;
-                case 'resend':
-                  connectionId = record.resendConnectionId;
-                  sendingOptionId = record.resendSendingOptionId;
-                  break;
-                default:
-                  break;
-              }
-
-              node.data.connectionId = connectionId;
-              node.data.sendingOptionId = sendingOptionId;
-              const step = await queryRunner.manager.findOneBy(Step, {
-                id: node.data.stepId,
-              });
-              if (!step) continue;
-
-              if(!step.metadata)
-                step.metadata = {};
-
-              step.metadata.connectionId = connectionId;
-              step.metadata.sendingOptionId = sendingOptionId;
-              await queryRunner.manager.save(step);
-              break;
-            case 'sms':
-              node.data.connectionId = record.twilioConnectionId;
-              const smsStep = await queryRunner.manager.findOneBy(Step, {
-                id: node.data.stepId,
-              });
-              if (!smsStep) continue;
-
-              if(!smsStep.metadata)
-                smsStep.metadata = {};
-
-              smsStep.metadata.connectionId = record.twilioConnectionId;
-              await queryRunner.manager.save(smsStep);
-              break;
-            case 'push':
-              node.data.connectionId = record.pushConnectionId;
-              const pushStep = await queryRunner.manager.findOneBy(Step, {
-                id: node.data.stepId,
-              });
-              if (!pushStep) continue;
-              
-              if(!pushStep.metadata)
-                pushStep.metadata = {};
-
-              pushStep.metadata.connectionId = record.pushConnectionId;
-              await queryRunner.manager.save(pushStep);
-              break;
-            default:
-              break;
-          }
-        }
-      }
-
-      await queryRunner.manager.save(Journey, {
-        id: record.journeyId,
-        visualLayout,
-      });
-    }
+    stream.on('data', async (record) => {
+      await this.processJourney(queryRunner, record)
+    });
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
+
+  private async processJourney(queryRunner: QueryRunner, record: any) {
+    const visualLayout = record.visualLayout;
+    if (!visualLayout) return;
+
+    for (const node of visualLayout.nodes) {
+      if (
+        (node.type === 'message' || node.type === 'push') &&
+        (node.data.type === 'message' || node.data.type === 'push')
+      ) {
+        switch (node.data?.template?.type) {
+          case 'email':
+            let connectionId: string;
+            let sendingOptionId: string;
+            switch (record.emailProvider) {
+              case 'mailgun':
+                connectionId = record.mailgunConnectionId;
+                sendingOptionId = record.mailgunSendingOptionId;
+                break;
+              case 'sendgrid':
+                connectionId = record.sendgridConnectionId;
+                sendingOptionId = record.sendgridSendingOptionId;
+                break;
+              case 'resend':
+                connectionId = record.resendConnectionId;
+                sendingOptionId = record.resendSendingOptionId;
+                break;
+              default:
+                break;
+            }
+
+            node.data.connectionId = connectionId;
+            node.data.sendingOptionId = sendingOptionId;
+            const step = await queryRunner.manager.findOneBy(Step, {
+              id: node.data.stepId,
+            });
+            if (!step) continue;
+
+            if(!step.metadata)
+              step.metadata = {};
+
+            step.metadata.connectionId = connectionId;
+            step.metadata.sendingOptionId = sendingOptionId;
+            await queryRunner.manager.save(step);
+            break;
+          case 'sms':
+            node.data.connectionId = record.twilioConnectionId;
+            const smsStep = await queryRunner.manager.findOneBy(Step, {
+              id: node.data.stepId,
+            });
+            if (!smsStep) continue;
+
+            if(!smsStep.metadata)
+              smsStep.metadata = {};
+
+            smsStep.metadata.connectionId = record.twilioConnectionId;
+            await queryRunner.manager.save(smsStep);
+            break;
+          case 'push':
+            node.data.connectionId = record.pushConnectionId;
+            const pushStep = await queryRunner.manager.findOneBy(Step, {
+              id: node.data.stepId,
+            });
+            if (!pushStep) continue;
+            
+            if(!pushStep.metadata)
+              pushStep.metadata = {};
+
+            pushStep.metadata.connectionId = record.pushConnectionId;
+            await queryRunner.manager.save(pushStep);
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    await queryRunner.manager.save(Journey, {
+      id: record.journeyId,
+      visualLayout,
+    });
+  }
 }
