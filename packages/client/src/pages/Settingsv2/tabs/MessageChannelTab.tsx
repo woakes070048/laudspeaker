@@ -12,13 +12,13 @@ import { toast } from "react-toastify";
 import { EmailSendingService } from "pages/EmailSettings/EmailSettings";
 
 export enum MessageChannel {
+  PUSH,
   MAILGUN,
   SENDGRID,
   RESEND,
   TWILIO,
   CUSTOM_MODAL,
   SLACK,
-  PUSH,
 }
 
 interface MessageChannelAdditionalInfoFixture {
@@ -63,11 +63,11 @@ interface PushPlatform {
 // };
 
 const messageChannelToLinkMap: Record<MessageChannel, string> = {
+  [MessageChannel.PUSH]: "/settings/push",
   [MessageChannel.MAILGUN]: "/settings/email/mailgun",
   [MessageChannel.SENDGRID]: "/settings/email/sendgrid",
   [MessageChannel.RESEND]: "/settings/email/resend",
   [MessageChannel.TWILIO]: "/settings/twilio",
-  [MessageChannel.PUSH]: "/settings/push",
   [MessageChannel.CUSTOM_MODAL]: "",
   [MessageChannel.SLACK]: "",
 };
@@ -76,6 +76,12 @@ const supportedMessageChannelCardsFixtures: Record<
   MessageChannel,
   MessageChannelCardFixture
 > = {
+  [MessageChannel.PUSH]: {
+    id: "create",
+    channel: MessageChannel.PUSH,
+    title: "Push",
+    icon: pushLogoIcon,
+  },
   [MessageChannel.MAILGUN]: {
     id: "create",
     channel: MessageChannel.MAILGUN,
@@ -107,12 +113,8 @@ const supportedMessageChannelCardsFixtures: Record<
     channel: MessageChannel.CUSTOM_MODAL,
     title: "Onboarding Suite",
     icon: customModalCardIconImage,
-  },
-  [MessageChannel.PUSH]: {
-    id: "create",
-    channel: MessageChannel.PUSH,
-    title: "Push",
-    icon: pushLogoIcon,
+    commingSoon: true,
+    disabled: true,
   },
   [MessageChannel.SLACK]: {
     id: "create",

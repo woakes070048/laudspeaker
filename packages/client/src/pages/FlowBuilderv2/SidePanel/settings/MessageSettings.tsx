@@ -190,7 +190,8 @@ const MessageSettings: FC<SidePanelComponentProps<MessageNodeData>> = ({
 
   return (
     <div className="flex flex-col gap-[10px]">
-      {templateType !== MessageType.PUSH ? (
+      {templateType !== MessageType.PUSH &&
+      templateType !== MessageType.WEBHOOK ? (
         <div className="font-inter font-normal text-[14px] leading-[22px]">
           <div className="flex p-5 justify-between items-center">
             <div>Template</div>
@@ -273,6 +274,44 @@ const MessageSettings: FC<SidePanelComponentProps<MessageNodeData>> = ({
                 }
                 placeholder="select option"
               />
+            </div>
+          </div>
+        </div>
+      ) : templateType === MessageType.WEBHOOK ? (
+        // New case for WEBHOOK type
+        <div className="font-inter font-normal text-[14px] leading-[22px]">
+          <div className="flex p-5 justify-between items-center">
+            <div>Template</div>
+            <div className="flex flex-col gap-[10px]">
+              <select
+                className="w-[200px] h-[32px] rounded-sm px-[12px] py-[4px] text-[14px] font-roboto leading-[22px]"
+                value={selectedTemplate?.id}
+                id="template-select"
+                onChange={(e) =>
+                  setNodeData({
+                    ...nodeData,
+                    template: {
+                      type: templateType,
+                      selected: {
+                        id: +e.target.value,
+                        name:
+                          templateList.find(
+                            (template) => template.id === +e.target.value
+                          )?.name || "",
+                      },
+                    },
+                  })
+                }
+              >
+                <option disabled selected value={undefined}>
+                  select template
+                </option>
+                {templateList.map((template) => (
+                  <option value={template.id} key={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

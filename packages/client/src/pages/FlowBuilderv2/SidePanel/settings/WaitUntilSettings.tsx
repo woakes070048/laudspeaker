@@ -351,10 +351,6 @@ const WaitUntilSettings: FC<SidePanelComponentProps<WaitUntilNodeData>> = ({
               groupLabel: true,
             },
             {
-              key: BranchType.WU_ATTRIBUTE,
-              title: "Attribute",
-            },
-            {
               key: BranchType.EVENT,
               title: "Event",
             },
