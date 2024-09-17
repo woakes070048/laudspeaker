@@ -623,8 +623,17 @@ export class JourneyLocationsService {
   async unlock(
     location: JourneyLocation,
     step: Step,
-    queryRunner?: QueryRunner
+    queryRunner?: QueryRunner,
+    account?: Account
   ) {
+    this.log(
+      JSON.stringify({
+        info: `Unlocking JourneyLocation (${location.journey}, ${location.customer})`,
+      }),
+      this.unlock.name,
+      'session',
+      account?.email
+    );
     const updateFields = {
       journey: location.journey,
       customer: location.customer,

@@ -60,6 +60,7 @@ export enum MessageGeneralComparison {
 export enum MessageEmailEventCondition {
   RECEIVED = "received",
   OPENED = "opened",
+  CLICKED = "clicked",
 }
 
 export enum MessagePushEventCondition {
@@ -856,8 +857,6 @@ const flowBuilderSlice = createSlice({
       if (
         (nodeToChange.type === NodeType.WAIT_UNTIL &&
           nodeToChange.data.type === NodeType.WAIT_UNTIL) ||
-        (nodeToChange.type === NodeType.USER_ATTRIBUTE &&
-          nodeToChange.data.type === NodeType.USER_ATTRIBUTE) ||
         (nodeToChange.type === NodeType.MULTISPLIT &&
           nodeToChange.data.type === NodeType.MULTISPLIT) ||
         (nodeToChange.type === NodeType.EXPERIMENT &&
@@ -1195,14 +1194,6 @@ const flowBuilderSlice = createSlice({
             toTime: "23:59",
             onDays: [...new Array(7)].map(() => 0),
             windowType: TimeWindowTypes.SPEC_DATES,
-            stepId,
-          };
-          break;
-        case DrawerAction.USER_ATTRIBUTE:
-          nodeToChange.type = NodeType.USER_ATTRIBUTE;
-          nodeToChange.data = {
-            type: NodeType.USER_ATTRIBUTE,
-            branches: [],
             stepId,
           };
           break;

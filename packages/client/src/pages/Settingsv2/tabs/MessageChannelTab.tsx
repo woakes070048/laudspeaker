@@ -67,7 +67,7 @@ const messageChannelToLinkMap: Record<MessageChannel, string> = {
   [MessageChannel.MAILGUN]: "/settings/email/mailgun",
   [MessageChannel.SENDGRID]: "/settings/email/sendgrid",
   [MessageChannel.RESEND]: "/settings/email/resend",
-  [MessageChannel.TWILIO]: "/settings/twilio",
+  [MessageChannel.TWILIO]: "/settings/sms",
   [MessageChannel.CUSTOM_MODAL]: "",
   [MessageChannel.SLACK]: "",
 };
@@ -85,22 +85,20 @@ const supportedMessageChannelCardsFixtures: Record<
   [MessageChannel.MAILGUN]: {
     id: "create",
     channel: MessageChannel.MAILGUN,
-    title: "Email (mailgun)",
+    title: "Mailgun",
     icon: emailCardIconImage,
   },
   [MessageChannel.SENDGRID]: {
     id: "create",
     channel: MessageChannel.SENDGRID,
-    title: "Email (sendgrid)",
+    title: "Sendgrid",
     icon: emailCardIconImage,
   },
   [MessageChannel.RESEND]: {
     id: "create",
     channel: MessageChannel.RESEND,
-    title: "Email (resend)",
+    title: "Resend",
     icon: emailCardIconImage,
-    commingSoon: true,
-    disabled: true,
   },
   [MessageChannel.TWILIO]: {
     id: "create",
@@ -139,11 +137,23 @@ const MessageChannelTab = () => {
       title: connection.name,
       icon: emailCardIconImage,
     })) || []),
+    ...(account?.workspace.resendConnections.map((connection) => ({
+      id: connection.id,
+      channel: MessageChannel.RESEND,
+      title: connection.name,
+      icon: emailCardIconImage,
+    })) || []),
     ...(account?.workspace.sendgridConnections.map((connection) => ({
       id: connection.id,
       channel: MessageChannel.SENDGRID,
       title: connection.name,
       icon: emailCardIconImage,
+    })) || []),
+    ...(account?.workspace.twilioConnections.map((connection) => ({
+      id: connection.id,
+      channel: MessageChannel.TWILIO,
+      title: connection.name,
+      icon: twilioCardIconImage,
     })) || []),
     ...(Object.entries(account?.workspace.pushPlatforms || {}).map(
       ([key, connection]: [string, PushPlatform]) => ({

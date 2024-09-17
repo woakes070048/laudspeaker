@@ -36,6 +36,8 @@ import {
   ClickHouseMessage,
   ClickHouseClient
 } from '@/common/services/clickhouse';
+import { CacheService } from '@/common/services/cache.service';
+import { Workspaces } from '../workspaces/entities/workspaces.entity';
 
 @Injectable()
 export class WebhooksService {
@@ -69,6 +71,9 @@ export class WebhooksService {
     private organizationPlanRepository: Repository<OrganizationPlan>,
     @Inject(ClickHouseClient)
     private clickhouseClient: ClickHouseClient,
+    @Inject(CacheService) private cacheService: CacheService,
+    @InjectRepository(Workspaces) private workspacesRepository: Repository<Workspaces>,
+
   ) {
     const session = randomUUID();
     (async () => {
@@ -267,13 +272,12 @@ export class WebhooksService {
       where: {
         id: body.data.tags.stepId,
       },
-      relations: ['workspace'],
+      relations: ['workspace.resendConnections'],
     });
 
     const payload = req.rawBody.toString('utf8');
     const headers = req.headers;
-
-    const webhook = new Webhook(step.workspace.resendSigningSecret);
+    const webhook = new Webhook(step.workspace.resendConnections[0].signingSecret);
 
     try {
       const event: any = webhook.verify(payload, headers);
@@ -335,7 +339,7 @@ export class WebhooksService {
     const hash = createHmac(
       'sha256',
       account?.teams?.[0]?.organization?.workspaces?.[0]?.mailgunAPIKey ||
-        process.env.MAILGUN_API_KEY
+      process.env.MAILGUN_API_KEY
     )
       .update(value)
       .digest('hex');
@@ -415,8 +419,7 @@ export class WebhooksService {
             );
           } else {
             this.error(
-              `Failed to update webhook ${
-                this.MAILGUN_HOOKS_TO_INSTALL[index]
+              `Failed to update webhook ${this.MAILGUN_HOOKS_TO_INSTALL[index]
               }:${JSON.stringify(result)}`,
               this.setupMailgunWebhook.name,
               randomUUID()
@@ -443,14 +446,58 @@ export class WebhooksService {
               message: element,
               session: session,
               customer: element.customerId,
+              stepId: element.stepId,
             };
           });
 
-          // await Producer.addBulk(
-          //   QueueType.EVENTS_PRE,
-          //   jobsData,
-          //   ProviderType.MESSAGE
-          // );
+          let workspace: Workspaces = await this.cacheService.get(
+            'Workspaces',
+            jobsData[0].workspaceId,
+            async () => {
+              return await this.workspacesRepository.findOne({
+                where: { id: jobsData[0].workspaceId },
+                relations: [
+                  'organization.owner',
+                ]
+              });
+            }
+          );
+
+          let step: Step = await this.cacheService.get(
+            'Step',
+            jobsData[0].stepId,
+            async () => {
+              return await this.stepRepository.findOneBy({
+                id: jobsData[0].stepId
+              });
+            }
+          );
+
+          let account: Account = await this.cacheService.get(
+            'Account',
+            workspace.organization.owner.id,
+            async () => {
+              return await this.accountRepository.findOne({
+                where: { id: workspace.organization.owner.id },
+                relations: [
+                  'teams.organization.workspaces',
+                  'teams.organization.plan',
+                  'teams.organization.workspaces.mailgunConnections.sendingOptions',
+                  'teams.organization.workspaces.sendgridConnections.sendingOptions',
+                  'teams.organization.workspaces.resendConnections.sendingOptions',
+                  'teams.organization.workspaces.twilioConnections',
+                  'teams.organization.workspaces.pushConnections',
+                  'teams.organization.owner',
+                ]
+              });
+            }
+          );
+
+          await Producer.addBulk(
+            QueueType.EVENTS_PRE,
+            jobsData.map((jobData) => { return { ...jobData, workspace, step, account } }),
+            ProviderType.MESSAGE
+          );
 
           await this.clickhouseClient.insertAsync({
             table: ClickHouseTable.MESSAGE_STATUS,

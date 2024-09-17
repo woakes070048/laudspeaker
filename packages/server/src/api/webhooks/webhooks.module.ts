@@ -14,9 +14,11 @@ import { TemplatesModule } from '../templates/templates.module';
 import { Step } from '../steps/entities/step.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationPlan } from '../organizations/entities/organization-plan.entity';
+import { Workspaces } from '../workspaces/entities/workspaces.entity';
+import { CacheService } from '@/common/services/cache.service';
 
 function getProvidersList() {
-  let providerList: Array<any> = [WebhooksService];
+  let providerList: Array<any> = [WebhooksService, CacheService];
 
   if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
     providerList = [...providerList, WebhooksProcessor];
@@ -27,7 +29,7 @@ function getProvidersList() {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Account, Step, Organization, OrganizationPlan]),
+    TypeOrmModule.forFeature([Account, Step, Organization, OrganizationPlan, Workspaces]),
     TemplatesModule,
   ],
   providers: getProvidersList(),

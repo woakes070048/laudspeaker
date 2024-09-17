@@ -55,10 +55,10 @@ export class EventsPreProcessor extends ProcessorBase {
     ProviderType,
     (job: Job<any, any, string>) => Promise<void>
   > = {
-    [ProviderType.LAUDSPEAKER]: this.handleCustom,
-    [ProviderType.MESSAGE]: this.handleMessage,
-    [ProviderType.WU_ATTRIBUTE]: this.handleAttributeChange,
-  };
+      [ProviderType.LAUDSPEAKER]: this.handleCustom,
+      [ProviderType.MESSAGE]: this.handleMessage,
+      [ProviderType.WU_ATTRIBUTE]: this.handleAttributeChange,
+    };
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -179,8 +179,6 @@ export class EventsPreProcessor extends ProcessorBase {
   ): Promise<any> {
     let err: any;
     try {
-      //find customer associated with event or create new customer if not found
-      //console.time(`handleCustom - findOrCreateCustomer ${job.data.session}`)
       const {
         customer,
         findType,
@@ -192,9 +190,6 @@ export class EventsPreProcessor extends ProcessorBase {
           null,
           job.data.event
         );
-      //console.timeEnd(`handleCustom - findOrCreateCustomer ${job.data.session}`)
-      //get all the journeys that are active, and pipe events to each journey in case they are listening for event
-      //console.time(`handleCustom - find journeys ${job.data.session}`)
       let journeys: Journey[] = await this.cacheService.get(
         'Journeys',
         job.data.workspace.id,
@@ -213,10 +208,7 @@ export class EventsPreProcessor extends ProcessorBase {
         }
       );
 
-      //console.timeEnd(`handleCustom - find journeys ${job.data.session}`)
-      // add event to event database for visibility
       if (job.data.event) {
-        //console.time(`handleCustom - create event ${job.data.session}`)
         await this.eventModel.create([
           {
             ...this.removeDollarSignsFromKeys(job.data.event),
@@ -224,14 +216,10 @@ export class EventsPreProcessor extends ProcessorBase {
             createdAt: new Date().toISOString(),
           },
         ]);
-        //console.timeEnd(`handleCustom - create event ${job.data.session}`)
       }
 
-      // Always add jobs after committing transactions, otherwise there could be race conditions
       let eventJobs = journeys.map((journey) => ({
-        //to do add here modified
         account: job.data.owner,
-        //workspace: job.data.workspace,
         event: job.data.event,
         journey: {
           ...journey,
@@ -285,59 +273,58 @@ export class EventsPreProcessor extends ProcessorBase {
   }
 
   async handleMessage(job: Job<any, any, string>): Promise<any> {
-    const transactionSession = await this.connection.startSession();
-    transactionSession.startTransaction();
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     let err: any;
-
     try {
-      const journeys = await queryRunner.manager.find(Journey, {
-        where: {
-          workspace: {
-            id: job.data.workspaceId,
-          },
-          isActive: true,
-          isPaused: false,
-          isStopped: false,
-          isDeleted: false,
-        },
-      });
+      const {
+        customer,
+        findType,
+      }: { customer: CustomerDocument; findType: FindType } =
+        await this.eventsService.findOrCreateCustomer(
+          job.data.workspace.id,
+          job.data.session,
+          null,
+          null,
+          { correlationKey: '_id', correlationValue: job.data.customer, event: '' }
+        );
+      let journeys: Journey[] = await this.cacheService.get(
+        'Journeys',
+        job.data.workspace.id,
+        async () => {
+          return await this.journeysRepository.find({
+            where: {
+              workspace: {
+                id: job.data.workspace.id,
+              },
+              isActive: true,
+              isPaused: false,
+              isStopped: false,
+              isDeleted: false,
+            },
+          });
+        }
+      );
       for (let i = 0; i < journeys.length; i++) {
         await Producer.add(QueueType.EVENTS, {
-            workspaceId: job.data.workspaceId,
-            message: job.data.message,
-            customer: job.data.customer,
-            journeyID: journeys[i].id,
-          }, EventType.MESSAGE);
+          ...job.data,
+          workspaceId: job.data.workspaceId,
+          message: job.data.message,
+          customer,
+          journey: journeys[i],
+        }, EventType.MESSAGE);
       }
 
-      await transactionSession.commitTransaction();
-      await queryRunner.commitTransaction();
     } catch (e) {
-      await transactionSession.abortTransaction();
-      await queryRunner.rollbackTransaction();
-      this.error(
-        e,
-        this.handleMessage.name,
-        job.data.session,
-        job.data.accountID
-      );
       err = e;
     } finally {
-      await transactionSession.endSession();
-      await queryRunner.release();
-    }
-    if (err) {
-      this.error(
-        err,
-        this.handleMessage.name,
-        job.data.session,
-        job.data.accountID
-      );
-      throw err;
+      if (err) {
+        this.error(
+          err,
+          this.handleMessage.name,
+          job.data.session,
+          job.data.accountID
+        );
+        throw err;
+      }
     }
   }
 

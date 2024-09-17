@@ -21,6 +21,8 @@ import { CreateMailgunChannelDto } from './dto/mailgun/create-mailgun-channel.dt
 import { UpdateMailgunChannelDto } from './dto/mailgun/update-mailgun-channel.dto';
 import { UpdateSendgridChannelDto } from './dto/sendgrid/update-sendgrid-channel.dto';
 import { CreateSendgridChannelDto } from './dto/sendgrid/create-sendgrid-channel.dto';
+import { UpdateResendChannelDto } from './dto/resend/update-resend-channel.dto';
+import { CreateResendChannelDto } from './dto/resend/create-resend-channel.dto';
 
 @Controller('workspaces')
 export class WorkspacesController {
@@ -67,6 +69,35 @@ export class WorkspacesController {
     return this.workspacesService.createMailgunChannel(
       <Account>user,
       createMailgunChannelDto
+    );
+  }
+
+  
+  @Patch('/channels/resend/:id')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  public async updateResendChannel(
+    @Req() { user }: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateResendChannelDto: UpdateResendChannelDto
+  ) {
+    return this.workspacesService.updateResendChannel(
+      <Account>user,
+      id,
+      updateResendChannelDto
+    );
+  }
+
+  @Post('/channels/resend')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  public async createResendChannel(
+    @Req() { user }: Request,
+    @Body() createResendChannelDto: CreateResendChannelDto
+  ) {
+    return this.workspacesService.createResendChannel(
+      <Account>user,
+      createResendChannelDto
     );
   }
 

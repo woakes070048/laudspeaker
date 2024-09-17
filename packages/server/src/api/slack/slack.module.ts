@@ -19,9 +19,10 @@ import { Step } from '../steps/entities/step.entity';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationPlan } from '../organizations/entities/organization-plan.entity';
+import { CacheService } from '@/common/services/cache.service';
 
 function getProvidersList() {
-  let providerList: Array<any> = [SlackService, WebhooksService];
+  let providerList: Array<any> = [SlackService, WebhooksService, CacheService];
 
   if (process.env.LAUDSPEAKER_PROCESS_TYPE == 'QUEUE') {
     providerList = [...providerList, SlackProcessor];
@@ -52,4 +53,4 @@ function getProvidersList() {
   providers: getProvidersList(),
   exports: [SlackService],
 })
-export class SlackModule {}
+export class SlackModule { }

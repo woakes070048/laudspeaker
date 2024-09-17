@@ -29,6 +29,7 @@ import { StepsModule } from './steps/steps.module';
 import { JourneysModule } from './journeys/journeys.module';
 import { DevModeModule } from './dev-mode/dev-mode.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { ChannelsModule } from './channels/channels.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     JourneysModule,
     DevModeModule,
     WorkspacesModule,
+    ChannelsModule,
   ],
 })
 export class ApiModule {

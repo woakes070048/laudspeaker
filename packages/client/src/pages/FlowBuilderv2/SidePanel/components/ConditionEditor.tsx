@@ -6,6 +6,7 @@ import {
   Condition,
   ElementKey,
   ElementStatement,
+  EventType,
   LogicRelation,
   MessageCondition,
   PropertyStatement,
@@ -215,7 +216,7 @@ const ConditionEditor: FC<ConditionEditorProps> = ({
 
   const isMessageEditing = [
     ProviderType.EMAIL_MESSAGE,
-    ProviderType.IN_APP_MESSAGE,
+    // ProviderType.IN_APP_MESSAGE,
     ProviderType.PUSH_MESSAGE,
     ProviderType.SMS_MESSAGE,
   ].includes(condition.providerType);
@@ -241,10 +242,10 @@ const ConditionEditor: FC<ConditionEditorProps> = ({
                     { key: ProviderType.EMAIL_MESSAGE, title: "Email" },
                     { key: ProviderType.SMS_MESSAGE, title: "SMS" },
                     { key: ProviderType.PUSH_MESSAGE, title: "Push" },
-                    {
-                      key: ProviderType.IN_APP_MESSAGE,
-                      title: "In-App message",
-                    },
+                    // {
+                    //   key: ProviderType.IN_APP_MESSAGE,
+                    //   title: "In-App message",
+                    // },
                   ]
                 : [
                     { key: ProviderType.CUSTOM, title: "Custom" },
@@ -270,6 +271,7 @@ const ConditionEditor: FC<ConditionEditorProps> = ({
                     eventCondition: "received",
                   } as MessageCondition)
                 : setCondition({
+                    type: EventType.ANALYTICS,
                     providerType: value,
                     name: "",
                     statements: [],

@@ -361,7 +361,7 @@ export class MessageSender {
       case 'resend':
         const resend = new Resend(key);
         const resendMessage = await resend.emails.send({
-          from: `${from} <${email}@${domain}>`,
+          from: `${from} <${email}>`,
           to: to,
           cc: cc,
           subject: subjectWithInsertedTags,
