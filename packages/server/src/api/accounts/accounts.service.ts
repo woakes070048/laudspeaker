@@ -167,7 +167,16 @@ export class AccountsService extends BaseJwtHelper {
         where: {
           id: owner.id,
         },
-        relations: ['teams.organization.workspaces'],
+        relations: [
+          'teams.organization.workspaces',
+          'teams.organization.plan',
+          'teams.organization.workspaces.mailgunConnections.sendingOptions',
+          'teams.organization.workspaces.sendgridConnections.sendingOptions',
+          'teams.organization.workspaces.resendConnections.sendingOptions',
+          'teams.organization.workspaces.twilioConnections',
+          'teams.organization.workspaces.pushConnections',
+          'teams.organization.owner',
+        ],
       });
 
       if (!account) {
