@@ -19,6 +19,7 @@ import { StepsModule } from '../steps/steps.module';
 import { OrganizationTeam } from '../organizations/entities/organization-team.entity';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { OrganizationInvites } from '../organizations/entities/organization-invites.entity';
+import { CacheService } from '@/common/services/cache.service';
 
 @Module({
   imports: [
@@ -45,7 +46,7 @@ import { OrganizationInvites } from '../organizations/entities/organization-invi
     forwardRef(() => StepsModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthHelper, JwtStrategy, ApiKeyStrategy],
+  providers: [AuthService, AuthHelper, JwtStrategy, ApiKeyStrategy, CacheService],
   exports: [AuthService, AuthHelper],
 })
 export class AuthModule {}
