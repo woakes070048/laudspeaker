@@ -246,7 +246,7 @@ describe('CacheService', () => {
   describe('delete', () => {
     it('should delete key that doesnt exist in cache', async () => {
       const uuid = randomUUID();
-      let key = `Step:${uuid}`;
+      let key = `${CacheConstants.STEPS}:${uuid}`;
 
       await cacheService.delete(Step, uuid);
 
