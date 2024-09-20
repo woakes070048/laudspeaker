@@ -68,7 +68,7 @@ describe('CacheService', () => {
 
     it('should get value from cache that was pre-set without a setter method', async () => {
       const uuid = randomUUID();
-      let key = `Step:${uuid}`;
+      let key = `${CacheConstants.STEPS}:${uuid}`;
 
       let expectedValueInCache = { id: uuid, type: 'waitUntil' };
 
@@ -212,7 +212,7 @@ describe('CacheService', () => {
 
       let expectedValueInCache = { id: uuid, type: 'waitUntil' };
 
-      await cacheService.set(Step, uuid, async () => {
+      await cacheService.set(CacheConstants.STEPS, uuid, async () => {
         return expectedValueInCache;
       });
 
@@ -227,7 +227,7 @@ describe('CacheService', () => {
   describe('setRaw', () => {
     it('should set value in cache', async () => {
       const uuid = randomUUID();
-      let key = `Step:${uuid}`;
+      let key = `${CacheConstants.STEPS}:${uuid}`;
 
       let expectedValueInCache = { id: uuid, type: 'waitUntil' };
 
@@ -260,11 +260,11 @@ describe('CacheService', () => {
 
     it('should delete key that exists in cache', async () => {
       const uuid = randomUUID();
-      let key = `Step:${uuid}`;
+      let key = `${CacheConstants.STEPS}:${uuid}`;
 
       let expectedValueInCache = { id: uuid, type: 'waitUntil' };
 
-      await cacheService.set(Step, uuid, async () => {
+      await cacheService.set(CacheConstants.STEPS, uuid, async () => {
         return expectedValueInCache;
       });
 
