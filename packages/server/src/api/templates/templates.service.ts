@@ -44,6 +44,7 @@ import { WebsocketGateway } from '../../websockets/websocket.gateway';
 import { CacheService } from '@/common/services/cache.service';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 @Injectable()
 export class TemplatesService {
@@ -528,7 +529,7 @@ export class TemplatesService {
   ) {
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-    await this.cacheService.delete(Template, id);
+    await this.cacheService.delete(CacheConstants.TEMPLATES, id);
 
     return this.templatesRepository.update(
       { workspace: { id: workspace.id }, id },

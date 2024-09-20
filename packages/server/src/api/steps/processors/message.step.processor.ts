@@ -38,6 +38,7 @@ import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
 import { ClickHouseEventProvider } from '@/common/services/clickhouse/types/clickhouse-event-provider';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 @Injectable()
 @Processor(
@@ -265,7 +266,7 @@ export class MessageStepProcessor extends ProcessorBase {
         }
 
         let template: Template = await this.cacheService.getIgnoreError(
-          Template,
+          CacheConstants.TEMPLATES,
           job.data.step.metadata.template,
           async () => {
             return await this.templatesService.lazyFindByID(
@@ -678,7 +679,7 @@ export class MessageStepProcessor extends ProcessorBase {
         }
 
         let nextStep: Step = await this.cacheService.getIgnoreError(
-          Step,
+          CacheConstants.STEPS,
           job.data.step.metadata.destination,
           async () => {
             return await this.stepsService.lazyFindByID(

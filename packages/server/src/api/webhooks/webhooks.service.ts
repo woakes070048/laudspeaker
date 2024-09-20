@@ -38,6 +38,7 @@ import {
 } from '@/common/services/clickhouse';
 import { CacheService } from '@/common/services/cache.service';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 @Injectable()
 export class WebhooksService {
@@ -451,7 +452,7 @@ export class WebhooksService {
           });
 
           let workspace: Workspaces = await this.cacheService.get(
-            'Workspaces',
+            CacheConstants.WORKSPACES,
             jobsData[0].workspaceId,
             async () => {
               return await this.workspacesRepository.findOne({
@@ -464,7 +465,7 @@ export class WebhooksService {
           );
 
           let step: Step = await this.cacheService.get(
-            'Step',
+            CacheConstants.STEPS,
             jobsData[0].stepId,
             async () => {
               return await this.stepRepository.findOneBy({
@@ -474,7 +475,7 @@ export class WebhooksService {
           );
 
           let account: Account = await this.cacheService.get(
-            'Account',
+            CacheConstants.ACCOUNTS,
             workspace.organization.owner.id,
             async () => {
               return await this.accountRepository.findOne({

@@ -21,7 +21,6 @@ import { JourneyLocationsService } from '@/api/journeys/journey-locations.servic
 import { StepsService } from '../steps.service';
 import { Journey } from '@/api/journeys/entities/journey.entity';
 import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity';
-import { CacheService } from '@/common/services/cache.service';
 import { Processor } from '@/common/services/queue/decorators/processor';
 import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 

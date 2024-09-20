@@ -97,6 +97,7 @@ import {
   ClickHouseClient,
   ClickHouseRow
 } from '@/common/services/clickhouse';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 export type Correlation = {
   cust: CustomerDocument;
@@ -4379,7 +4380,7 @@ export class CustomersService {
   ): Promise<CustomerKeysDocument> {
     let primaryKey: CustomerKeysDocument =
       await this.cacheService.getIgnoreError(
-        'PrimaryKey',
+        CacheConstants.PRIMARY_KEYS,
         workspaceId,
         async () => {
           return await this.CustomerKeysModel.findOne({

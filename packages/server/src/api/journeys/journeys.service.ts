@@ -89,6 +89,7 @@ import { EntityWithComputedFields } from '@/common/entities/entityWithComputedFi
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
 import { Segment, SegmentType } from '../segments/entities/segment.entity';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 export enum JourneyStatus {
   ACTIVE = 'Active',
@@ -2758,7 +2759,7 @@ export class JourneysService {
   async cleanupJourneyCache(data: { workspaceId: string }) {
     // invalidate journeys cache entry set in eventPreprocessor
     if (data.workspaceId) {
-      await this.cacheService.delete('Journeys', data.workspaceId);
+      await this.cacheService.delete(CacheConstants.JOURNEYS, data.workspaceId);
     }
   }
 }

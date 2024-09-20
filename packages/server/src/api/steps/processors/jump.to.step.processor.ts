@@ -26,6 +26,7 @@ import { Processor } from '@/common/services/queue/decorators/processor';
 import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 @Injectable()
 @Processor('jump.to.step')
@@ -124,7 +125,7 @@ export class JumpToStepProcessor extends ProcessorBase {
         let nextJob;
 
         let nextStep: Step = await this.cacheService.getIgnoreError(
-          Step,
+          CacheConstants.STEPS,
           job.data.step.metadata.destination,
           async () => {
             return await this.stepsService.lazyFindByID(

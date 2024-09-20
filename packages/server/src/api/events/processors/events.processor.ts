@@ -29,6 +29,7 @@ import { Processor } from '@/common/services/queue/decorators/processor';
 import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 export enum EventType {
   EVENT = 'event',
@@ -207,7 +208,7 @@ export class EventsProcessor extends ProcessorBase {
     );
     // All steps in `journey` that might be listening for this event
     const steps = await this.cacheService.get(
-      'WaitUntilSteps',
+      CacheConstants.WAIT_UNTIL_STEPS,
       job.data.journey.id,
       async () => {
         return (
@@ -757,7 +758,7 @@ export class EventsProcessor extends ProcessorBase {
     );
     // All steps in `journey` that might be listening for this event
     const steps = await this.cacheService.get(
-      'WaitUntilSteps',
+      CacheConstants.WAIT_UNTIL_STEPS,
       job.data.journey.id,
       async () => {
         return (

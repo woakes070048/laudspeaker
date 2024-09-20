@@ -33,6 +33,7 @@ import { Processor } from '@/common/services/queue/decorators/processor';
 import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 export enum ProviderType {
   LAUDSPEAKER = 'laudspeaker',
@@ -191,7 +192,7 @@ export class EventsPreProcessor extends ProcessorBase {
           job.data.event
         );
       let journeys: Journey[] = await this.cacheService.get(
-        'Journeys',
+        CacheConstants.JOURNEYS,
         job.data.workspace.id,
         async () => {
           return await this.journeysRepository.find({
@@ -287,7 +288,7 @@ export class EventsPreProcessor extends ProcessorBase {
           { correlationKey: '_id', correlationValue: job.data.customer, event: '' }
         );
       let journeys: Journey[] = await this.cacheService.get(
-        'Journeys',
+        CacheConstants.JOURNEYS,
         job.data.workspace.id,
         async () => {
           return await this.journeysRepository.find({

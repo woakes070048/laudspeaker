@@ -5,6 +5,7 @@ import { Cache } from 'cache-manager';
 import { randomUUID } from 'crypto';
 import { MockCacheService } from './__mocks__/mock-cache.service';
 import { Step } from './__mocks__/mock-step.entity';
+import { CacheConstants } from './cache.constants';
 
 // to run: npm run test -- cache.service.spec --watch
 describe('CacheService', () => {
@@ -40,11 +41,11 @@ describe('CacheService', () => {
 
       let expectedValueInCache = { id: uuid, type: 'waitUntil' };
 
-      let value = await cacheService.get(Step, uuid, async () => {
+      let value = await cacheService.get(CacheConstants.STEPS, uuid, async () => {
         return expectedValueInCache;
       });
 
-      value = await cacheService.get(Step, uuid, async () => {
+      value = await cacheService.get(CacheConstants.STEPS, uuid, async () => {
         return 'NEWVALUE';
       });
 
@@ -58,7 +59,7 @@ describe('CacheService', () => {
 
       let expectedValueInCache = { id: uuid, type: 'waitUntil' };
 
-      let value = await cacheService.get(Step, uuid);
+      let value = await cacheService.get(CacheConstants.STEPS, uuid);
 
       expect(spyGet).toHaveBeenCalledTimes(1);
       expect(spySet).toHaveBeenCalledTimes(0);
@@ -73,7 +74,7 @@ describe('CacheService', () => {
 
       cache.set(key, expectedValueInCache);
 
-      let value = await cacheService.get(Step, uuid);
+      let value = await cacheService.get(CacheConstants.STEPS, uuid);
 
       expect(spyGet).toHaveBeenCalledTimes(1);
       expect(spySet).toHaveBeenCalledTimes(1);
@@ -83,7 +84,7 @@ describe('CacheService', () => {
     it('should throw an error when id is empty', async () => {
       const uuid = '';
 
-      await expect(cacheService.get(Step, uuid)).rejects.toThrow(
+      await expect(cacheService.get(CacheConstants.STEPS, uuid)).rejects.toThrow(
         CacheServiceInvalidValueError
       );
 
@@ -215,7 +216,7 @@ describe('CacheService', () => {
         return expectedValueInCache;
       });
 
-      let value = await cacheService.get(Step, uuid);
+      let value = await cacheService.get(CacheConstants.STEPS, uuid);
 
       expect(spyGet).toHaveBeenCalledTimes(1);
       expect(spySet).toHaveBeenCalledTimes(1);
@@ -249,7 +250,7 @@ describe('CacheService', () => {
 
       await cacheService.delete(Step, uuid);
 
-      let value = await cacheService.get(Step, uuid);
+      let value = await cacheService.get(CacheConstants.STEPS, uuid);
 
       expect(spyGet).toHaveBeenCalledTimes(1);
       expect(spySet).toHaveBeenCalledTimes(0);
@@ -269,7 +270,7 @@ describe('CacheService', () => {
 
       await cacheService.delete(Step, uuid);
 
-      let value = await cacheService.get(Step, uuid);
+      let value = await cacheService.get(CacheConstants.STEPS, uuid);
 
       expect(spyGet).toHaveBeenCalledTimes(1);
       expect(spySet).toHaveBeenCalledTimes(1);

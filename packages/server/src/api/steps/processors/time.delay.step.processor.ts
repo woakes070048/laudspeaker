@@ -27,6 +27,7 @@ import { Processor } from '@/common/services/queue/decorators/processor';
 import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
+import { CacheConstants } from '@/common/services/cache.constants';
 
 @Injectable()
 @Processor('time.delay.step')
@@ -130,7 +131,7 @@ export class TimeDelayStepProcessor extends ProcessorBase {
           })
         ) {
           nextStep = await this.cacheService.getIgnoreError(
-            Step,
+            CacheConstants.STEPS,
             job.data.step.metadata.destination,
             async () => {
               return await this.stepsService.lazyFindByID(
