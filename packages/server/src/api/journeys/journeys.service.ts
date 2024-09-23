@@ -90,6 +90,7 @@ import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
 import { Segment, SegmentType } from '../segments/entities/segment.entity';
 import { CacheConstants } from '@/common/services/cache.constants';
+import { JourneyStatisticsService } from './journey-statistics.service';
 
 export enum JourneyStatus {
   ACTIVE = 'Active',
@@ -242,8 +243,9 @@ export class JourneysService {
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
     @Inject(RedisService) private redisService: RedisService,
-    @Inject(CacheService) private cacheService: CacheService
-  ) { }
+    @Inject(CacheService) private cacheService: CacheService,
+    @Inject(JourneyStatisticsService) private journeyStatisticsService: JourneyStatisticsService
+  ) {}
 
   log(message, method, session, user = 'ANONYMOUS') {
     this.logger.log(
@@ -1079,99 +1081,15 @@ export class JourneysService {
 
     if (!frequency) frequency = 'daily';
 
-    const dbFrequency = frequency == 'weekly' ? 'week' : 'day';
-
-    const pointDates =
-      frequency === 'daily'
-        ? eachDayOfInterval({ start: startTime, end: endTime })
-        : // Postgres' week starts on Monday
-        eachWeekOfInterval(
-          { start: startTime, end: endTime },
-          { weekStartsOn: 1 }
-        );
-
-    const totalPoints = pointDates.length;
-
-    const enrollementGroupedByDate =
-      await this.journeyLocationsService.journeyLocationsRepository
-        .createQueryBuilder('location')
-        .where({
-          journey: journey.id,
-          journeyEntryAt: Between(
-            startTime.toISOString(),
-            endTime.toISOString()
-          ),
-        })
-        .select([
-          `date_trunc('${dbFrequency}', "journeyEntryAt") as "date"`,
-          `count(*)::INTEGER as group_count`,
-        ])
-        .groupBy('date')
-        .orderBy('date', 'ASC')
-        .getRawMany();
-
-    const terminalSteps = await this.stepsService.findAllTerminalInJourney(
-      journey.id,
-      session,
-      ['step.id']
-    );
-    const terminalStepIds = terminalSteps.map((step) => step.id);
-
-    const finishedGroupedByDate =
-      await this.journeyLocationsService.journeyLocationsRepository
-        .createQueryBuilder('location')
-        .where({
-          journey: journey.id,
-          stepEntryAt: Between(startTime.toISOString(), endTime.toISOString()),
-          step: In(terminalStepIds),
-        })
-        .select([
-          `date_trunc('${dbFrequency}', "journeyEntryAt") as "date"`,
-          `count(*)::INTEGER as group_count`,
-        ])
-        .groupBy('date')
-        .orderBy('date', 'ASC')
-        .getRawMany();
-
-    const enrolledCount = enrollementGroupedByDate.reduce((acc, group) => {
-      return acc + group['group_count'];
-    }, 0);
-
-    const finishedCount = finishedGroupedByDate.reduce((acc, group) => {
-      return acc + group['group_count'];
-    }, 0);
-
-    const enrolledDataPoints: number[] = new Array(totalPoints).fill(
-      0,
-      0,
-      totalPoints
-    );
-    const finishedDataPoints: number[] = new Array(totalPoints).fill(
-      0,
-      0,
-      totalPoints
+    const statistics = this.journeyStatisticsService.getStatistics(
+      journey,
+      startTime,
+      endTime,
+      frequency,
+      session
     );
 
-    for (const group of enrollementGroupedByDate) {
-      for (var i = 0; i < pointDates.length; i++) {
-        if (group.date.getTime() == pointDates[i].getTime())
-          enrolledDataPoints[i] += group.group_count;
-      }
-    }
-
-    for (const group of finishedGroupedByDate) {
-      for (var i = 0; i < pointDates.length; i++) {
-        if (group.date.getTime() == pointDates[i].getTime())
-          finishedDataPoints[i] += group.group_count;
-      }
-    }
-
-    return {
-      enrolledDataPoints,
-      finishedDataPoints,
-      enrolledCount,
-      finishedCount,
-    };
+    return statistics;
   }
 
   async getJourneyCustomers(

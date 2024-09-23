@@ -14,6 +14,10 @@ import {
   EventKeys,
   EventKeysSchema,
 } from '../events/schemas/event-keys.schema';
+import {
+  Event,
+  EventSchema
+} from '../events/schemas/event.schema';
 import { AudiencesModule } from '../audiences/audiences.module';
 import { CustomersModule } from '../customers/customers.module';
 import { TemplatesModule } from '../templates/templates.module';
@@ -28,6 +32,7 @@ import { JourneyLocation } from './entities/journey-location.entity';
 import { JourneyLocationsService } from './journey-locations.service';
 import { JourneyChange } from './entities/journey-change.entity';
 import { CacheService } from '@/common/services/cache.service';
+import { JourneyStatisticsService } from './journey-statistics.service';
 
 @Module({
   imports: [
@@ -44,6 +49,7 @@ import { CacheService } from '@/common/services/cache.service';
     MongooseModule.forFeature([
       { name: Customer.name, schema: CustomerSchema },
       { name: EventKeys.name, schema: EventKeysSchema },
+      { name: Event.name, schema: EventSchema }
     ]),
     MongooseModule.forFeature([
       { name: CustomerKeys.name, schema: CustomerKeysSchema },
@@ -56,7 +62,12 @@ import { CacheService } from '@/common/services/cache.service';
     SlackModule,
   ],
   controllers: [JourneysController],
-  providers: [JourneysService, JourneyLocationsService, CacheService],
+  providers: [
+    JourneysService,
+    JourneyLocationsService,
+    CacheService,
+    JourneyStatisticsService
+  ],
   exports: [JourneysService],
 })
 export class JourneysModule {}

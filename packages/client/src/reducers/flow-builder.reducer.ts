@@ -489,12 +489,28 @@ export interface JourneySettingsEnableFrequencyCapping {
   enabled: boolean;
 }
 
+export enum JourneySettingsConversionTrackingTimeLimitUnit {
+  Days = "Days",
+}
+
+export interface JourneySettingsConversionTrackingTimeLimit {
+  unit: JourneySettingsConversionTrackingTimeLimitUnit;
+  value: number;
+}
+
+export interface JourneySettingsConversionTracking {
+  enabled: boolean;
+  events: string[];
+  timeLimit: JourneySettingsConversionTrackingTimeLimit;
+}
+
 export interface JourneySettings {
   tags: string[];
   quietHours: JourneySettingsQuietHours;
   maxEntries: JourneySettingsMaxUserEntries;
   maxMessageSends: JourneySettingsMaxMessageSends;
   frequencyCapping: JourneySettingsEnableFrequencyCapping;
+  conversionTracking: JourneySettingsConversionTracking;
 }
 
 export interface TemplateInlineEditor {
@@ -599,6 +615,14 @@ export const defaultJourneySettings = {
   },
   frequencyCapping: {
     enabled: false,
+  },
+  conversionTracking: {
+    enabled: false,
+    events: [],
+    timeLimit: {
+      unit: JourneySettingsConversionTrackingTimeLimitUnit.Days,
+      value: 3,
+    },
   },
 };
 
@@ -1068,12 +1092,12 @@ const flowBuilderSlice = createSlice({
         messageNodes.find(
           /* eslint-disable */
           (node) =>
-            (node?.data as MessageNodeData)?.customName === newMessageNodeName
+            (node?.data as MessageNodeData)?.customName === newMessageNodeName,
         )
       ) {
         postFixValue++;
         newMessageNodeName = `${capitalize(
-          action.payload.action
+          action.payload.action,
         )} ${postFixValue}`;
       }
 
@@ -1269,7 +1293,7 @@ const flowBuilderSlice = createSlice({
           })),
           { type: "select", id: nodeToChange.id, selected: true },
         ],
-        state.nodes
+        state.nodes,
       );
 
       state.nodes = getLayoutedNodes(state.nodes, state.edges);
@@ -1284,7 +1308,7 @@ const flowBuilderSlice = createSlice({
           })),
           { type: "select", id: action.payload, selected: true },
         ],
-        state.nodes
+        state.nodes,
       );
     },
     deselectNodes(state) {
@@ -1294,7 +1318,7 @@ const flowBuilderSlice = createSlice({
           id: node.id,
           selected: false,
         })),
-        state.nodes
+        state.nodes,
       );
     },
     setIsDragging(state, action: PayloadAction<boolean>) {
@@ -1343,26 +1367,26 @@ const flowBuilderSlice = createSlice({
     },
     setJourneySettingsMaxEntries(
       state,
-      action: PayloadAction<JourneySettingsMaxUserEntries>
+      action: PayloadAction<JourneySettingsMaxUserEntries>,
     ) {
       state.journeySettings.maxEntries = action.payload;
     },
     setJourneySettingsQuietHours(
       state,
-      action: PayloadAction<JourneySettingsQuietHours>
+      action: PayloadAction<JourneySettingsQuietHours>,
     ) {
       state.journeySettings.quietHours = action.payload;
     },
     setJourneyFrequencyCappingRules(
       state,
-      action: PayloadAction<JourneySettingsEnableFrequencyCapping>
+      action: PayloadAction<JourneySettingsEnableFrequencyCapping>,
     ) {
       state.journeySettings.frequencyCapping = action.payload;
     },
 
     setMaxMessageSends(
       state,
-      action: PayloadAction<JourneySettingsMaxMessageSends>
+      action: PayloadAction<JourneySettingsMaxMessageSends>,
     ) {
       state.journeySettings.maxMessageSends = action.payload;
     },
@@ -1389,7 +1413,7 @@ const flowBuilderSlice = createSlice({
     },
     setJourneyEntryTimingTime(
       state,
-      action: PayloadAction<EntryTimingSpecificTime>
+      action: PayloadAction<EntryTimingSpecificTime>,
     ) {
       let weeklyOn = null;
       let defaultAdditionalValue: number | string | undefined | null = null;
@@ -1442,13 +1466,13 @@ const flowBuilderSlice = createSlice({
     },
     setJourneyEntryEnrollmentType(
       state,
-      action: PayloadAction<JourneyEnrollmentType>
+      action: PayloadAction<JourneyEnrollmentType>,
     ) {
       state.journeyEntrySettings.enrollmentType = action.payload;
     },
     setJourneyEntrySettings(
       state,
-      action: PayloadAction<JourneyEntrySettings | undefined>
+      action: PayloadAction<JourneyEntrySettings | undefined>,
     ) {
       if (action.payload === undefined)
         state.journeyEntrySettings = defaultJourneyEntrySettings;
@@ -1456,7 +1480,7 @@ const flowBuilderSlice = createSlice({
     },
     setJourneySettings(
       state,
-      action: PayloadAction<JourneySettings | undefined>
+      action: PayloadAction<JourneySettings | undefined>,
     ) {
       if (action.payload === undefined)
         state.journeySettings = defaultJourneySettings;
@@ -1473,13 +1497,13 @@ const flowBuilderSlice = createSlice({
     },
     setIsOnboardingWaitUntilTooltipVisible(
       state,
-      action: PayloadAction<boolean>
+      action: PayloadAction<boolean>,
     ) {
       state.isOnboardingWaitUntilTooltipVisible = action.payload;
     },
     setIsOnboardingWaitUntilTimeSettingTooltipVisible(
       state,
-      action: PayloadAction<boolean>
+      action: PayloadAction<boolean>,
     ) {
       state.isOnboardingWaitUntilTimeSettingTooltipVisible = action.payload;
     },
@@ -1491,7 +1515,7 @@ const flowBuilderSlice = createSlice({
     },
     setTemplateInlineCreator(
       state,
-      action: PayloadAction<TemplateInlineEditor | undefined>
+      action: PayloadAction<TemplateInlineEditor | undefined>,
     ) {
       state.templateInlineCreation = action.payload;
     },
@@ -1515,6 +1539,19 @@ const flowBuilderSlice = createSlice({
     },
     setIsStarting(state, action: PayloadAction<boolean>) {
       state.isStarting = action.payload;
+    },
+    setJourneySettingsConversionTracking(
+      state,
+      action: PayloadAction<JourneySettingsConversionTracking>,
+    ) {
+      if (action.payload === undefined)
+        state.journeySettings.conversionTracking =
+          defaultJourneySettings.conversionTracking;
+      else state.journeySettings.conversionTracking = action.payload;
+
+      state.journeySettings.conversionTracking.events = Array.from(
+        new Set(state.journeySettings.conversionTracking.events),
+      );
     },
   },
 });
@@ -1572,6 +1609,7 @@ export const {
   setTemplateInlineCreator,
   setJourneyFrequencyCappingRules,
   setIsStarting,
+  setJourneySettingsConversionTracking,
 } = flowBuilderSlice.actions;
 
 export { defaultDevMode };
