@@ -54,6 +54,9 @@ export class EventDto {
   public payload?: any;
 
   @IsOptional()
+  public context?: any;
+
+  @IsOptional()
   public $fcm?: FCMToken;
 
   @IsNotEmpty()

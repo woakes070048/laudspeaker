@@ -3112,7 +3112,6 @@ export class CustomersService {
         //collectionName = collectionName + count;
 
         if (query.type === 'all') {
-          console.log('the query has all (AND)');
           if (!query.statements || query.statements.length === 0) {
             return; //new Set<string>(); // Return an empty set
           }
@@ -4438,115 +4437,64 @@ export class CustomersService {
 
         const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-        // ****
         const mongoQuery: any = {
           event: eventName,
           workspaceId: workspace.id,
         };
 
         if (time) {
-          console.log('the statement is', JSON.stringify(statement, null, 2));
           const { dateComparisonType, timeAfter, timeBefore } = time;
           switch (time.comparisonType) {
             case 'after':
-              //console.log("value type is", typeof value);
-              //console.log("value is", value);
               let afterDate: Date;
               let isoDateStringAfter: string;
               if (dateComparisonType === 'relative') {
                 afterDate = this.parseRelativeDate(timeAfter);
                 isoDateStringAfter = afterDate.toISOString();
               } else {
-                // Use the Date constructor for parsing RFC 2822 formatted dates
                 afterDate = new Date(timeAfter);
                 isoDateStringAfter = afterDate.toISOString();
               }
-              //console.log("afterDate type is", typeof afterDate);
-              //console.log("after date is", afterDate);
-              // Check if afterDate is valid
               if (isNaN(afterDate.getTime())) {
                 throw new Error('Invalid date format');
               }
-              //query[key] = { $gt: afterDate };
               mongoQuery.createdAt = { $gt: isoDateStringAfter };
               break;
             case 'before':
-              //console.log("value type is", typeof value);
-              //console.log("value is", value);
               let beforeDate: Date;
               let isoDateStringBefore: string;
               if (dateComparisonType === 'relative') {
                 beforeDate = this.parseRelativeDate(timeBefore);
                 isoDateStringBefore = beforeDate.toISOString();
               } else {
-                // Directly use the Date constructor for parsing RFC 2822 formatted dates
                 beforeDate = new Date(timeBefore);
                 isoDateStringBefore = beforeDate.toISOString();
               }
-              //console.log("beforeDate type is", typeof beforeDate);
-              //console.log("before date is", beforeDate);
-              // Check if beforeDate is valid
               if (isNaN(beforeDate.getTime())) {
                 throw new Error('Invalid date format');
               }
-              //query[key] = { $lt: this.toMongoDate(beforeDate) };
-              //query[key] = { $lt: beforeDate };
               mongoQuery.createdAt = { $lt: isoDateStringBefore };
               break;
             case 'during':
-              //console.log("value type is", typeof value);
-              //console.log("value is", value);
-              //console.log("subComparisonValue is", subComparisonValue);
               let startDate: Date, endDate: Date;
               let isoStart: string, isoEnd: string;
               if (dateComparisonType === 'relative') {
                 startDate = this.parseRelativeDate(timeAfter);
-                // this is not a type, the front end is making the later date timeBefore
                 endDate = this.parseRelativeDate(timeBefore);
                 isoStart = startDate.toISOString();
                 isoEnd = endDate.toISOString();
               } else {
-                // Use the Date constructor for parsing RFC 2822 formatted dates
                 startDate = new Date(timeAfter);
-                // this is not a type, the front end is making the later date timeBefore
                 endDate = new Date(timeBefore);
                 isoStart = startDate.toISOString();
                 isoEnd = endDate.toISOString();
               }
-              //console.log("startDate type is", typeof startDate);
-              //console.log("startDate is", startDate);
-              //console.log("endDate type is", typeof endDate);
-              //console.log("endDate is", endDate);
-              // Check if dates are valid
               if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
                 throw new Error('Invalid date format');
               }
-              //query[key] = { $gte: startDate, $lte: endDate };
               mongoQuery.createdAt = { $gte: isoStart, $lte: isoEnd };
               break;
-            /*
-          case 'before':
-            //.toUTCString()
-            mongoQuery.createdAt = {
-              $lt: new Date(time.timeBefore).toISOString(),
-            };
-            break;
-          case 'after':
-            mongoQuery.createdAt = {
-              $gt: new Date(time.timeAfter).toISOString(),
-            };
-            break;
-          case 'during':
-            mongoQuery.createdAt = {
-              $gte: new Date(time.timeAfter).toISOString(),
-              $lte: new Date(time.timeBefore).toISOString(),
-            };
-            break;
-          default:
-            break;
-          */
           }
-          console.log('time query is', JSON.stringify(mongoQuery, null, 2));
         }
 
         //sub property not fully tested yet
@@ -4573,16 +4521,6 @@ export class CustomersService {
         this.connection.db.collection(intermediateCollection);
 
         if (comparisonType === 'has performed') {
-          this.debug(
-            'in the aggregate construction - has performed',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          //first we make the aggregation call with non-mobile events
-          //we treat mobile seperately to handle anonymous users
-
           const aggregationPipeline: any[] = [
             { $match: mongoQuery },
             {
@@ -4601,61 +4539,20 @@ export class CustomersService {
               },
             },
             { $match: { count: { $gte: value } } },
-            /*
-          {
-            $group: {
-              _id: null,
-              customerIds: { $push: '$_id' },
-            },
-          },
-          */
             { $out: intermediateCollection },
-            //to do
           ];
 
-          this.debug(
-            'aggregate query is/n\n',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          this.debug(
-            JSON.stringify(aggregationPipeline, null, 2),
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          //fetch users here
           const result: any =
             await this.eventsService.getCustomersbyEventsMongo(
               aggregationPipeline
             );
-          /*
-        * Example result is: 
-        [
-          {
-            "_id": null,
-            "customerIds": [
-              "658515aba1256bc5c2232ba7",
-              "658515aba1256bc5c2232bad",
-              "6585156aa1256bc5c2232ba0"
-            ]
-          }
-        ]
-        Empty example: []
-        */
 
-          //now we make the aggregation call with mobile events
           mongoQuery.source = 'mobile';
-          //console.log("mongoquery in eventssegment is ", JSON.stringify(mongoQuery, null, 2) );
 
           let aggregationPipelineMobile: any[] = [
             { $match: mongoQuery },
             {
               $addFields: {
-                //convertedCorrelationValue: { $toObjectId: '$correlationValue' },
                 convertedCorrelationValue: '$correlationValue',
               },
             },
@@ -4675,14 +4572,6 @@ export class CustomersService {
               },
             },
             { $match: { count: { $gte: value } } },
-            /*
-          {
-            $group: {
-              _id: null,
-              customerIds: { $push: '$_id' },
-            },
-          },
-          */
           ];
           if (process.env.DOCUMENT_DB === 'true') {
             aggregationPipelineMobile.push({
@@ -4704,60 +4593,11 @@ export class CustomersService {
             });
           }
 
-          //to do
-          this.debug(
-            'aggregate mobile query is/n\n',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          this.debug(
-            JSON.stringify(aggregationPipelineMobile, null, 2),
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          //fetch users here
           const mobileResult: any =
             await this.eventsService.getCustomersbyEventsMongo(
               aggregationPipelineMobile
             );
 
-          if (process.env.DOCUMENT_DB === 'true') {
-            // here we need to add the temp collection back into
-            /*
-            const BATCH_SIZE = +process.env.DOCUMENT_DB_BATCH_SIZE || 50000;
-            const finalCollection = `${finalCollectionPrepend}${collectionName}`;
-            await Promise.all(
-        
-            const cursor = this.connection.db.collection(newCollName).find();
-            let batch = [];
-            while (await cursor.hasNext()) {
-              const doc = await cursor.next();
-              batch.push({
-                insertOne: {
-                  document: doc,
-                },
-              });
-
-              if (batch.length >= BATCH_SIZE) {
-                await this.connection.db
-                  .collection(finalCollection)
-                  .bulkWrite(batch);
-                batch = []; // Reset the batch for the next group of documents
-              }
-            }
-
-              // Process any remaining documents in the last batch
-              if (batch.length > 0) {
-                await this.connection.db.collection(finalCollection).bulkWrite(batch);
-              }
-              */
-          }
-
-          // we do one more merge with mobile users for those who may include the event correlationValues in their other_ids field
           const aggregationPipelineMobileOtherIds: any[] = [
             { $match: mongoQuery },
             {
@@ -4784,22 +4624,7 @@ export class CustomersService {
                 whenNotMatched: 'insert', // Insert if the _id was not matched (new entry)
               },
             },
-            // Add any additional stages you may need
           ];
-
-          this.debug(
-            'aggregate mobile other ids query is/n\n',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          this.debug(
-            JSON.stringify(aggregationPipelineMobileOtherIds, null, 2),
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
 
           //fetch users here
           const mobileResultOtherIds: any =
@@ -4809,21 +4634,6 @@ export class CustomersService {
 
           return intermediateCollection;
         } else if (comparisonType === 'has not performed') {
-          /*
-           * we first check if the event has ever been performed
-           * if not we return all customers
-           *
-           * if event has been performed by any user, we get the customer ids of the users who have performed
-           * then filter for all other customer ids ie never performed event
-           *
-           */
-          this.debug(
-            'in the aggregate construction - has not performed',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
           //first check
           const checkEventExists = [
             {
@@ -4839,68 +4649,26 @@ export class CustomersService {
           const check = await this.eventsService.getCustomersbyEventsMongo(
             checkEventExists
           );
-          this.debug(
-            'the check is',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-          this.debug(
-            JSON.stringify(check, null, 2),
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
 
           if (check.length < 1) {
-            this.debug(
-              'no events of this name',
-              this.customersFromEventStatement.name,
-              session,
-              account.id
-            ); //the event does not exist, so we should return all customers
             const allUsers = [
               {
                 $match: {
                   workspaceId: workspace.id,
                 },
               },
-              /*
-            {
-              $group: {
-                _id: null,
-                customerIds: { $push: '$_id' },
-              },
-            },
-            */
               {
                 $project: {
                   _id: 1,
-                  //_id: 0,
-                  //allCustomerIds: '$customerIds'
                 },
               },
               { $out: intermediateCollection },
             ];
 
             const result = await this.CustomerModel.aggregate(allUsers).exec();
-            //console.log("outputted to", intermediateCollection);
 
             return intermediateCollection;
           }
-
-          this.debug(
-            'event exists',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          /*
-           *  Find customers who perform event (non mobile) (pipeline1), then merge with users who perform event (mobile) (pipeline2)
-           *  filter these customers out, return the remaining customers
-           *
-           */
 
           const primaryKey = await this.getPrimaryKey(account, session); // Ensure this is done outside the pipeline
 
@@ -4934,7 +4702,6 @@ export class CustomersService {
             { $match: mobileMongoQuery },
             {
               $addFields: {
-                //convertedCorrelationValue: { $toObjectId: '$correlationValue' },
                 convertedCorrelationValue: '$correlationValue',
               },
             },
@@ -4962,55 +4729,9 @@ export class CustomersService {
             },
           ];
 
-          this.debug(
-            'about to run pipeline 2/n\n',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          this.debug(
-            JSON.stringify(pipeline2, null, 2),
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
           const result2 = await this.eventsService.getCustomersbyEventsMongo(
             pipeline2
           );
-
-          const pipeline_other_ids = [
-            { $match: mobileMongoQuery },
-            {
-              $addFields: {
-                //convertedCorrelationValue: { $toObjectId: '$correlationValue' },
-                convertedCorrelationValue: '$correlationValue',
-              },
-            },
-            {
-              $lookup: {
-                from: 'customers',
-                localField: 'convertedCorrelationValue',
-                foreignField: 'other_ids',
-                as: 'matchedOnCorrelationValue',
-              },
-            },
-            { $unwind: '$matchedOnCorrelationValue' },
-            {
-              $project: {
-                _id: '$matchedOnCorrelationValue._id', // Projects the _id of the matched customers
-              },
-            },
-            {
-              $merge: {
-                into: intermediateCollection,
-                on: '_id',
-                whenMatched: 'keepExisting',
-                whenNotMatched: 'insert',
-              },
-            },
-          ];
 
           const pipeline3 = [
             {
@@ -5033,92 +4754,10 @@ export class CustomersService {
             },
             { $out: intermediateCollection },
           ];
-
-          this.debug(
-            'about to run pipeline 3/n\n',
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
-          this.debug(
-            JSON.stringify(pipeline3, null, 2),
-            this.customersFromEventStatement.name,
-            session,
-            account.id
-          );
-
           const result3 = await this.CustomerModel.aggregate(pipeline3).exec();
-          //const result3 = await this.eventsService.getCustomersbyEventsMongo(pipeline3);
-
-          /*
-        const aggregationPipeline: any[] = [
-          { $match: mongoQuery },
-          {
-            $lookup: {
-              from: 'customers',
-              localField: 'correlationValue',
-              foreignField: primaryKey,
-              as: 'matchedCustomers',
-            },
-          },
-          {
-            $group: {
-              _id: '$event',
-              correlationValues: { $addToSet: '$correlationValue' },
-              matchedCustomers: { $addToSet: '$matchedCustomers._id' },
-            },
-          },
-          {
-            $lookup: {
-              from: 'customers',
-              let: {
-                matchedCustomerIds: '$matchedCustomers',
-                correlationValues: '$correlationValues',
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        {
-                          $not: {
-                            $in: [
-                              '$' +  primaryKey,//(await this.getPrimaryKey(account, session)),
-                              { $ifNull: ['$$correlationValues', []] },
-                            ],
-                          },
-                        },
-                        {
-                          $not: {
-                            $in: [
-                              '$_id',
-                              { $ifNull: ['$$matchedCustomerIds', []] },
-                            ],
-                          },
-                        },
-                      ],
-                    },
-                  },
-                },
-              ],
-              as: 'unmatchedCustomers',
-            },
-          },
-          { $unwind: "$unmatchedCustomers" },
-          {
-            $project: {
-              _id: "$unmatchedCustomers._id",
-            },
-          },
-          { $out: intermediateCollection },
-        ];
-        */
-
           return intermediateCollection;
         } else {
           return intermediateCollection;
-          //return new Set<string>();
         }
         return intermediateCollection;
         //return false;
@@ -5578,22 +5217,17 @@ export class CustomersService {
 
     const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-    // ****
-    const mongoQuery: any = {
-      event: eventName,
-      workspaceId: workspace.id,
-      $or: [],
-    };
+    let whereClauses = [
+      `event = '${eventName}'`,
+      `workspaceId = '${workspace.id}'`
+    ];
 
     const currentPK: string = await this.CustomerKeysModel.findOne({
       workspaceId: workspace.id,
       isPrimary: true,
     });
     if (currentPK && customer[currentPK]) {
-      const pkCondition = {};
-      pkCondition[`correlationKey`] = currentPK;
-      pkCondition[`correlationValue`] = customer[currentPK];
-      mongoQuery.$or.push(pkCondition);
+      whereClauses.push(`(correlationKey = '${currentPK}' AND correlationValue = '${customer[currentPK]}')`);
     } else {
       // Handle case where currentPK is null
       //uncomment when primary key thing is working correctly
@@ -5605,88 +5239,54 @@ export class CustomersService {
       */
     }
 
-    //we need this condition to handle our mobile sdk since we save events with customer ID not customer primary key as the correlationKey
-    const idCondition = {
-      correlationKey: '_id',
-      correlationValue: customer._id, // Assuming customer.id stores the MongoDB _id
-    };
-    mongoQuery.$or.push(idCondition);
+    // Add the condition for the mobile SDK
+    whereClauses.push(`(correlationKey = '_id' AND correlationValue = '${customer._id}')`);
 
     if (time) {
       switch (time.comparisonType) {
         case 'before':
-          //.toUTCString()
-          mongoQuery.createdAt = {
-            $lt: new Date(time.timeBefore).toISOString(),
-          };
+          whereClauses.push(`createdAt < '${new Date(time.timeBefore).toISOString()}'`);
           break;
         case 'after':
-          mongoQuery.createdAt = {
-            $gt: new Date(time.timeAfter).toISOString(),
-          };
+          whereClauses.push(`createdAt > '${new Date(time.timeAfter).toISOString()}'`);
           break;
         case 'during':
-          mongoQuery.createdAt = {
-            $gte: new Date(time.timeAfter).toISOString(),
-            $lte: new Date(time.timeBefore).toISOString(),
-          };
+          whereClauses.push(`createdAt BETWEEN '${new Date(time.timeAfter).toISOString()}' AND '${new Date(time.timeBefore).toISOString()}'`);
           break;
         default:
           break;
       }
     }
 
-    //sub property not fully tested yet
     if (additionalProperties) {
-      const propertiesQuery: any[] = [];
+      const propertiesQuery: string[] = [];
       for (const property of additionalProperties.properties) {
-        const propQuery: any = {};
-        propQuery[`payload.${property.key}`] =
-          this.getValueComparison(property);
+        const propQuery = `payload.${property.key} ${this.getValueComparison(property)}`;
         propertiesQuery.push(propQuery);
       }
 
       if (additionalProperties.comparison === 'all') {
         if (propertiesQuery.length > 0) {
-          mongoQuery.$and = propertiesQuery;
+          whereClauses.push(propertiesQuery.join(' AND '));
         }
       } else if (additionalProperties.comparison === 'any') {
         if (propertiesQuery.length > 0) {
-          mongoQuery.$or = propertiesQuery;
+          whereClauses.push(`(${propertiesQuery.join(' OR ')})`);
         }
       }
     }
 
-    //console.log('mongo query is/n\n', JSON.stringify(mongoQuery, null, 2));
-    this.debug(
-      'mongo query is/n\n',
-      this.evaluateEventStatement.name,
-      session,
-      account.id
-    );
+    const whereClause = whereClauses.join(' AND ');
+    const query = `SELECT count(*) as count FROM events WHERE ${whereClause};`;
+    const result = await this.clickhouseClient.query({ query });
 
-    this.debug(
-      JSON.stringify(mongoQuery, null, 2),
-      this.evaluateEventStatement.name,
-      session,
-      account.id
-    );
+    const count = (await result.json<{count: number}>()).data[0].count;
 
     if (comparisonType === 'has performed') {
-      return (await this.eventsService.getEventsByMongo(
-        mongoQuery,
-        customer
-      )) >= value
-        ? true
-        : false;
+      return count >= value;
     } else if (comparisonType === 'has not performed') {
-      //need to check the logic for this one
-      return (await this.eventsService.getEventsByMongo(mongoQuery, customer)) <
-        1
-        ? true
-        : false;
+      return count < 1;
     }
-    //return (await this.eventsService.getEventsByMongo(mongoQuery )) >= value ? true : false ;
     return false;
   }
 

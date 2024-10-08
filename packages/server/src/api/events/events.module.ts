@@ -60,6 +60,8 @@ import { TimeDelayStepProcessor } from '../steps/processors/time.delay.step.proc
 import { TimeWindowStepProcessor } from '../steps/processors/time.window.step.processor';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { EventsPostProcessor } from './processors/events.postprocessor';
+import { EventsPGSyncProcessor } from './processors/events-pg-sync.processor';
+import { PGEvent } from '../events/entities/pg-event.entity';
 
 function getProvidersList() {
   let providerList: Array<any> = [
@@ -78,6 +80,7 @@ function getProvidersList() {
       EventsProcessor,
       EventsPreProcessor,
       EventsPostProcessor,
+      EventsPGSyncProcessor
     ];
   }
 
@@ -97,6 +100,7 @@ function getProvidersList() {
       Imports,
       Step,
       Journey,
+      PGEvent
     ]),
     MongooseModule.forFeature([
       { name: Customer.name, schema: CustomerSchema },

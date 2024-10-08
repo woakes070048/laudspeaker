@@ -33,6 +33,11 @@ import { Processor } from '@/common/services/queue/decorators/processor';
 import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
 import { QueueType } from '@/common/services/queue/types/queue-type';
 import { Producer } from '@/common/services/queue/classes/producer';
+import {
+  ClickHouseTable,
+  ClickHouseEvent,
+  ClickHouseClient
+} from '@/common/services/clickhouse';
 import { CacheConstants } from '@/common/services/cache.constants';
 
 export enum ProviderType {
@@ -73,7 +78,9 @@ export class EventsPreProcessor extends ProcessorBase {
     @InjectModel(Customer.name) public customerModel: Model<CustomerDocument>,
     @InjectRepository(Journey)
     private readonly journeysRepository: Repository<Journey>,
-    @Inject(CacheService) private cacheService: CacheService
+    @Inject(CacheService) private cacheService: CacheService,
+    @Inject(ClickHouseClient)
+    private clickhouseClient: ClickHouseClient,
   ) {
     super();
   }
@@ -210,13 +217,11 @@ export class EventsPreProcessor extends ProcessorBase {
       );
 
       if (job.data.event) {
-        await this.eventModel.create([
-          {
-            ...this.removeDollarSignsFromKeys(job.data.event),
-            workspaceId: job.data.workspace.id,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        const clickHouseRecord: ClickHouseEvent = await this.eventsService.recordEvent(
+          job.data.event,
+          job.data.workspace.id,
+          job.data.event.source
+        );
       }
 
       let eventJobs = journeys.map((journey) => ({

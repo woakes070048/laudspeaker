@@ -27,7 +27,7 @@ export class Producer {
     const queueName = QueueManager.getQueueName(queue, destination);
     const options = {
       ...this.publishOptions,
-      priority: job.metadata.priority
+      priority: job.metadata?.priority
     }
 
     return this.connectionMgr.channelObj.sendToQueue(queueName, contents, options);

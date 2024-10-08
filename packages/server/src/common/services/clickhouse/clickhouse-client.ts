@@ -22,11 +22,17 @@ import {
 export class ClickHouseClient implements OnModuleDestroy {
   private client;
 
-  private readonly insertSettings: ClickHouseSettings = {
+  private readonly commonSettings: ClickHouseSettings = {
     date_time_input_format: 'best_effort',
+    output_format_json_array_of_rows: 1,
+  };
+
+  private readonly insertSettings: ClickHouseSettings = {
+    ...this.commonSettings,
   };
 
   private readonly insertAsyncSettings: ClickHouseSettings = {
+    ...this.commonSettings,
     async_insert: 1,
     wait_for_async_insert: 0,
     async_insert_max_data_size:
@@ -77,7 +83,11 @@ export class ClickHouseClient implements OnModuleDestroy {
     return this.insert(insertParams);
   }
 
+  async disconnect() {
+    return this.client.close();
+  }
+  
   async onModuleDestroy() {
-    await this.client.close();
+    await this.disconnect();
   }
 }

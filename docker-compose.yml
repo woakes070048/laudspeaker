@@ -81,10 +81,13 @@ services:
     networks:
       - laudspeaker_default
 
+  # Ensure the following settings are set
+  # date_time_input_format: 'best_effort'
+  # output_format_json_array_of_rows: 1
   clickhouse:
     hostname: clickhouse
     container_name: clickhouse
-    image: clickhouse/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:24.8
     restart: on-failure
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
@@ -96,6 +99,9 @@ services:
       - "9000:9000"
     networks:
       - laudspeaker_default
+    configs:
+      - source: clickhouse_rmq_config
+        target: /etc/clickhouse-server/config.d/rmq.xml
 
   #### START kafka related containers
   zoo1:
@@ -373,6 +379,16 @@ services:
       - laudspeaker_default
     command:
       - "guis"
+
+configs:
+  clickhouse_rmq_config:
+    content: |
+      <clickhouse>
+        <rabbitmq>
+           <username>guest</username>
+           <password>guest</password>
+        </rabbitmq>
+      </clickhouse>
 
 networks:
   laudspeaker_default:

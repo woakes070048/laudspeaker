@@ -1,6 +1,5 @@
 import { ToDate } from 'class-sanitizer';
 import {
-  IsNotEmpty,
   IsOptional,
   IsArray,
   ValidateNested,
@@ -9,7 +8,7 @@ import {
 import { EventDto } from './event.dto';
 import { Type } from 'class-transformer';
 
-export class MobileBatchDto {
+export class BatchEventDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EventDto)

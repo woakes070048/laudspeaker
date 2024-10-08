@@ -97,8 +97,22 @@ export class WorkOrchestrator {
     return `${process.env.LAUDSPEAKER_PROCESS_TYPE}-${process.pid}`;
   }
 
+  private parseMsg(msg) {
+    return msg.content.toString();
+  }
+
+  // messageAsString, messageAsJSON, messageAsJob
   private jobFromMsg(msg) {
-    return JSON.parse(msg.content.toString());
+    const content = this.parseMsg(msg);
+
+    try {
+      const parsedJSON = JSON.parse(content);
+      return parsedJSON;
+    }
+    catch (error) {
+      console.log(content);
+      throw error;
+    }
   }
 
   private async handleMessage(channel, msg, queue: QueueType) {
@@ -118,7 +132,7 @@ export class WorkOrchestrator {
         self.processor,
         result);
     }
-    catch(error) {
+    catch (error) {
       await self.handleProcessorError(
         channel,
         msg,
@@ -161,7 +175,7 @@ export class WorkOrchestrator {
   }
 
   private getJobDeliveryCount(job): number {
-    return job.metadata.deliveryCount
+    return job?.metadata?.deliveryCount
       ? parseInt(job.metadata.deliveryCount)
       : 0;
   }
