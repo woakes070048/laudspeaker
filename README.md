@@ -8,7 +8,7 @@
 <a href='https://img.shields.io/github/commit-activity/m/laudspeaker/laudspeaker'><img alt="Commits" src="https://img.shields.io/github/commit-activity/m/laudspeaker/laudspeaker"/></a>
 
 <h4 align="center">
-  <a href="https://join.slack.com/t/laudspeakerusers/shared_invite/zt-1li25huaq-BljJUA1Zm8dXvbZViAbMwg">Slack</a> |
+  <a href="https://join.slack.com/t/laudspeakerusers/shared_invite/zt-2vn19c53k-wNiaTmLyT~rFUsjKN_NdUg">Slack</a> |
   <a href="https://app.laudspeaker.com/login/?ref=github">Laudspeaker Cloud</a> |
   <a href="https://laudspeaker.com/docs/guides/overview/intro/?ref=github">Docs</a> |
   <a href="https://laudspeaker.com/?ref=github">Website</a>
@@ -48,7 +48,7 @@ Use [Laudspeaker Cloud](https://app.laudspeaker.com/login/?ref=github) or if you
 
 <a href="https://cal.com/laudspeaker-mahamad/20min-set-up" target="_blank"><img src="https://user-images.githubusercontent.com/7728266/226135023-e484e408-4434-4282-ae66-5c224fb65e20.png" /> </a>
 
-Questions? Please join our [Slack channel](https://join.slack.com/t/laudspeakerusers/shared_invite/zt-1io0f6u50-rSCnNtqkJT6QIdbPOyJh6g) or visit our [site](https://laudspeaker.com/).
+Questions? Please join our [Slack channel](https://join.slack.com/t/laudspeakerusers/shared_invite/zt-2vn19c53k-wNiaTmLyT~rFUsjKN_NdUg) or visit our [site](https://laudspeaker.com/).
 
 ## 🔥 What makes Laudspeaker cool?
 
