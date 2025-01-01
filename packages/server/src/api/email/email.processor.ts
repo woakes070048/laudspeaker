@@ -17,9 +17,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Account } from '../accounts/entities/accounts.entity';
 import { Repository } from 'typeorm';
 import { workspacesUrl } from 'twilio/lib/jwt/taskrouter/util';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { ClickHouseEventProvider } from '@/common/services/clickhouse/types/clickhouse-event-provider';
+import { Processor } from '../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../common/services/queue/classes/processor-base';
+import { ClickHouseEventProvider } from '../../common/services/clickhouse/types/clickhouse-event-provider';
 
 export enum MessageType {
   SMS = 'sms',

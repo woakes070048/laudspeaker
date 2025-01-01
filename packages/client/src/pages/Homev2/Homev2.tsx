@@ -77,7 +77,7 @@ const Homev2 = () => {
         }
 
         // Check for user schema setup (primary key set)
-        if (pk && pk.key) {
+        if (pk && pk.name) {
           dispatch(setUserSchemaSetupped(true));
         }
 

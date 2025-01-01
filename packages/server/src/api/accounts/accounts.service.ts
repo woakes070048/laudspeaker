@@ -10,7 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { Account } from './entities/accounts.entity';
 import * as bcrypt from 'bcryptjs';
@@ -19,8 +19,6 @@ import { AuthService } from '../auth/auth.service';
 import { MailService } from '@sendgrid/mail';
 import { Client } from '@sendgrid/client';
 import { RemoveAccountDto } from './dto/remove-account.dto';
-import { InjectConnection } from '@nestjs/mongoose';
-import mongoose, { ClientSession } from 'mongoose';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { JourneysService } from '../journeys/journeys.service';
@@ -71,7 +69,6 @@ export class AccountsService extends BaseJwtHelper {
     private templatesService: TemplatesService,
     @Inject(forwardRef(() => StepsService))
     private stepsService: StepsService,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(forwardRef(() => WebhooksService))
     private webhookService: WebhooksService
   ) {
@@ -358,9 +355,6 @@ export class AccountsService extends BaseJwtHelper {
         oldUser.expectedOnboarding.length === oldUser.currentOnboarding.length;
     }
 
-    const transactionSession = await this.connection.startSession();
-    transactionSession.startTransaction();
-
     let verified = oldUser.verified;
     const needEmailUpdate =
       updateUserDto.email && oldUser.email !== updateUserDto.email;
@@ -490,18 +484,15 @@ export class AccountsService extends BaseJwtHelper {
           session
         );
 
-      await transactionSession.commitTransaction();
       await queryRunner.commitTransaction();
 
       return updatedUser;
     } catch (e) {
-      await transactionSession.abortTransaction();
       err = e;
       this.error(e, this.update.name, session);
       await queryRunner.rollbackTransaction();
     } finally {
       await queryRunner.release();
-      await transactionSession.endSession();
     }
     if (err) throw err;
   }
@@ -543,75 +534,47 @@ export class AccountsService extends BaseJwtHelper {
   }
 
   async remove(
-    user: Express.User,
+    user: Account,
     removeAccountDto: RemoveAccountDto,
     session: string
   ): Promise<void> {
-    let transactionSession: ClientSession;
-    try {
-      const account = await this.findOne(user, session);
-      /*
-      this.debug(
-        `Found ${JSON.stringify({ id: account.id })}`,
-        this.remove.name,
-        session,
-        (<Account>user).id
-      );
-    */
-      const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-      if (!bcrypt.compareSync(removeAccountDto.password, account.password))
-        throw new BadRequestException('Password is incorrect');
+    const account = await this.findOne(user, session);
+    if (!bcrypt.compareSync(removeAccountDto.password, account.password))
+      throw new BadRequestException('Password is incorrect!');
+    this.debug(`Account deletion request,please contact support@laudspeaker.com`, this.remove.name, session, user.email)
 
-      transactionSession = await this.connection.startSession();
-      transactionSession.startTransaction();
+    //     const queryRunner = this.dataSource.createQueryRunner();
+    //     const client = await queryRunner.connect();
+    //     await queryRunner.startTransaction();
 
-      await this.customersService.CustomerModel.deleteMany(
-        {
-          workspaceId: workspace.id,
-        },
-        { session: transactionSession }
-      )
-        .session(transactionSession)
-        .exec();
-      this.debug(
-        `Deleted customers for ${JSON.stringify({ id: account.id })}`,
-        this.remove.name,
-        session,
-        (<Account>user).id
-      );
+    //     try {
+    //       const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-      await this.customersService.CustomerKeysModel.deleteMany(
-        {
-          workspaceId: workspace.id,
-        },
-        { session: transactionSession }
-      )
-        .session(transactionSession)
-        .exec();
-      this.debug(
-        `Deleted customer keys for ${JSON.stringify({ id: account.id })}`,
-        this.remove.name,
-        session,
-        (<Account>user).id
-      );
 
-      await this.accountsRepository.delete(account.id);
-      this.debug(
-        `Deleted ${JSON.stringify({ id: account.id })}`,
-        this.remove.name,
-        session,
-        (<Account>user).id
-      );
+    //       this.debug(
+    //         `Deleted customers for ${JSON.stringify({ id: account.id })}`,
+    //         this.remove.name,
+    //         session,
+    //         (<Account>user).id
+    //       );
+    // await queryRunner.manager.delete()
+    //       await this.accountsRepository.delete(account.id);
+    //       this.debug(
+    //         `Deleted ${JSON.stringify({ id: account.id })}`,
+    //         this.remove.name,
+    //         session,
+    //         (<Account>user).id
+    //       );
 
-      await transactionSession.commitTransaction();
-    } catch (e) {
-      await transactionSession.abortTransaction();
-      this.error(e, this.remove.name, session, (<Account>user).id);
-      throw e;
-    } finally {
-      await transactionSession.endSession();
-    }
+    //       await transactionSession.commitTransaction();
+    //     } catch (e) {
+    //       await transactionSession.abortTransaction();
+    //       this.error(e, this.remove.name, session, (<Account>user).id);
+    //       throw e;
+    //     } finally {
+    //       await transactionSession.endSession();
+    //     }
   }
 
   async createOnboadingAccount() {
@@ -791,15 +754,15 @@ export class AccountsService extends BaseJwtHelper {
                     )?.id ||
                     (node.data.type
                       ? (
-                          await this.stepsService.insert(
-                            account,
-                            {
-                              journeyID: journey.id,
-                              type: node.data.type as StepType,
-                            },
-                            session
-                          )
-                        ).id
+                        await this.stepsService.insert(
+                          account,
+                          {
+                            journeyID: journey.id,
+                            type: node.data.type as StepType,
+                          },
+                          session
+                        )
+                      ).id
                       : undefined),
                 },
               })

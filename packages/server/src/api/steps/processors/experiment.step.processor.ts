@@ -5,27 +5,22 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   OnWorkerEvent,
 } from '@nestjs/bullmq';
-import { Job, MetricsTime, Queue } from 'bullmq';
+import { Job } from 'bullmq';
 import { ExperimentBranch, StepType } from '../types/step.interface';
 import { Step } from '../entities/step.entity';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import {
-  Customer,
-  CustomerDocument,
-} from '@/api/customers/schemas/customer.schema';
-import { Account } from '@/api/accounts/entities/accounts.entity';
+import { Account } from '../../accounts/entities/accounts.entity';
 import * as _ from 'lodash';
 import * as Sentry from '@sentry/node';
-import { JourneyLocationsService } from '@/api/journeys/journey-locations.service';
+import { JourneyLocationsService } from '../../journeys/journey-locations.service';
 import { StepsService } from '../steps.service';
-import { Journey } from '@/api/journeys/entities/journey.entity';
-import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity';
-import { CacheService } from '@/common/services/cache.service';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { Journey } from '../../journeys/entities/journey.entity';
+import { JourneyLocation } from '../../journeys/entities/journey-location.entity';
+import { CacheService } from '../../../common/services/cache.service';
+import { Processor } from '../../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../../common/services/queue/classes/processor-base';
+import { QueueType } from '../../../common/services/queue/types/queue-type';
+import { Producer } from '../../../common/services/queue/classes/producer';
+import { Customer } from '../../customers/entities/customer.entity';
 
 @Injectable()
 @Processor('experiment.step')
@@ -33,7 +28,6 @@ export class ExperimentStepProcessor extends ProcessorBase {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectModel(Customer.name) public customerModel: Model<CustomerDocument>,
     @Inject(JourneyLocationsService)
     private journeyLocationsService: JourneyLocationsService,
     @Inject(StepsService) private stepsService: StepsService,
@@ -107,7 +101,7 @@ export class ExperimentStepProcessor extends ProcessorBase {
         step: Step;
         owner: Account;
         journey: Journey;
-        customer: CustomerDocument;
+        customer: Customer;
         location: JourneyLocation;
         session: string;
         event?: string;
@@ -175,7 +169,7 @@ export class ExperimentStepProcessor extends ProcessorBase {
           // customer has stopped moving so we can release lock
           await this.journeyLocationsService.unlock(
             job.data.location,
-            job.data.step
+            job.data.step.id
           );
         }
         if (nextStep && nextJob)

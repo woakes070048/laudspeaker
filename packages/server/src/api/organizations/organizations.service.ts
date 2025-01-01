@@ -26,12 +26,12 @@ import {
   DEFAULT_PLAN,
   OrganizationPlan,
 } from './entities/organization-plan.entity';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { QueueType } from '../../common/services/queue/types/queue-type';
+import { Producer } from '../../common/services/queue/classes/producer';
 import {
   ClickHouseTable,
   ClickHouseClient
-} from '@/common/services/clickhouse';
+} from '../../common/services/clickhouse';
 
 @Injectable()
 export class OrganizationService {

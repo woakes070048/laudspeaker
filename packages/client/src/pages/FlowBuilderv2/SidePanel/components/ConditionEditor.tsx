@@ -497,7 +497,7 @@ const ConditionEditor: FC<ConditionEditorProps> = ({
                       </div>
                       <div className="flex flex-col gap-[10px]">
                         <div className="dynamic-input w-full">
-                          <DynamicInput
+                          {/* <DynamicInput
                             type={statement.valueType}
                             value={statement.value}
                             onChange={(value) => {
@@ -505,7 +505,7 @@ const ConditionEditor: FC<ConditionEditorProps> = ({
                               condition.statements[i].value = value;
                               setCondition({ ...condition });
                             }}
-                          />
+                          /> */}
                         </div>
 
                         {showErrors &&

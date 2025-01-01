@@ -22,14 +22,8 @@ import { UpdateJourneyDto } from './dto/update-journey.dto';
 import { Journey } from './entities/journey.entity';
 import errors from '../../shared/utils/errors';
 import { CustomersService } from '../customers/customers.service';
-import {
-  Customer,
-  CustomerDocument,
-} from '../customers/schemas/customer.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { isUUID } from 'class-validator';
-import mongoose, { ClientSession, Model } from 'mongoose';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { BadRequestException } from '@nestjs/common/exceptions';
 import { StepsService } from '../steps/steps.service';
 import { Step } from '../steps/entities/step.entity';
@@ -80,16 +74,18 @@ import { JourneyLocationsService } from './journey-locations.service';
 import { Queue } from 'bullmq';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { JourneyChange } from './entities/journey-change.entity';
-import isObjectDeepEqual from '@/utils/isObjectDeepEqual';
+import isObjectDeepEqual from '../../utils/isObjectDeepEqual';
 import { JourneyLocation } from './entities/journey-location.entity';
 import { eachDayOfInterval, eachWeekOfInterval } from 'date-fns';
-import { CacheService } from '@/common/services/cache.service';
-import { EntityComputedFieldsHelper } from '@/common/helper/entityComputedFields.helper';
-import { EntityWithComputedFields } from '@/common/entities/entityWithComputedFields.entity';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { CacheService } from '../../common/services/cache.service';
+import { EntityComputedFieldsHelper } from '../../common/helper/entityComputedFields.helper';
+import { EntityWithComputedFields } from '../../common/entities/entityWithComputedFields.entity';
+import { QueueType } from '../../common/services/queue/types/queue-type';
+import { Producer } from '../../common/services/queue/classes/producer';
 import { Segment, SegmentType } from '../segments/entities/segment.entity';
-import { CacheConstants } from '@/common/services/cache.constants';
+import { Customer } from '../customers/entities/customer.entity';
+import { CustomerKeysService } from '../customers/customer-keys.service';
+import { CacheConstants } from '../../common/services/cache.constants';
 import { JourneyStatisticsService } from './journey-statistics.service';
 
 export enum JourneyStatus {
@@ -236,10 +232,10 @@ export class JourneysService {
     @InjectRepository(JourneyChange)
     public journeyChangesRepository: Repository<JourneyChange>,
     @Inject(StepsService) private stepsService: StepsService,
-    @InjectModel(Customer.name) public CustomerModel: Model<CustomerDocument>,
     @Inject(forwardRef(() => CustomersService))
     private customersService: CustomersService,
-    @InjectConnection() private readonly connection: mongoose.Connection,
+    @Inject(forwardRef(() => CustomerKeysService))
+    private customerKeysService: CustomerKeysService,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
     @Inject(RedisService) private redisService: RedisService,
@@ -636,7 +632,6 @@ export class JourneysService {
     customerUpdateType: 'NEW' | 'CHANGE',
     session: string,
     queryRunner: QueryRunner,
-    clientSession: ClientSession
   ) {
     const workspace = account.teams?.[0]?.organization?.workspaces?.[0];
 
@@ -652,10 +647,9 @@ export class JourneysService {
         isDynamic: true,
       },
     });
-    const customer = await this.customersService.findById(
+    const customer = await this.customersService.findByCustomerId(
       account,
       customerId,
-      clientSession
     );
     for (const journey of journeys) {
       // get segments for journey
@@ -712,7 +706,6 @@ export class JourneysService {
             [],
             session,
             queryRunner,
-            clientSession
           );
           break;
         case 'REMOVE':
@@ -721,7 +714,6 @@ export class JourneysService {
             journey,
             customer,
             session,
-            clientSession
           );
           break;
       }
@@ -738,19 +730,17 @@ export class JourneysService {
   async enrollCustomersInJourney(
     account: Account,
     journey: Journey,
-    customers: CustomerDocument[],
+    customers: Customer[],
     locations: JourneyLocation[],
     session: string,
     queryRunner: QueryRunner,
-    clientSession?: ClientSession
   ): Promise<any[]> {
     const jobsData: any[] = [];
 
     const startStep = await this.stepsService.getStartStep(
       account,
       journey,
-      session,
-      queryRunner
+      session
     );
 
     // Construct a new journey object with an empty visualLayout, inclusionCriteria
@@ -788,7 +778,7 @@ export class JourneysService {
         )
       ) {
         this.log(
-          `Max customer limit reached on journey: ${journey.id}. Preventing customer: ${customer._id} from being enrolled.`,
+          `Max customer limit reached on journey: ${journey.id}. Preventing customer: ${customer.id} from being enrolled.`,
           this.enrollCustomersInJourney.name,
           session,
           account.id
@@ -801,14 +791,15 @@ export class JourneysService {
         step: startStep,
         location: locations.find((location: JourneyLocation) => {
           return (
-            location.customer === (customer._id ?? customer._id.toString()) &&
+            location.customer.toString() === (customer.id ?? customer.id.toString()) &&
             location.journey === journey.id
           );
         }),
         session: session,
-        customer, //customer.id ?? customer._id.toString(),
+        customer,
         stepDepth: 1,
       };
+
       jobsData.push(jobData);
     }
     return jobsData;
@@ -820,25 +811,10 @@ export class JourneysService {
   public async unenrollCustomerFromJourney(
     account: Account,
     journey: Journey,
-    customer: CustomerDocument,
+    customer: Customer,
     session: string,
-    clientSession: ClientSession
   ) {
     // TODO_JH: remove from steps also
-    await this.CustomerModel.updateOne(
-      { _id: customer._id },
-      {
-        $pullAll: {
-          journeys: [journey.id],
-        },
-        // TODO_JH: This logic needs to be checked
-        $unset: {
-          journeyEnrollmentsDates: [journey.id],
-        },
-      }
-    )
-      .session(clientSession)
-      .exec();
   }
 
   /**
@@ -855,10 +831,9 @@ export class JourneysService {
    */
   async enrollCustomer(
     account: Account,
-    customer: CustomerDocument,
+    customer: Customer,
     queryRunner: QueryRunner,
-    clientSession: ClientSession,
-    session: string
+    session: string,
   ): Promise<void> {
     try {
       const workspace = account.teams?.[0]?.organization?.workspaces?.[0];
@@ -874,38 +849,6 @@ export class JourneysService {
           isDynamic: true,
         },
       });
-      for (
-        let journeyIndex = 0;
-        journeyIndex < journeys?.length;
-        journeyIndex++
-      ) {
-        const journey = journeys[journeyIndex];
-        if (
-          (await this.customersService.checkInclusion(
-            customer,
-            journey.inclusionCriteria,
-            session,
-            account
-          )) &&
-          customer.journeys.indexOf(journey.id) < 0
-        ) {
-          await this.CustomerModel.updateOne(
-            { _id: customer._id },
-            {
-              $addToSet: {
-                journeys: journey.id,
-              },
-              $set: {
-                journeyEnrollmentsDates: {
-                  [journey.id]: new Date().toUTCString(),
-                },
-              },
-            }
-          )
-            .session(clientSession)
-            .exec();
-        }
-      }
     } catch (err) {
       this.error(err, this.enrollCustomer.name, session, account.id);
       throw err;
@@ -1081,6 +1024,78 @@ export class JourneysService {
 
     if (!frequency) frequency = 'daily';
 
+    const dbFrequency = frequency == 'weekly' ? 'week' : 'day';
+
+    const pointDates =
+      frequency === 'daily'
+        ? eachDayOfInterval({ start: startTime, end: endTime })
+        : // Postgres' week starts on Monday
+        eachWeekOfInterval(
+          { start: startTime, end: endTime },
+          { weekStartsOn: 1 }
+        );
+
+    const totalPoints = pointDates.length;
+
+    const enrollementGroupedByDate =
+      await this.journeyLocationsService.journeyLocationsRepository
+        .createQueryBuilder('location')
+        .where({
+          journey: journey.id,
+          journeyEntryAt: Between(
+            startTime.toISOString(),
+            endTime.toISOString()
+          ),
+        })
+        .select([
+          `date_trunc('${dbFrequency}', "journeyEntryAt") as "date"`,
+          `count(*)::INTEGER as group_count`,
+        ])
+        .groupBy('date')
+        .orderBy('date', 'ASC')
+        .getRawMany();
+
+    const terminalSteps = await this.stepsService.findAllTerminalInJourney(
+      journey.id,
+      session,
+      ['step.id']
+    );
+    const terminalStepIds = terminalSteps.map((step) => step.id);
+
+    const finishedGroupedByDate =
+      await this.journeyLocationsService.journeyLocationsRepository
+        .createQueryBuilder('location')
+        .where({
+          journey: journey.id,
+          stepEntryAt: Between(startTime.toISOString(), endTime.toISOString()),
+          step: In(terminalStepIds),
+        })
+        .select([
+          `date_trunc('${dbFrequency}', "journeyEntryAt") as "date"`,
+          `count(*)::INTEGER as group_count`,
+        ])
+        .groupBy('date')
+        .orderBy('date', 'ASC')
+        .getRawMany();
+
+    const enrolledCount = enrollementGroupedByDate.reduce((acc, group) => {
+      return acc + group['group_count'];
+    }, 0);
+
+    const finishedCount = finishedGroupedByDate.reduce((acc, group) => {
+      return acc + group['group_count'];
+    }, 0);
+
+    const enrolledDataPoints: number[] = new Array(totalPoints).fill(
+      0,
+      0,
+      totalPoints
+    );
+    const finishedDataPoints: number[] = new Array(totalPoints).fill(
+      0,
+      0,
+      totalPoints
+    );
     const statistics = this.journeyStatisticsService.getStatistics(
       journey,
       startTime,
@@ -1169,29 +1184,26 @@ export class JourneysService {
 
     const workspace = account.teams?.[0]?.organization?.workspaces?.[0];
 
-    const pk = await this.customersService.CustomerKeysModel.findOne({
-      isPrimary: true,
-      workspaceId: workspace.id,
-    });
+    const pk = await this.customerKeysService.getPrimaryKey(workspace.id, session);
 
     if (pk) {
       const customerIds = data.map((item) => item.customerId);
 
-      const customers = this.CustomerModel.find({
-        _id: { $in: customerIds },
-      }).cursor();
+      // const customers = this.CustomerModel.find({
+      //   _id: { $in: customerIds },
+      // }).cursor();
 
-      for await (const customer of customers) {
-        const dataItem = data.find((item) => item.customerId === customer.id);
+      // for await (const customer of customers) {
+      //   const dataItem = data.find((item) => item.customerId === customer.id);
 
-        if (dataItem) dataItem[pk.key] = customer[pk.key];
-      }
+      //   if (dataItem) dataItem[pk.key] = customer[pk.key];
+      // }
     }
 
     return {
       data: data.map((item) => ({
         customerId: item.customerId,
-        [pk.key]: item[pk.key],
+        [pk.name]: item[pk.name],
         status: item.isFinished ? 'Finished' : 'Enrolled',
         lastUpdate: +item.lastUpdate,
       })),

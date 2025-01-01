@@ -492,18 +492,20 @@ const RouteComponent: React.FC = () => {
             </Protected>
           }
         />
-        <Route
-          path="/person/:id"
-          element={
-            <Protected>
-              <VerificationProtected>
-                <DrawerLayout>
-                  <Personv2 />
-                </DrawerLayout>
-              </VerificationProtected>
-            </Protected>
-          }
-        />
+        {
+          <Route
+            path="/person/:id"
+            element={
+              <Protected>
+                <VerificationProtected>
+                  <DrawerLayout>
+                    <Personv2 />
+                  </DrawerLayout>
+                </VerificationProtected>
+              </Protected>
+            }
+          />
+        }
         <Route
           path="/segment"
           element={
@@ -755,18 +757,20 @@ const RouteComponent: React.FC = () => {
             </Protected>
           }
         />
-        <Route
-          path="/data-transfer/:id"
-          element={
-            <Protected>
-              <VerificationProtected>
-                <DrawerLayout>
-                  <DataTransfer />
-                </DrawerLayout>
-              </VerificationProtected>
-            </Protected>
-          }
-        />
+        {
+          <Route
+            path="/data-transfer/:id"
+            element={
+              <Protected>
+                <VerificationProtected>
+                  <DrawerLayout>
+                    <DataTransfer />
+                  </DrawerLayout>
+                </VerificationProtected>
+              </Protected>
+            }
+          />
+        }
 
         {/* Removed for version 1 release
         <Route

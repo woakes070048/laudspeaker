@@ -1,24 +1,10 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import mongoose, { Model } from 'mongoose';
-import {
-  Customer,
-  CustomerDocument,
-} from './api/customers/schemas/customer.schema';
 import { getType } from 'tst-reflect';
-import {
-  CustomerKeys,
-  CustomerKeysDocument,
-} from './api/customers/schemas/customer-keys.schema';
 import { isDateString, isEmail } from 'class-validator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Verification } from './api/auth/entities/verification.entity';
-import { EventDocument } from './api/events/schemas/event.schema';
-import { EventKeysDocument } from './api/events/schemas/event-keys.schema';
-import { Event } from './api/events/schemas/event.schema';
-import { EventKeys } from './api/events/schemas/event-keys.schema';
 import { IntegrationsService } from './api/integrations/integrations.service';
 import {
   Integration,
@@ -62,14 +48,14 @@ import { Temporal } from '@js-temporal/polyfill';
 import { Account } from './api/accounts/entities/accounts.entity';
 import * as os from 'os';
 import * as Sentry from '@sentry/node';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { QueueType } from './common/services/queue/types/queue-type';
+import { Producer } from './common/services/queue/classes/producer';
 import {
   ClickHouseTable,
   ClickHouseEventProvider,
   ClickHouseMessage,
   ClickHouseClient
-} from '@/common/services/clickhouse';
+} from './common/services/clickhouse';
 
 const BATCH_SIZE = 500;
 
@@ -85,14 +71,6 @@ export class CronService {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectModel(Customer.name)
-    private customerModel: Model<CustomerDocument>,
-    @InjectModel(CustomerKeys.name)
-    private customerKeysModel: Model<CustomerKeysDocument>,
-    @InjectModel(Event.name)
-    private eventModel: Model<EventDocument>,
-    @InjectModel(EventKeys.name)
-    private eventKeysModel: Model<EventKeysDocument>,
     @InjectRepository(Integration)
     private integrationsRepository: Repository<Integration>,
     @InjectRepository(Verification)
@@ -114,10 +92,9 @@ export class CronService {
     private journeyLocationsService: JourneyLocationsService,
     @Inject(RedlockService)
     private readonly redlockService: RedlockService,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(ClickHouseClient)
     private clickhouseClient: ClickHouseClient,
-  ) {}
+  ) { }
 
   log(message, method, session, user = 'ANONYMOUS') {
     this.logger.log(
@@ -177,83 +154,6 @@ export class CronService {
       })
     );
   }
-
-  // TODO: might be deleted after clarification
-  // @Cron(CronExpression.EVERY_HOUR)
-  // async handleCustomerKeysCron() {
-  //   const session = randomUUID();
-  //   try {
-  //     let current = 0;
-  //     const documentsCount = await this.customerModel
-  //       .estimatedDocumentCount()
-  //       .exec();
-
-  //     const keys: Record<string, any[]> = {};
-  //     const keyCustomerMap: Record<string, Set<string>> = {};
-
-  //     while (current < documentsCount) {
-  //       const batch = await this.customerModel
-  //         .find()
-  //         .skip(current)
-  //         .limit(BATCH_SIZE)
-  //         .exec();
-
-  //       batch.forEach((customer) => {
-  //         const obj = customer.toObject();
-  //         for (const key of Object.keys(obj)) {
-  //           if (KEYS_TO_SKIP.includes(key)) continue;
-
-  //           if (keys[key]) {
-  //             keys[key].push(obj[key]);
-  //             keyCustomerMap[key].add(customer.workspaceId);
-  //             continue;
-  //           }
-
-  //           keys[key] = [obj[key]];
-  //           keyCustomerMap[key] = new Set([customer.workspaceId]);
-  //         }
-  //       });
-  //       current += BATCH_SIZE;
-  //     }
-
-  //     for (const key of Object.keys(keys)) {
-  //       const validItem = keys[key].find(
-  //         (item) => item !== '' && item !== undefined && item !== null
-  //       );
-
-  //       if (validItem === '' || validItem === undefined || validItem === null)
-  //         continue;
-
-  //       const keyType = getType(validItem);
-  //       const isArray = keyType.isArray();
-  //       let type = isArray ? getType(validItem[0]).name : keyType.name;
-
-  //       if (type === 'String') {
-  //         if (isEmail(validItem)) type = 'Email';
-  //         if (isDateString(validItem)) type = 'Date';
-  //       }
-
-  //       for (const workspaceId of keyCustomerMap[key].values()) {
-  //         await this.customerKeysModel
-  //           .updateOne(
-  //             { key, workspaceId },
-  //             {
-  //               $set: {
-  //                 key,
-  //                 type,
-  //                 isArray,
-  //                 workspaceId,
-  //               },
-  //             },
-  //             { upsert: true }
-  //           )
-  //           .exec();
-  //       }
-  //     }
-  //   } catch (e) {
-  //     this.error(e, this.handleCustomerKeysCron.name, session);
-  //   }
-  // }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async minuteTasks() {
@@ -357,11 +257,11 @@ export class CronService {
                           ).epochMilliseconds
                         ).getTime() < Date.now() &&
                         Date.now() <
-                          new Date(
-                            Temporal.Instant.from(
-                              step.metadata.timeBranch.window.to
-                            ).epochMilliseconds
-                          ).getTime()
+                        new Date(
+                          Temporal.Instant.from(
+                            step.metadata.timeBranch.window.to
+                          ).epochMilliseconds
+                        ).getTime()
                       )
                     ) {
                       continue;
@@ -414,11 +314,11 @@ export class CronService {
                         ).epochMilliseconds
                       ).getTime() < Date.now() &&
                       Date.now() <
-                        new Date(
-                          Temporal.Instant.from(
-                            step.metadata.window.to
-                          ).epochMilliseconds
-                        ).getTime()
+                      new Date(
+                        Temporal.Instant.from(
+                          step.metadata.window.to
+                        ).epochMilliseconds
+                      ).getTime()
                     )
                   ) {
                     continue;
@@ -456,9 +356,7 @@ export class CronService {
                     ),
                   session: session,
                   journey: journeys[journeyIndex],
-                  customer: await this.customerModel
-                    .findById(locations[locationsIndex].customer)
-                    .exec(),
+                  customer: await this.customersService.findByCustomerIdUnauthenticated(locations[locationsIndex].customer.id.toString()),
                   location: locations[locationsIndex],
                   branch,
                   // TODO: extrapolate stepDepth from journey
@@ -583,10 +481,10 @@ export class CronService {
         );
         const bulkJobs: any[] = [];
         for (const requeue of requeuedMessages) {
-          // THIS MIGHT BE SLOWER THAN WE WANT querying for the customer from mongo.
+          // THIS MIGHT BE SLOWER THAN WE WANT querying for the customer.
           // findAndLock only uses customer.id, but the function currently
           // only accepts the whole customer document. Consider changing
-          const customer = await this.customersService.findByCustomerId(
+          const customer = await this.customersService.findByCustomerIdUnauthenticated(
             requeue.customerId,
             undefined
           );
@@ -623,99 +521,6 @@ export class CronService {
         await queryRunner.release();
       }
     });
-  }
-
-  @Cron(CronExpression.EVERY_HOUR)
-  async handleEventKeysCron() {
-    return Sentry.startSpan(
-      { name: 'CronService.handleEventKeysCron' },
-      async () => {
-        if (process.env.ENABLE_HANDLEEVENTKEYSCRON !== 'true') return;
-        const session = randomUUID();
-        try {
-          let current = 0;
-          const documentsCount = await this.eventModel
-            .estimatedDocumentCount()
-            .exec();
-
-          const keys: Record<string, { value: any; workspaceId: string }[]> =
-            {};
-
-          while (current < documentsCount) {
-            const batch = await this.eventModel
-              .find()
-              .skip(current)
-              .limit(BATCH_SIZE)
-              .exec();
-
-            batch.forEach((event) => {
-              const workspaceId = event.workspaceId;
-              const obj = (event.toObject() as any)?.event || {};
-              for (const key of Object.keys(obj)) {
-                if (KEYS_TO_SKIP.includes(key)) continue;
-
-                if (keys[key]) {
-                  keys[key].push({ value: obj[key], workspaceId });
-                  continue;
-                }
-
-                keys[key] = [{ value: obj[key], workspaceId }];
-              }
-            });
-
-            current += BATCH_SIZE;
-          }
-
-          for (const key of Object.keys(keys)) {
-            const validItems = keys[key].filter(
-              (item) =>
-                item.value !== '' &&
-                item.value !== undefined &&
-                item.value !== null
-            );
-
-            if (!validItems.length) continue;
-
-            let batchToSave = [];
-            for (const validItem of validItems) {
-              const keyType = getType(validItem.value);
-              const isArray = keyType.isArray();
-              let type = isArray
-                ? getType(validItem.value[0]).name
-                : keyType.name;
-
-              if (type === 'String') {
-                if (isEmail(validItem.value)) type = 'Email';
-                if (isDateString(validItem.value)) type = 'Date';
-              }
-
-              const eventKey = {
-                key,
-                type,
-                isArray,
-                workspaceId: validItem.workspaceId,
-              };
-
-              const foundEventKey = await this.eventKeysModel
-                .findOne(eventKey)
-                .exec();
-
-              if (!foundEventKey) {
-                batchToSave.push(eventKey);
-              }
-
-              if (batchToSave.length > BATCH_SIZE) {
-                await this.eventKeysModel.insertMany(batchToSave);
-                batchToSave = [];
-              }
-            }
-            await this.eventKeysModel.insertMany(batchToSave);
-          }
-        } catch (e) {
-          this.error(e, this.handleEventKeysCron.name, session);
-        }
-      }
-    );
   }
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -889,10 +694,6 @@ export class CronService {
                   queryRunner,
                   500
                 );
-                // drop the collections after adding customer segments
-                await this.segmentsService.deleteCollectionsWithPrefix(
-                  collectionPrefix
-                );
               }
             }
             await queryRunner.commitTransaction();
@@ -910,9 +711,6 @@ export class CronService {
               accounts[j].id
             );
             //drop extraneous collections in case of error
-            for (const prefix of segmentPrefixes) {
-              await this.segmentsService.deleteCollectionsWithPrefix(prefix);
-            }
             await queryRunner.rollbackTransaction();
             err = error;
           } finally {
@@ -1330,12 +1128,8 @@ export class CronService {
     if (collectionName.includes('_FullDetails')) {
       // Remove '_FullDetails' from the collection name
       const modifiedCollectionName = collectionName.replace('_FullDetails', '');
-      await this.segmentsService.deleteCollectionsWithPrefix(
-        modifiedCollectionName
-      );
     } else {
       // If '_FullDetails' is not part of the name, use the original collection name
-      await this.segmentsService.deleteCollectionsWithPrefix(collectionName);
     }
   }
 
@@ -1392,13 +1186,13 @@ export class CronService {
                 .time.recurrence.endsOn === RecurrenceEndsOptions.After &&
               +delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming
                 .time.recurrence.endAdditionalValue <=
-                delayedJourneys[journeysIndex].enrollment_count - 1
+              delayedJourneys[journeysIndex].enrollment_count - 1
             ) {
               continue;
             } else if (
               delayedJourneys[journeysIndex].journeyEntrySettings?.entryTiming
                 .time.recurrence.endsOn ===
-                RecurrenceEndsOptions.SpecificDate &&
+              RecurrenceEndsOptions.SpecificDate &&
               new Date(
                 delayedJourneys[
                   journeysIndex
@@ -1420,7 +1214,6 @@ export class CronService {
                   delayedJourneys[journeysIndex].workspace.organization.owner,
                   delayedJourneys[journeysIndex].inclusionCriteria,
                   session,
-                  null
                 );
               // if (collectionName) collectionNames.push(collectionName);
               // Step 3: Edit journey details
@@ -1450,22 +1243,22 @@ export class CronService {
                 accountWithConnections,
                 delayedJourneys[journeysIndex],
                 delayedJourneys[journeysIndex].inclusionCriteria,
-                delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
-                  ?.enabled &&
-                  count >
-                    parseInt(
-                      delayedJourneys[journeysIndex]?.journeySettings
-                        ?.maxEntries?.maxEntries
-                    )
-                  ? parseInt(
-                      delayedJourneys[journeysIndex]?.journeySettings
-                        ?.maxEntries?.maxEntries
-                    )
-                  : count,
-                queryRunner,
-                client,
+                // delayedJourneys[journeysIndex]?.journeySettings?.maxEntries
+                //   ?.enabled &&
+                //   count >
+                //   parseInt(
+                //     delayedJourneys[journeysIndex]?.journeySettings
+                //       ?.maxEntries?.maxEntries
+                //   )
+                //   ? parseInt(
+                //     delayedJourneys[journeysIndex]?.journeySettings
+                //       ?.maxEntries?.maxEntries
+                //   )
+                //   : count,
+                // queryRunner,
+                // client,
                 session,
-                collectionName
+                // collectionName
               );
               // drop the collections after adding customer segments
               await this.deleteCollectionIfNeeded(collectionName);
@@ -1493,9 +1286,7 @@ export class CronService {
 
 // /*
 // import { Inject, Injectable, LoggerService } from '@nestjs/common';
-// import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 // import { Cron, CronExpression } from '@nestjs/schedule';
-// import mongoose, { Model } from 'mongoose';
 // import {
 //   Customer,
 //   CustomerDocument,
@@ -1594,7 +1385,6 @@ export class CronService {
 //     @InjectQueue('start') private readonly startQueue: Queue,
 //     @Inject(RedlockService)
 //     private readonly redlockService: RedlockService,
-//     @InjectConnection() private readonly connection: mongoose.Connection,
 //     @Inject(ProcessManagementService)
 //     private processManagementService: ProcessManagementService
 //   ) {}
@@ -2052,7 +1842,7 @@ export class CronService {
 //     //   );
 //     //   const bulkJobs: { name: string; data: any }[] = [];
 //     //   for (const requeue of requeuedMessages) {
-//     //     // THIS MIGHT BE SLOWER THAN WE WANT querying for the customer from mongo.
+//     //     // THIS MIGHT BE SLOWER THAN WE WANT querying for the customer from.
 //     //     // findAndLock only uses customer.id, but the function currently
 //     //     // only accepts the whole customer document. Consider changing
 //     //     const customer = await this.customersService.findByCustomerId(

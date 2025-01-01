@@ -7,8 +7,6 @@ import {
 } from '@nestjs/bullmq';
 import { Job, MetricsTime, Queue } from 'bullmq';
 import { DataSource } from 'typeorm';
-import { InjectConnection } from '@nestjs/mongoose';
-import mongoose from 'mongoose';
 import * as _ from 'lodash';
 import * as Sentry from '@sentry/node';
 import { CustomersService } from '../../customers/customers.service';
@@ -19,10 +17,10 @@ import { JourneysService } from '../journeys.service';
 import { Step } from '../../steps/entities/step.entity';
 import { StepType } from '../../steps/types/step.interface';
 import { StepsService } from '../../steps/steps.service';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { Processor } from '../../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../../common/services/queue/classes/processor-base';
+import { QueueType } from '../../../common/services/queue/types/queue-type';
+import { Producer } from '../../../common/services/queue/classes/producer';
 
 const BATCH_SIZE = +process.env.START_BATCH_SIZE;
 
@@ -36,7 +34,6 @@ export class StartProcessor extends ProcessorBase {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(CustomersService)
     private readonly customersService: CustomersService,
     @Inject(JourneyLocationsService)
@@ -113,8 +110,8 @@ export class StartProcessor extends ProcessorBase {
    * `Job` type contains the following fields :
    * - `ownerID` Owner of the Journey
    * - `stepID` ID of journey's start step
-   * - `skip` How many documents to skip when querying mongo
-   * - `limit` Limit on returned number of mongo documents
+   * - `skip` How many documents to skip when querying
+   * - `limit` Limit on returned number of documents
    * - `query` The query to perform to lookup customers
    * - `session` Session used for logging
    *
@@ -150,22 +147,22 @@ export class StartProcessor extends ProcessorBase {
       await queryRunner.connect();
       await queryRunner.startTransaction();
       try {
-        // Retrieve customers from mongo
-        const customers = await this.customersService.find(
-          job.data.owner,
-          job.data.query,
-          job.data.session,
-          null,
-          job.data.skip,
+        const workspaceId = job.data.owner.teams?.[0]?.organization?.workspaces?.[0].id;
+
+        const customerIds = await this.journeyLocationsService.getCustomerIds(
+          workspaceId,
+          job.data.journey.id,
           job.data.limit,
-          job.data.collectionName
+          job.data.skip);
+
+        const customers = await this.customersService.getCustomersByIds(
+          job.data.owner,
+          customerIds,
         );
         // Retreive locations from Postgres
         const locations = await this.journeyLocationsService.findForWriteBulk(
           job.data.journey,
-          customers.map((document) => {
-            return document._id.toString();
-          }),
+          customerIds,
           queryRunner
         );
         const jobsData = await this.journeysService.enrollCustomersInJourney(
@@ -175,7 +172,6 @@ export class StartProcessor extends ProcessorBase {
           locations,
           job.data.session,
           queryRunner,
-          null
         );
         await queryRunner.commitTransaction();
         if (jobsData && jobsData.length)

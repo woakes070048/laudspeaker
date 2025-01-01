@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  forwardRef,
   HttpException,
   HttpStatus,
   Inject,
@@ -10,11 +11,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, QueryRunner, Like, Repository, FindManyOptions } from 'typeorm';
 import { Account } from '../accounts/entities/accounts.entity';
-import {
-  Customer,
-  CustomerDocument,
-} from '../customers/schemas/customer.schema';
-import { InjectModel } from '@nestjs/mongoose';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import {
@@ -25,26 +21,26 @@ import {
   WebhookData,
   WebhookMethod,
 } from './entities/template.entity';
-import { Job, Queue } from 'bullmq';
+import { Job } from 'bullmq';
 import { Installation } from '../slack/entities/installation.entity';
 import { SlackService } from '../slack/slack.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EventDto } from '../events/dto/event.dto';
-import { Audience } from '../audiences/entities/audience.entity';
 import { cleanTagsForSending } from '../../shared/utils/helpers';
 import { MessageType } from '../email/email.processor';
 import { Response, fetch } from 'undici';
-import { Model } from 'mongoose';
 import { Liquid } from 'liquidjs';
 import { format, parseISO } from 'date-fns';
 import { TestWebhookDto } from './dto/test-webhook.dto';
 import wait from '../../utils/wait';
 import { ModalsService } from '../modals/modals.service';
+import { CacheService } from '../../common/services/cache.service';
+import { QueueType } from '../../common/services/queue/types/queue-type';
+import { Producer } from '../../common/services/queue/classes/producer';
+import { Customer } from '../customers/entities/customer.entity';
+import { CustomersService } from '../customers/customers.service';
 import { WebsocketGateway } from '../../websockets/websocket.gateway';
-import { CacheService } from '@/common/services/cache.service';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
-import { CacheConstants } from '@/common/services/cache.constants';
+import { CacheConstants } from '../../common/services/cache.constants';
 
 @Injectable()
 export class TemplatesService {
@@ -55,14 +51,10 @@ export class TemplatesService {
     private readonly logger: Logger,
     @InjectRepository(Template)
     public templatesRepository: Repository<Template>,
-    @InjectModel(Customer.name) private customerModel: Model<CustomerDocument>,
-    @InjectRepository(Audience)
-    private audiencesRepository: Repository<Audience>,
-    @Inject(WebsocketGateway)
-    private websocketGateway: WebsocketGateway,
     @Inject(SlackService) private slackService: SlackService,
     @Inject(ModalsService) private modalsService: ModalsService,
-    @Inject(CacheService) private cacheService: CacheService
+    @Inject(CacheService) private cacheService: CacheService,
+    @Inject(forwardRef(()=>CustomersService)) private customersService: CustomersService
   ) {
     this.tagEngine.registerFilter('date', (input, formatString) => {
       const date = input === 'now' ? new Date() : parseISO(input);
@@ -232,11 +224,11 @@ export class TemplatesService {
   async queueMessage(
     account: Account,
     templateId: string,
-    customer: CustomerDocument,
+    customer: Customer,
     event: EventDto,
     audienceId?: string
   ): Promise<string | number> {
-    const customerId = customer._id;
+    const customerId = customer.id;
     let template: Template,
       job: Job<any>, // created jobId
       installation: Installation,
@@ -249,7 +241,7 @@ export class TemplatesService {
     } catch (err) {
       return Promise.reject(err);
     }
-    const { _id, workspaceId, workflows, ...tags } = customer.toObject();
+    const { id, ...tags } = customer;
 
     const filteredTags = cleanTagsForSending(tags);
 
@@ -309,7 +301,7 @@ export class TemplatesService {
             tags: filteredTags,
             templateId,
             text: await this.parseApiCallTags(template.text, filteredTags),
-            to: customer.phEmail ? customer.phEmail : customer.email,
+            to: customer.user_attributes.phEmail ? customer.user_attributes.phEmail : customer.user_attributes.email,
           }, MessageType.EMAIL);
         if (workspace.emailProvider === 'free3') {
           await account.save();
@@ -326,7 +318,7 @@ export class TemplatesService {
           accountId: account.id,
           args: {
             audienceId,
-            channel: customer.slackId,
+            channel: customer.user_attributes.slackId,
             customerId,
             tags: filteredTags,
             templateId,
@@ -350,7 +342,7 @@ export class TemplatesService {
           tags: filteredTags,
           templateId: template.id,
           text: await this.parseApiCallTags(template.smsText, filteredTags),
-          to: customer.phPhoneNumber || customer.phone,
+          to: customer.user_attributes.phPhoneNumber || customer.user_attributes.phone,
           token: workspace.smsAuthToken,
           trackingEmail: email,
         }, MessageType.SMS);
@@ -388,14 +380,14 @@ export class TemplatesService {
         }
         break;
       case TemplateType.MODAL:
-        if (template.modalState) {
-          const isSent = await this.websocketGateway.sendModal(
-            customerId,
-            template
-          );
-          if (!isSent)
-            await this.modalsService.queueModalEvent(customerId, template);
-        }
+        // if (template.modalState) {
+        //   const isSent = await this.websocketGateway.sendModal(
+        //     customerId.toString(),
+        //     template
+        //   );
+        //   if (!isSent)
+        //     await this.modalsService.queueModalEvent(customerId.toString(), template);
+        // }
         break;
     }
     return Promise.resolve(message ? message?.sid : job?.id);
@@ -619,34 +611,6 @@ export class TemplatesService {
     return { id: tmp.id };
   }
 
-  async findUsedInJourneys(account: Account, id: string, session: string) {
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
-
-    const template = await this.templatesRepository.findOneBy({
-      id,
-      workspace: { id: workspace.id },
-    });
-    if (!template) throw new NotFoundException('Template not found');
-
-    const data = await this.audiencesRepository
-      .createQueryBuilder('audience')
-      .select(`DISTINCT(workflow."name")`)
-      .leftJoin(
-        'audience_templates_template',
-        'audience_templates_template',
-        'audience_templates_template."audienceId" = audience.id'
-      )
-      .leftJoin('workflow', 'workflow', 'workflow.id = audience."workflowId"')
-      .where(
-        `workflow."isDeleted" = false AND audience."ownerId" = :ownerId AND audience_templates_template."templateId" = :templateId`,
-        // update if used
-        { workspaceId: account.id, templateId: template.id }
-      )
-      .execute();
-
-    return data.map((item) => item.name);
-  }
-
   public async parseTemplateTags(str: string) {
     this.logger.debug('Parsing template tags...');
 
@@ -747,15 +711,13 @@ export class TemplatesService {
   }
 
   async testWebhookTemplate(testWebhookDto: TestWebhookDto, session: string) {
-    let customer = await this.customerModel.findOne({
-      _id: testWebhookDto.testCustomerId,
-    });
+    let customer = await this.customersService.findByCustomerIdUnauthenticated(testWebhookDto.testCustomerId);
 
     if (!customer) {
-      customer = new this.customerModel({});
+      customer = new Customer();
     }
 
-    const { _id, workspaceId, workflows, ...tags } = customer.toObject();
+    const { id, ...tags } = customer.toObject();
     const filteredTags = cleanTagsForSending(tags);
 
     const { method, mimeType } = testWebhookDto.webhookData;

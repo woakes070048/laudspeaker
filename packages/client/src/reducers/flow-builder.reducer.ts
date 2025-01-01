@@ -32,6 +32,7 @@ import {
 import { MessageType, ProviderType } from "types/Workflow";
 import getClosestNextAndPrevious from "utils/getClosestNextAndPrevious";
 import { v4 as uuid } from "uuid";
+import { Attribute, AttributeType } from "pages/PeopleSettings/PeopleSettings";
 
 export enum SegmentsSettingsType {
   ALL_CUSTOMERS = "allCustomers",
@@ -210,6 +211,46 @@ export enum StatementValueType {
   OBJECT = "Object",
 }
 
+export function valueTypeToAttributeType(
+  valueType: StatementValueType,
+  possibleAttributeTypes: AttributeType[]
+): AttributeType {
+  const attribute = possibleAttributeTypes.find(
+    (attr) => attr.name == valueType.toString()
+  );
+  if (!attribute)
+    console.warn(
+      `Attribute not found, possible attribute types: ${JSON.stringify(
+        possibleAttributeTypes,
+        null,
+        2
+      )}, valueType: ${valueType}`
+    );
+  else
+    console.log(
+      `Attribute found, possible attribute types: ${JSON.stringify(
+        possibleAttributeTypes,
+        null,
+        2
+      )}, valueType: ${valueType}`
+    );
+  return attribute!;
+}
+
+export const attributeTypeToStatementValueTypeMap: Record<
+  string,
+  StatementValueType
+> = {
+  String: StatementValueType.STRING,
+  Number: StatementValueType.NUMBER,
+  Boolean: StatementValueType.BOOLEAN,
+  Email: StatementValueType.EMAIL,
+  Date: StatementValueType.DATE,
+  DateTime: StatementValueType.DATE_TIME,
+  Array: StatementValueType.ARRAY,
+  Object: StatementValueType.OBJECT,
+};
+
 export const valueTypeToComparisonTypesMap: Record<
   StatementValueType,
   ComparisonType[]
@@ -283,6 +324,7 @@ export interface AttributeQueryStatement {
   type: QueryStatementType.ATTRIBUTE;
   key: string;
   valueType?: StatementValueType;
+  attribute?: Attribute;
   comparisonType: ComparisonType;
   subComparisonType: ObjectKeyComparisonType;
   subComparisonValue: string;
@@ -1092,12 +1134,12 @@ const flowBuilderSlice = createSlice({
         messageNodes.find(
           /* eslint-disable */
           (node) =>
-            (node?.data as MessageNodeData)?.customName === newMessageNodeName,
+            (node?.data as MessageNodeData)?.customName === newMessageNodeName
         )
       ) {
         postFixValue++;
         newMessageNodeName = `${capitalize(
-          action.payload.action,
+          action.payload.action
         )} ${postFixValue}`;
       }
 
@@ -1293,7 +1335,7 @@ const flowBuilderSlice = createSlice({
           })),
           { type: "select", id: nodeToChange.id, selected: true },
         ],
-        state.nodes,
+        state.nodes
       );
 
       state.nodes = getLayoutedNodes(state.nodes, state.edges);
@@ -1308,7 +1350,7 @@ const flowBuilderSlice = createSlice({
           })),
           { type: "select", id: action.payload, selected: true },
         ],
-        state.nodes,
+        state.nodes
       );
     },
     deselectNodes(state) {
@@ -1318,7 +1360,7 @@ const flowBuilderSlice = createSlice({
           id: node.id,
           selected: false,
         })),
-        state.nodes,
+        state.nodes
       );
     },
     setIsDragging(state, action: PayloadAction<boolean>) {
@@ -1367,26 +1409,26 @@ const flowBuilderSlice = createSlice({
     },
     setJourneySettingsMaxEntries(
       state,
-      action: PayloadAction<JourneySettingsMaxUserEntries>,
+      action: PayloadAction<JourneySettingsMaxUserEntries>
     ) {
       state.journeySettings.maxEntries = action.payload;
     },
     setJourneySettingsQuietHours(
       state,
-      action: PayloadAction<JourneySettingsQuietHours>,
+      action: PayloadAction<JourneySettingsQuietHours>
     ) {
       state.journeySettings.quietHours = action.payload;
     },
     setJourneyFrequencyCappingRules(
       state,
-      action: PayloadAction<JourneySettingsEnableFrequencyCapping>,
+      action: PayloadAction<JourneySettingsEnableFrequencyCapping>
     ) {
       state.journeySettings.frequencyCapping = action.payload;
     },
 
     setMaxMessageSends(
       state,
-      action: PayloadAction<JourneySettingsMaxMessageSends>,
+      action: PayloadAction<JourneySettingsMaxMessageSends>
     ) {
       state.journeySettings.maxMessageSends = action.payload;
     },
@@ -1413,7 +1455,7 @@ const flowBuilderSlice = createSlice({
     },
     setJourneyEntryTimingTime(
       state,
-      action: PayloadAction<EntryTimingSpecificTime>,
+      action: PayloadAction<EntryTimingSpecificTime>
     ) {
       let weeklyOn = null;
       let defaultAdditionalValue: number | string | undefined | null = null;
@@ -1466,13 +1508,13 @@ const flowBuilderSlice = createSlice({
     },
     setJourneyEntryEnrollmentType(
       state,
-      action: PayloadAction<JourneyEnrollmentType>,
+      action: PayloadAction<JourneyEnrollmentType>
     ) {
       state.journeyEntrySettings.enrollmentType = action.payload;
     },
     setJourneyEntrySettings(
       state,
-      action: PayloadAction<JourneyEntrySettings | undefined>,
+      action: PayloadAction<JourneyEntrySettings | undefined>
     ) {
       if (action.payload === undefined)
         state.journeyEntrySettings = defaultJourneyEntrySettings;
@@ -1480,7 +1522,7 @@ const flowBuilderSlice = createSlice({
     },
     setJourneySettings(
       state,
-      action: PayloadAction<JourneySettings | undefined>,
+      action: PayloadAction<JourneySettings | undefined>
     ) {
       if (action.payload === undefined)
         state.journeySettings = defaultJourneySettings;
@@ -1497,13 +1539,13 @@ const flowBuilderSlice = createSlice({
     },
     setIsOnboardingWaitUntilTooltipVisible(
       state,
-      action: PayloadAction<boolean>,
+      action: PayloadAction<boolean>
     ) {
       state.isOnboardingWaitUntilTooltipVisible = action.payload;
     },
     setIsOnboardingWaitUntilTimeSettingTooltipVisible(
       state,
-      action: PayloadAction<boolean>,
+      action: PayloadAction<boolean>
     ) {
       state.isOnboardingWaitUntilTimeSettingTooltipVisible = action.payload;
     },
@@ -1515,7 +1557,7 @@ const flowBuilderSlice = createSlice({
     },
     setTemplateInlineCreator(
       state,
-      action: PayloadAction<TemplateInlineEditor | undefined>,
+      action: PayloadAction<TemplateInlineEditor | undefined>
     ) {
       state.templateInlineCreation = action.payload;
     },
@@ -1542,7 +1584,7 @@ const flowBuilderSlice = createSlice({
     },
     setJourneySettingsConversionTracking(
       state,
-      action: PayloadAction<JourneySettingsConversionTracking>,
+      action: PayloadAction<JourneySettingsConversionTracking>
     ) {
       if (action.payload === undefined)
         state.journeySettings.conversionTracking =
@@ -1550,7 +1592,7 @@ const flowBuilderSlice = createSlice({
       else state.journeySettings.conversionTracking = action.payload;
 
       state.journeySettings.conversionTracking.events = Array.from(
-        new Set(state.journeySettings.conversionTracking.events),
+        new Set(state.journeySettings.conversionTracking.events)
       );
     },
   },

@@ -136,16 +136,6 @@ export class TemplatesController {
     );
   }
 
-  @Get(':id/usedInJourneys')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(ClassSerializerInterceptor, new RavenInterceptor())
-  findUsedInJourneys(
-    @Req() { user }: Request,
-    @Param('id', ParseIntPipe) id: string
-  ) {
-    const session = randomUUID();
-    return this.templatesService.findUsedInJourneys(<Account>user, id, session);
-  }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)

@@ -27,17 +27,12 @@ import {
   addDays
 } from 'date-fns';
 import { Journey } from './entities/journey.entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { StepsService } from '../steps/steps.service';
 import { JourneyLocationsService } from './journey-locations.service';
-import { JourneyLocation } from './entities/journey-location.entity';
-import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { ClientSession, Model, SortOrder } from 'mongoose';
-import { EventDocument, Event } from '../events/schemas/event.schema';
-import { BaseLaudspeakerService } from '@/common/services/base.laudspeaker.service';
+import { BaseLaudspeakerService } from '../../common/services/base.laudspeaker.service';
 import {
   JourneySettingsConversionTrackingTimeLimitUnit
-} from '@/api/journeys/types/additional-journey-settings.interface';
+} from './types/additional-journey-settings.interface';
 
 @Injectable()
 export class JourneyStatisticsService extends BaseLaudspeakerService {
@@ -45,8 +40,6 @@ export class JourneyStatisticsService extends BaseLaudspeakerService {
     @Inject(StepsService) private stepsService: StepsService,
     @Inject(JourneyLocationsService)
     private readonly journeyLocationsService: JourneyLocationsService,
-    @InjectModel(Event.name)
-    private EventModel: Model<EventDocument>,
   ) {
     super();
   }
@@ -239,7 +232,7 @@ export class JourneyStatisticsService extends BaseLaudspeakerService {
       }
     }];
 
-    const result = await this.EventModel.aggregate(query).exec();
+    const result = []; // TODO: Convert
 
     const totalEvents = result.reduce((acc, group) => {
       return acc + group['count'];

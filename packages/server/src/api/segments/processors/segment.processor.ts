@@ -13,8 +13,6 @@ import { Segment, SegmentType } from '../entities/segment.entity';
 import { SegmentsService } from '../segments.service';
 import { CustomersService } from '../../customers/customers.service';
 import { CreateSegmentDTO } from '../dto/create-segment.dto';
-import { InjectConnection } from '@nestjs/mongoose';
-import mongoose from 'mongoose';
 import { SegmentCustomers } from '../entities/segment-customers.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateSegmentDTO } from '../dto/update-segment.dto';
@@ -22,12 +20,12 @@ import { Workspaces } from '../../workspaces/entities/workspaces.entity';
 import { SegmentCustomersService } from '../segment-customers.service';
 import { Journey } from '../../journeys/entities/journey.entity';
 import { Step } from '../../steps/entities/step.entity';
-import { StepsService } from '@/api/steps/steps.service';
-import { StepType } from '@/api/steps/types/step.interface';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { StepsService } from '../../steps/steps.service';
+import { Processor } from '../../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../../common/services/queue/classes/processor-base';
+import { QueueType } from '../../../common/services/queue/types/queue-type';
+import { Producer } from '../../../common/services/queue/classes/producer';
+import { Query } from '../../../common/services/query';
 
 @Injectable()
 @Processor('segment_update')
@@ -46,7 +44,6 @@ export class SegmentUpdateProcessor extends ProcessorBase {
     @Inject(StepsService) private stepsService: StepsService,
     @Inject(forwardRef(() => CustomersService))
     private customersService: CustomersService,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     @Inject(SegmentCustomersService)
     private segmentCustomersService: SegmentCustomersService,
     @InjectRepository(SegmentCustomers)
@@ -169,62 +166,21 @@ export class SegmentUpdateProcessor extends ProcessorBase {
     await queryRunner.startTransaction();
 
     try {
-      const collectionPrefix = this.segmentsService.generateRandomString();
-      const customersInSegment =
-        await this.customersService.getSegmentCustomersFromQuery(
-          job.data.segment.inclusionCriteria.query,
-          job.data.account,
-          job.data.session,
-          true,
-          0,
-          collectionPrefix
-        );
+      const workspaceId = job?.data?.account?.teams?.[0]?.organization?.workspaces?.[0]?.id;
 
-      if (!customersInSegment) return; // The segment definition doesnt have any customers in it...
-      const CUSTOMERS_PER_BATCH = 50000;
-      let batch = 0;
-      const mongoCollection = this.connection.db.collection(customersInSegment);
-      const totalDocuments = await mongoCollection.countDocuments();
+      const query = Query.fromJSON(job.data.segment.inclusionCriteria);
+      query.setContext({
+        workspace_id: workspaceId,
+      });
 
-      while (batch * CUSTOMERS_PER_BATCH <= totalDocuments) {
-        const customers = await this.customersService.find(
-          job.data.account,
-          job.data.segment.inclusionCriteria,
-          job.data.session,
-          null,
-          batch * CUSTOMERS_PER_BATCH,
-          CUSTOMERS_PER_BATCH,
-          customersInSegment
-        );
-        this.log(
-          `Skip ${batch * CUSTOMERS_PER_BATCH}, limit: ${CUSTOMERS_PER_BATCH}`,
-          this.handleCreateDynamic.name,
-          job.data.session
-        );
-        batch++;
+      await this.segmentCustomersService.populateEmptySegment(
+        job.data.segment,
+        query,
+        job.data.session,
+        job.data.account,
+        queryRunner
+      );
 
-        await this.segmentCustomersService.addBulk(
-          job.data.segment.id,
-          customers.map((document) => {
-            return document._id.toString();
-          }),
-          job.data.session,
-          job.data.account,
-          client
-        );
-      }
-      try {
-        await this.segmentsService.deleteCollectionsWithPrefix(
-          collectionPrefix
-        );
-      } catch (e) {
-        this.error(
-          e,
-          this.process.name,
-          job.data.session,
-          job.data.account.email
-        );
-      }
       let last = false;
       queryRunner.manager.query('SELECT pg_advisory_lock(12345)');
       const journey = await queryRunner.manager.findOne(Journey, {
@@ -237,7 +193,6 @@ export class SegmentUpdateProcessor extends ProcessorBase {
           last = true;
       }
       await queryRunner.manager.query('SELECT pg_advisory_unlock(12345)');
-      await queryRunner.commitTransaction();
       if (last)
         await Producer.add(QueueType.ENROLLMENT, {
           account: job.data.account,
@@ -306,65 +261,25 @@ export class SegmentUpdateProcessor extends ProcessorBase {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Sleep for 1 second before checking again
     }
 
+    const workspaceId = job?.data?.account?.teams?.[0]?.organization?.workspaces?.[0]?.id;
+
+    const query = Query.fromJSON(job.data.createSegmentDTO);
+    query.setContext({
+      workspace_id: workspaceId,
+    });
+    
     const queryRunner = await this.dataSource.createQueryRunner();
-    const client = await queryRunner.connect();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
+
     try {
-      const collectionPrefix = this.segmentsService.generateRandomString();
-      const customersInSegment =
-        await this.customersService.getSegmentCustomersFromQuery(
-          job.data.createSegmentDTO.inclusionCriteria.query,
-          job.data.account,
-          job.data.session,
-          true,
-          0,
-          collectionPrefix
-        );
-
-      const CUSTOMERS_PER_BATCH = 50000;
-      let batch = 0;
-      const mongoCollection = this.connection.db.collection(customersInSegment);
-      const totalDocuments = await mongoCollection.countDocuments();
-
-      while (batch * CUSTOMERS_PER_BATCH <= totalDocuments) {
-        const customers = await this.customersService.find(
-          job.data.account,
-          job.data.createSegmentDTO.inclusionCriteria,
-          job.data.session,
-          null,
-          batch * CUSTOMERS_PER_BATCH,
-          CUSTOMERS_PER_BATCH,
-          customersInSegment
-        );
-        this.log(
-          `Skip ${batch * CUSTOMERS_PER_BATCH}, limit: ${CUSTOMERS_PER_BATCH}`,
-          this.handleCreateDynamic.name,
-          job.data.session
-        );
-        batch++;
-
-        await this.segmentCustomersService.addBulk(
-          job.data.segment.id,
-          customers.map((document) => {
-            return document._id.toString();
-          }),
-          job.data.session,
-          job.data.account,
-          client
-        );
-      }
-      try {
-        await this.segmentsService.deleteCollectionsWithPrefix(
-          collectionPrefix
-        );
-      } catch (e) {
-        this.error(
-          e,
-          this.process.name,
-          job.data.session,
-          job.data.account.email
-        );
-      }
+      await this.segmentCustomersService.populateEmptySegment(
+        job.data.segment,
+        query,
+        job.data.session,
+        job.data.account,
+        queryRunner
+      );
 
       await queryRunner.manager.save(Segment, {
         ...job.data.segment,
@@ -432,25 +347,15 @@ export class SegmentUpdateProcessor extends ProcessorBase {
         segment: { id: segment.id },
       });
 
-      for (const { customerId } of forDelete) {
-        const customer = await this.customersService.CustomerModel.findById(
-          customerId
-        ).exec();
+      for (const { customer } of forDelete) {
         await this.segmentsService.updateAutomaticSegmentCustomerInclusion(
-          job.data.account,
-          customer,
-          job.data.session
-        );
-        await this.customersService.recheckDynamicInclusion(
           job.data.account,
           customer,
           job.data.session
         );
       }
 
-      const amount = await this.customersService.CustomerModel.count({
-        workspaceId: job.data.workspace.id,
-      });
+      const amount = await this.customersService.countCustomersInWorkspace(job.data.workspace.id);
 
       const batchOptions = {
         current: 0,
@@ -459,12 +364,7 @@ export class SegmentUpdateProcessor extends ProcessorBase {
       };
 
       while (batchOptions.current < batchOptions.documentsCount) {
-        const batch = await this.customersService.CustomerModel.find({
-          workspaceId: job.data.workspace.id,
-        })
-          .skip(batchOptions.current)
-          .limit(batchOptions.batchSize)
-          .exec();
+        const batch = await this.customersService.get(job.data.workspace.id, job.data.session, batchOptions.current, batchOptions.batchSize)
 
         for (const customer of batch) {
           await this.segmentsService.updateAutomaticSegmentCustomerInclusion(
@@ -480,17 +380,6 @@ export class SegmentUpdateProcessor extends ProcessorBase {
       const records = await this.segmentCustomersRepository.findBy({
         segment: { id: segment.id },
       });
-
-      for (const { customerId } of records) {
-        const customer = await this.customersService.CustomerModel.findById(
-          customerId
-        ).exec();
-        await this.customersService.recheckDynamicInclusion(
-          job.data.account,
-          customer,
-          job.data.session
-        );
-      }
 
       await queryRunner.manager.save(Segment, {
         ...segment,
@@ -508,7 +397,6 @@ export class SegmentUpdateProcessor extends ProcessorBase {
       err = e;
     } finally {
       await queryRunner.release();
-      // await this.customerChangeQueue.resume();
       if (err) throw err;
     }
   }

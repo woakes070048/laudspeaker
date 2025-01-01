@@ -4,7 +4,6 @@ import {
 import { Job, MetricsTime, Queue, UnrecoverableError } from 'bullmq';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Account } from '../../accounts/entities/accounts.entity';
-import { CustomerDocument } from '../../customers/schemas/customer.schema';
 import { CustomersService } from '../../customers/customers.service';
 import { DataSource, Repository } from 'typeorm';
 import { Step } from '../../steps/entities/step.entity';
@@ -16,25 +15,35 @@ import {
   StepType,
 } from '../../steps/types/step.interface';
 import { Journey } from '../../journeys/entities/journey.entity';
-import { PosthogTriggerParams } from '../../workflows/entities/workflow.entity';
-import { AudiencesHelper } from '../../audiences/audiences.helper';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { WebsocketGateway } from '@/websockets/websocket.gateway';
+import { WebsocketGateway } from '../../../websockets/websocket.gateway';
 import * as _ from 'lodash';
 import * as Sentry from '@sentry/node';
 import { JourneyLocationsService } from '../../journeys/journey-locations.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CacheService } from '@/common/services/cache.service';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
-import { CacheConstants } from '@/common/services/cache.constants';
+import { CacheService } from '../../../common/services/cache.service';
+import { Processor } from '../../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../../common/services/queue/classes/processor-base';
+import { QueueType } from '../../../common/services/queue/types/queue-type';
+import { Producer } from '../../../common/services/queue/classes/producer';
+import { StepsHelper } from '../../../api/steps/steps.helper';
+import { Customer } from '../../../api/customers/entities/customer.entity';
+import { CacheConstants } from '../../../common/services/cache.constants';
 
 export enum EventType {
   EVENT = 'event',
   ATTRIBUTE = 'attribute_change',
   MESSAGE = 'message',
+}
+export enum PosthogTriggerParams {
+  Track = 'track',
+  Page = 'page',
+  Rageclick = 'Rageclick',
+  Typed = 'Typed (Change)',
+  Autocapture = 'Autocapture (Click)',
+  Submit = 'Submit',
+  Pageview = 'Pageview',
+  Pageleave = 'Pageleave',
 }
 
 /**
@@ -69,7 +78,7 @@ export class EventsProcessor extends ProcessorBase {
     private dataSource: DataSource,
     @Inject(forwardRef(() => CustomersService))
     private readonly customersService: CustomersService,
-    private readonly audiencesHelper: AudiencesHelper,
+    private readonly stepsHelper: StepsHelper,
     @Inject(forwardRef(() => WebsocketGateway))
     private websocketGateway: WebsocketGateway,
     @Inject(JourneyLocationsService)
@@ -169,7 +178,7 @@ export class EventsProcessor extends ProcessorBase {
         account: Account;
         //workspace: Workspace;
         journey: Journey;
-        customer: CustomerDocument;
+        customer: Customer;
         event: any;
         session: string;
       },
@@ -181,10 +190,9 @@ export class EventsProcessor extends ProcessorBase {
     const stepsToQueue: Step[] = [];
 
     const location = await this.journeyLocationsService.findForWrite(
-      job.data.journey,
-      job.data.customer,
-      job.data.session,
-      job.data.account
+      job.data.journey.id,
+      job.data.customer.id,
+      job.data.account.teams?.[0]?.organization?.workspaces?.[0].id
     );
 
     if (!location) {
@@ -347,29 +355,29 @@ export class EventsProcessor extends ProcessorBase {
                 const matches: boolean = ['exists', 'doesNotExist'].includes(
                   comparisonType
                 )
-                  ? this.audiencesHelper.operableCompare(
-                    job.data.event?.payload?.context?.page?.url,
-                    comparisonType
-                  )
-                  : await this.audiencesHelper.conditionalCompare(
-                    job.data.event?.payload?.context?.page?.url,
-                    value,
-                    comparisonType
-                  );
+                  ? this.stepsHelper.operableCompare(
+                      job.data.event?.payload?.context?.page?.url,
+                      comparisonType
+                    )
+                  : await this.stepsHelper.conditionalCompare(
+                      job.data.event?.payload?.context?.page?.url,
+                      value,
+                      comparisonType
+                    );
                 conditionEvalutation.push(matches);
               } else {
                 const matches = ['exists', 'doesNotExist'].includes(
                   comparisonType
                 )
-                  ? this.audiencesHelper.operableCompare(
-                    job.data.event?.payload?.[key],
-                    comparisonType
-                  )
-                  : await this.audiencesHelper.conditionalCompare(
-                    job.data.event?.payload?.[key],
-                    value,
-                    comparisonType
-                  );
+                  ? this.stepsHelper.operableCompare(
+                      job.data.event?.payload?.[key],
+                      comparisonType
+                    )
+                  : await this.stepsHelper.conditionalCompare(
+                      job.data.event?.payload?.[key],
+                      value,
+                      comparisonType
+                    );
                 this.warn(
                   `${JSON.stringify({
                     checkMatchResult: matches,
@@ -389,7 +397,7 @@ export class EventsProcessor extends ProcessorBase {
                 (el) => el?.order === order
               )?.[filter === ElementConditionFilter.TEXT ? 'text' : 'tag_name'];
               const matches: boolean =
-                await this.audiencesHelper.conditionalCompare(
+                await this.stepsHelper.conditionalCompare(
                   elementToCompare,
                   value,
                   comparisonType
@@ -490,7 +498,7 @@ export class EventsProcessor extends ProcessorBase {
     if (stepsToQueue.length) {
       let stepToQueue: Step;
       for (let i = 0; i < stepsToQueue.length; i++) {
-        if (String(location.step.id) === stepsToQueue[i].id) {
+        if (String(location.step_id) === stepsToQueue[i].id) {
           stepToQueue = stepsToQueue[i];
           break;
         }
@@ -507,11 +515,11 @@ export class EventsProcessor extends ProcessorBase {
           event: job.data.event.event,
         }, stepToQueue.type);
       } else {
-        await this.journeyLocationsService.unlock(location, location.step);
+        await this.journeyLocationsService.unlock(location, location.step_id);
         this.warn(
           `${JSON.stringify({
             warning: 'Customer not in step',
-            customerID: job.data.customer._id,
+            customerID: job.data.customer.id,
             stepToQueue,
           })}`,
           this.process.name,
@@ -522,7 +530,7 @@ export class EventsProcessor extends ProcessorBase {
         // a tracker event
         if (job.data.event.source === AnalyticsProviderTypes.TRACKER) {
           await this.websocketGateway.sendProcessed(
-            job.data.customer._id,
+            job.data.customer.id.toString(),
             job.data.event.event,
             job.data.event.payload.trackerId
           );
@@ -530,7 +538,7 @@ export class EventsProcessor extends ProcessorBase {
         return;
       }
     } else {
-      await this.journeyLocationsService.unlock(location, location.step);
+      await this.journeyLocationsService.unlock(location, location.step_id);
       this.warn(
         `${JSON.stringify({ warning: 'No step matches event' })}`,
         this.process.name,
@@ -539,7 +547,7 @@ export class EventsProcessor extends ProcessorBase {
       );
       if (job.data.event.source === AnalyticsProviderTypes.TRACKER) {
         await this.websocketGateway.sendProcessed(
-          job.data.customer._id,
+          job.data.customer.id.toString(),
           job.data.event.event,
           job.data.event.payload.trackerId
         );
@@ -694,7 +702,7 @@ export class EventsProcessor extends ProcessorBase {
     if (stepsToQueue.length) {
       let stepToQueue;
       for (let i = 0; i < stepsToQueue.length; i++) {
-        if (String(location.step) === stepsToQueue[i].id) {
+        if (String(location.step_id) === stepsToQueue[i].id) {
           stepToQueue = stepsToQueue[i];
           break;
         }
@@ -709,7 +717,7 @@ export class EventsProcessor extends ProcessorBase {
           journeyID: journey.id,
         });
       } else {
-        await this.journeyLocationsService.unlock(location, location.step);
+        await this.journeyLocationsService.unlock(location, location.step_id);
         this.warn(
           `${JSON.stringify({
             warning: 'Customer not in step',
@@ -723,7 +731,7 @@ export class EventsProcessor extends ProcessorBase {
         return;
       }
     } else {
-      await this.journeyLocationsService.unlock(location, location.step);
+      await this.journeyLocationsService.unlock(location, location.step_id);
       this.warn(
         `${JSON.stringify({ warning: 'No step matches event' })}`,
         this.process.name,
@@ -741,10 +749,9 @@ export class EventsProcessor extends ProcessorBase {
     const stepsToQueue: Step[] = [];
 
     const location = await this.journeyLocationsService.findForWrite(
-      job.data.journey,
-      job.data.customer,
-      job.data.session,
-      job.data.account
+      job.data.journey.id,
+      job.data.customer.id,
+      job.data.account.teams?.[0]?.organization?.workspaces?.[0].id
     );
 
     if (!location) {
@@ -842,7 +849,7 @@ export class EventsProcessor extends ProcessorBase {
     if (stepsToQueue.length) {
       let stepToQueue: Step;
       for (let i = 0; i < stepsToQueue.length; i++) {
-        if (String(location.step.id) === stepsToQueue[i].id) {
+        if (String(location.step_id) === stepsToQueue[i].id) {
           stepToQueue = stepsToQueue[i];
           break;
         }
@@ -859,11 +866,11 @@ export class EventsProcessor extends ProcessorBase {
           event: job.data.message.event,
         }, stepToQueue.type);
       } else {
-        await this.journeyLocationsService.unlock(location, location.step);
+        await this.journeyLocationsService.unlock(location, location.step_id);
         return;
       }
     } else {
-      await this.journeyLocationsService.unlock(location, location.step);
+      await this.journeyLocationsService.unlock(location, location.step_id);
       return;
     }
     return;

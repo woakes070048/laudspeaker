@@ -4,7 +4,6 @@ import { TypeOrmConfigService } from './shared/typeorm/typeorm.service';
 import { ApiModule } from './api/api.module';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
-import { MongooseModule } from '@nestjs/mongoose';
 import { AuthMiddleware } from './api/auth/middleware/auth.middleware';
 import { EventsController } from './api/events/events.controller';
 import { SlackMiddleware } from './api/slack/middleware/slack.middleware';
@@ -12,21 +11,8 @@ import { AppController } from './app.controller';
 import { join } from 'path';
 import { CronService } from './app.cron.service';
 import { ScheduleModule } from '@nestjs/schedule';
-import {
-  Customer,
-  CustomerSchema,
-} from './api/customers/schemas/customer.schema';
-import {
-  CustomerKeys,
-  CustomerKeysSchema,
-} from './api/customers/schemas/customer-keys.schema';
 import { Account } from './api/accounts/entities/accounts.entity';
 import { Verification } from './api/auth/entities/verification.entity';
-import { EventSchema, Event } from './api/events/schemas/event.schema';
-import {
-  EventKeys,
-  EventKeysSchema,
-} from './api/events/schemas/event-keys.schema';
 import { Integration } from './api/integrations/entities/integration.entity';
 import { Template } from './api/templates/entities/template.entity';
 import { Installation } from './api/slack/entities/installation.entity';
@@ -52,7 +38,6 @@ import { JourneysModule } from './api/journeys/journeys.module';
 import { RedlockModule } from './api/redlock/redlock.module';
 import { RedlockService } from './api/redlock/redlock.service';
 import { RavenModule } from 'nest-raven';
-import { KafkaModule } from './api/kafka/kafka.module';
 import { JourneyLocation } from './api/journeys/entities/journey-location.entity';
 import { JourneyLocationsService } from './api/journeys/journey-locations.service';
 import { SegmentsModule } from './api/segments/segments.module';
@@ -61,8 +46,8 @@ import { OrganizationInvites } from './api/organizations/entities/organization-i
 import { redisStore } from 'cache-manager-redis-yet';
 import { CacheModule } from '@nestjs/cache-manager';
 import { HealthCheckService } from './app.healthcheck.service';
-import { QueueModule } from '@/common/services/queue/queue.module';
-import { ClickHouseModule } from '@/common/services/clickhouse/clickhouse.module';
+import { QueueModule } from './common/services/queue/queue.module';
+import { ClickHouseModule } from './common/services/clickhouse/clickhouse.module';
 import { ChannelsModule } from './api/channels/channels.module';
 
 const sensitiveKeys = [
@@ -122,7 +107,7 @@ const myFormat = winston.format.printf(function ({
 }) {
   let ctx: any = {};
   try {
-    ctx = JSON.parse(context);
+    ctx = JSON.parse(context as string);
   } catch (e) {}
   return `[${timestamp}] [${level}] [${process.env.LAUDSPEAKER_PROCESS_TYPE}-${
     process.pid
@@ -166,19 +151,6 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
           }),
         ]
       : []),
-    process.env.DOCUMENT_DB === 'true'
-      ? MongooseModule.forRoot(process.env.DOCUMENT_DB_CONNECTION_STRING, {
-          user: process.env.DOCUMENT_DB_USER,
-          pass: process.env.DOCUMENT_DB_PASS,
-          tls: true,
-          tlsCAFile: process.env.DOCUMENT_DB_CA_FILE,
-          tlsAllowInvalidHostnames: true,
-          directConnection: true,
-          retryWrites: false,
-        })
-      : MongooseModule.forRoot(
-          formatMongoConnectionString(process.env.MONGOOSE_URL)
-        ),
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => ({
@@ -220,12 +192,6 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
     }),
     TypeOrmModule.forRootAsync({ useClass: TypeOrmConfigService }),
     ApiModule,
-    MongooseModule.forFeature([
-      { name: Customer.name, schema: CustomerSchema },
-      { name: CustomerKeys.name, schema: CustomerKeysSchema },
-      { name: Event.name, schema: EventSchema },
-      { name: EventKeys.name, schema: EventKeysSchema },
-    ]),
     ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       Account,
@@ -266,7 +232,6 @@ export const formatMongoConnectionString = (mongoConnectionString: string) => {
     SegmentsModule,
     RedlockModule,
     RavenModule,
-    KafkaModule,
     OrganizationsModule,
     ChannelsModule,
   ],

@@ -2,7 +2,6 @@ import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PublicKey, Signature, Ecdsa } from 'starkbank-ecdsa';
-import { Audience } from '../audiences/entities/audience.entity';
 import { Account } from '../accounts/entities/accounts.entity';
 import { createHmac } from 'crypto';
 import {
@@ -28,17 +27,17 @@ import {
 } from '../organizations/entities/organization-plan.entity';
 import * as Sentry from '@sentry/node';
 import Stripe from 'stripe';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { QueueType } from '../../common/services/queue/types/queue-type';
+import { Producer } from '../../common/services/queue/classes/producer';
 import {
   ClickHouseTable,
   ClickHouseEventProvider,
   ClickHouseMessage,
   ClickHouseClient
-} from '@/common/services/clickhouse';
-import { CacheService } from '@/common/services/cache.service';
+} from '../../common/services/clickhouse';
+import { CacheService } from '../../common/services/cache.service';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
-import { CacheConstants } from '@/common/services/cache.constants';
+import { CacheConstants } from '../../common/services/cache.constants';
 
 @Injectable()
 export class WebhooksService {

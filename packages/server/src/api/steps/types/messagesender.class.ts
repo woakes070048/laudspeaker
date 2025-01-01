@@ -7,15 +7,15 @@ import twilio from 'twilio';
 import { PostHog } from 'posthog-node';
 import * as admin from 'firebase-admin';
 import { WebClient } from '@slack/web-api';
-import { Account } from '@/api/accounts/entities/accounts.entity';
+import { Account } from '../../accounts/entities/accounts.entity';
 import { Repository } from 'typeorm';
 import { Resend } from 'resend';
-import { MIMEType } from '@/api/templates/entities/template.entity';
+import { MIMEType } from '../../templates/entities/template.entity';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Logger } from '@nestjs/common';
-import { ClickHouseEventProvider } from '@/common/services/clickhouse/types/clickhouse-event-provider';
-import { ClickHouseMessage } from '@/common/services/clickhouse/interfaces/clickhouse-message';
+import { ClickHouseEventProvider } from '../../../common/services/clickhouse/types/clickhouse-event-provider';
+import { ClickHouseMessage } from '../../../common/services/clickhouse/interfaces/clickhouse-message';
 
 export enum MessageType {
   SMS = 'sms',

@@ -23,6 +23,7 @@ export class ModalsService {
   private tagEngine = new Liquid();
 
   constructor(
+    @Inject(forwardRef(() => AccountsService))
     private accountsService: AccountsService,
     @Inject(forwardRef(() => CustomersService))
     private customersService: CustomersService,
@@ -47,47 +48,47 @@ export class ModalsService {
     const account = await this.accountsService.findOneByAPIKey(apiKey);
     if (!account) throw new NotFoundException('Account not found');
 
-    const customer = await this.customersService.CustomerModel.findById(
-      customerId
-    );
-    if (!customer) throw new NotFoundException('Customer not found');
+    // const customer = await this.customersService.CustomerModel.findById(
+    //   customerId
+    // // );
+    // if (!customer) throw new NotFoundException('Customer not found');
 
-    const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
+    // const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
-    if (customer.workspaceId !== workspace.id)
-      throw new ForbiddenException("Customer does't belongs to account");
+    // if (customer.workspaceId !== workspace.id)
+    //   throw new ForbiddenException("Customer does't belongs to account");
   }
 
   public async getQueuedModalObject(
     customerId: string
   ): Promise<Record<string, unknown> | undefined> {
-    const customer = await this.customersService.CustomerModel.findById(
-      customerId
-    );
-    if (!customer) throw new NotFoundException('Customer not found');
+  //   const customer = await this.customersService.CustomerModel.findById(
+  //     customerId
+  //   );
+  //   if (!customer) throw new NotFoundException('Customer not found');
 
-    const modalEvent = await this.modalEventRepository.findOne({
-      where: { customerId },
-      relations: ['template'],
-    });
-    if (!modalEvent) return;
+  //   const modalEvent = await this.modalEventRepository.findOne({
+  //     where: { customerId },
+  //     relations: ['template'],
+  //   });
+  //   if (!modalEvent) return;
 
-    const modalState = modalEvent.template.modalState;
-    const { _id, workspaceId, workflows, ...tags } = customer.toObject();
-    const filteredTags = cleanTagsForSending(tags);
+  //   const modalState = modalEvent.template.modalState;
+  //   const { _id, workspaceId, workflows, ...tags } = customer.toObject();
+  //   const filteredTags = cleanTagsForSending(tags);
 
-    recursivelyUpdateObject(modalState, (item, type) => {
-      if (type !== 'string') return item;
+  //   recursivelyUpdateObject(modalState, (item, type) => {
+  //     if (type !== 'string') return item;
 
-      return this.tagEngine.parseAndRenderSync(
-        item as string,
-        filteredTags || {}
-      );
-    });
+  //     return this.tagEngine.parseAndRenderSync(
+  //       item as string,
+  //       filteredTags || {}
+  //     );
+  //   });
 
-    await this.modalEventRepository.delete({ customerId });
+  //   await this.modalEventRepository.delete({ customerId });
 
-    return modalState;
+    return null;
   }
 
   public async deleteExpiredModalEvents() {

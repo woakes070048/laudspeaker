@@ -18,11 +18,11 @@ import { CustomersService } from '../customers/customers.service';
 import { CreateCustomerDto } from '../customers/dto/create-customer.dto';
 import { State } from './entities/state.entity';
 import { platform, release } from 'os';
-import { CustomerDocument } from '../customers/schemas/customer.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { QueueType } from '../../common/services/queue/types/queue-type';
+import { Producer } from '../../common/services/queue/classes/producer';
+import { Customer } from '../customers/entities/customer.entity';
 
 interface ResponseError extends Error {
   status?: number;
@@ -522,9 +522,9 @@ export class SlackService {
     };
   }
 
-  async getInstallation(customer: CustomerDocument): Promise<Installation> {
+  async getInstallation(customer: Customer): Promise<Installation> {
     return await this.installationRepository.findOneBy({
-      id: customer?.slackTeamId[0]?.trim(),
+      id: customer?.user_attributes.slackTeamId[0]?.trim(),
     });
   }
 }

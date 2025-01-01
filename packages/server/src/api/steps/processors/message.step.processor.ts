@@ -10,35 +10,35 @@ import {
 import { Job, MetricsTime, Queue } from 'bullmq';
 import { StepType } from '../types/step.interface';
 import { Step } from '../entities/step.entity';
-import { CustomerDocument } from '@/api/customers/schemas/customer.schema';
-import { Account } from '@/api/accounts/entities/accounts.entity';
+import { Account } from '../../accounts/entities/accounts.entity';
 import * as _ from 'lodash';
 import * as Sentry from '@sentry/node';
-import { JourneyLocationsService } from '@/api/journeys/journey-locations.service';
+import { JourneyLocationsService } from '../../journeys/journey-locations.service';
 import { StepsService } from '../steps.service';
-import { Journey } from '@/api/journeys/entities/journey.entity';
-import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity';
-import { CacheService } from '@/common/services/cache.service';
-import { JourneysService } from '@/api/journeys/journeys.service';
-import { convertTimeToUTC, isWithinInterval } from '@/common/helper/timing';
-import { JourneySettingsQuietFallbackBehavior } from '@/api/journeys/types/additional-journey-settings.interface';
+import { Journey } from '../../journeys/entities/journey.entity';
+import { JourneyLocation } from '../../journeys/entities/journey-location.entity';
+import { CacheService } from '../../../common/services/cache.service';
+import { JourneysService } from '../../journeys/journeys.service';
+import { convertTimeToUTC, isWithinInterval } from '../../../common/helper/timing';
+import { JourneySettingsQuietFallbackBehavior } from '../../journeys/types/additional-journey-settings.interface';
 import {
   Template,
   TemplateType,
-} from '@/api/templates/entities/template.entity';
-import { TemplatesService } from '@/api/templates/templates.service';
+} from '../../templates/entities/template.entity';
+import { TemplatesService } from '../../templates/templates.service';
 import { cleanTagsForSending } from '../../../shared/utils/helpers';
 import { MessageSender } from '../types/messagesender.class';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { WebhooksService } from '@/api/webhooks/webhooks.service';
-import { OrganizationService } from '@/api/organizations/organizations.service';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
-import { ClickHouseEventProvider } from '@/common/services/clickhouse/types/clickhouse-event-provider';
-import { CacheConstants } from '@/common/services/cache.constants';
+import { WebhooksService } from '../../webhooks/webhooks.service';
+import { OrganizationService } from '../../organizations/organizations.service';
+import { Processor } from '../../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../../common/services/queue/classes/processor-base';
+import { QueueType } from '../../../common/services/queue/types/queue-type';
+import { Producer } from '../../../common/services/queue/classes/producer';
+import { ClickHouseEventProvider } from '../../../common/services/clickhouse/types/clickhouse-event-provider';
+import { Customer } from '../../customers/entities/customer.entity';
+import { CacheConstants } from '../../../common/services/cache.constants';
 
 @Injectable()
 @Processor(
@@ -133,7 +133,7 @@ export class MessageStepProcessor extends ProcessorBase {
         step: Step;
         owner: Account;
         journey: Journey;
-        customer: CustomerDocument;
+        customer: Customer;
         location: JourneyLocation;
         session: string;
         event?: string;
@@ -308,7 +308,7 @@ export class MessageStepProcessor extends ProcessorBase {
           let key = mailgunAPIKey;
           let from = sendingName;
 
-          const { _id, workspaceId, workflows, journeys, ...tags } =
+          const { id, ...tags } =
             job.data.customer;
           const filteredTags = cleanTagsForSending(tags);
           const sender = new MessageSender(this.logger, this.accountRepository);
@@ -392,7 +392,7 @@ export class MessageStepProcessor extends ProcessorBase {
                 name: TemplateType.EMAIL,
                 accountID: job.data.owner.id,
                 cc: template.cc,
-                customerID: job.data.customer._id,
+                customerID: job.data.customer.uuid,
                 domain: sendingDomain,
                 email: sendingEmail,
                 stepID: job.data.step.id,
@@ -403,9 +403,9 @@ export class MessageStepProcessor extends ProcessorBase {
                   template.subject,
                   filteredTags
                 ),
-                to: job.data.customer.phEmail
-                  ? job.data.customer.phEmail
-                  : job.data.customer.email,
+                to: job.data.customer.user_attributes.phEmail
+                  ? job.data.customer.user_attributes.phEmail
+                  : job.data.customer.user_attributes.email,
                 text: await this.templatesService.parseApiCallTags(
                   template.text,
                   filteredTags
@@ -443,11 +443,11 @@ export class MessageStepProcessor extends ProcessorBase {
                       name: 'android',
                       accountID: job.data.owner.id,
                       stepID: job.data.step.id,
-                      customerID: job.data.customer._id,
+                      customerID: job.data.customer.uuid,
                       firebaseCredentials:
                         workspace?.pushPlatforms?.Android?.credentials,
                       // pushChannel?.pushPlatforms?.Android?.credentials,
-                      deviceToken: job.data.customer.androidDeviceToken,
+                      deviceToken: job.data.customer.user_attributes.androidDeviceToken,
                       pushTitle: template.pushObject.settings.Android.title,
                       pushText:
                         template.pushObject.settings.Android.description,
@@ -468,11 +468,11 @@ export class MessageStepProcessor extends ProcessorBase {
                       name: 'ios',
                       accountID: job.data.owner.id,
                       stepID: job.data.step.id,
-                      customerID: job.data.customer._id,
+                      customerID: job.data.customer.uuid,
                       firebaseCredentials:
                         workspace?.pushPlatforms?.iOS?.credentials,
                       // pushChannel?.pushPlatforms?.iOS?.credentials,
-                      deviceToken: job.data.customer.iosDeviceToken,
+                      deviceToken: job.data.customer.user_attributes.iosDeviceToken,
                       pushTitle: template.pushObject.settings.iOS.title,
                       pushText: template.pushObject.settings.iOS.description,
                       kvPairs: template.pushObject.fields,
@@ -494,11 +494,11 @@ export class MessageStepProcessor extends ProcessorBase {
                       name: 'ios',
                       accountID: job.data.owner.id,
                       stepID: job.data.step.id,
-                      customerID: job.data.customer._id,
+                      customerID: job.data.customer.uuid,
                       firebaseCredentials:
                         workspace?.pushPlatforms?.iOS?.credentials,
                       // pushChannel?.pushPlatforms?.iOS?.credentials,
-                      deviceToken: job.data.customer.iosDeviceToken,
+                      deviceToken: job.data.customer.user_attributes.iosDeviceToken,
                       pushTitle: template.pushObject.settings.iOS.title,
                       pushText: template.pushObject.settings.iOS.description,
                       kvPairs: template.pushObject.fields,
@@ -520,11 +520,11 @@ export class MessageStepProcessor extends ProcessorBase {
                       name: 'android',
                       accountID: job.data.owner.id,
                       stepID: job.data.step.id,
-                      customerID: job.data.customer._id,
+                      customerID: job.data.customer.uuid,
                       firebaseCredentials:
                         workspace?.pushPlatforms?.Android?.credentials,
                       // pushChannel?.pushPlatforms?.Android?.credentials,
-                      deviceToken: job.data.customer.androidDeviceToken,
+                      deviceToken: job.data.customer.user_attributes.androidDeviceToken,
                       pushTitle: template.pushObject.settings.Android.title,
                       pushText:
                         template.pushObject.settings.Android.description,
@@ -549,7 +549,7 @@ export class MessageStepProcessor extends ProcessorBase {
                   name: TemplateType.SMS,
                   accountID: job.data.owner.id,
                   stepID: job.data.step.id,
-                  customerID: job.data.customer._id,
+                  customerID: job.data.customer.uuid,
                   templateID: template.id,
                   from: workspace.smsFrom,
                   sid: workspace.smsAccountSid,
@@ -559,7 +559,7 @@ export class MessageStepProcessor extends ProcessorBase {
                     filteredTags
                   ),
                   to:
-                    job.data.customer.phPhoneNumber || job.data.customer.phone,
+                    job.data.customer.user_attributes.phPhoneNumber || job.data.customer.user_attributes.phone,
                   token: workspace.smsAuthToken,
                   trackingEmail: email,
                   session: job.data.session,
@@ -573,7 +573,7 @@ export class MessageStepProcessor extends ProcessorBase {
                   template,
                   filteredTags,
                   stepId: job.data.step.id,
-                  customerId: job.data.customer._id,
+                  customerId: job.data.customer.uuid,
                   accountId: job.data.owner.id,
                   stepDepth: job.data.stepDepth,
                 };
@@ -600,7 +600,7 @@ export class MessageStepProcessor extends ProcessorBase {
               {
                 stepId: job.data.step.id,
                 createdAt: new Date(),
-                customerId: job.data.customer._id,
+                customerId: job.data.customer.uuid.toString(),
                 event: 'aborted',
                 eventProvider: ClickHouseEventProvider.TRACKER,
                 messageId: job.data.step.metadata.humanReadableName,
@@ -636,7 +636,7 @@ export class MessageStepProcessor extends ProcessorBase {
               {
                 stepId: job.data.step.id,
                 createdAt: new Date(),
-                customerId: job.data.customer._id,
+                customerId: job.data.customer.uuid.toString(),
                 event: 'sent',
                 eventProvider: ClickHouseEventProvider.TRACKER,
                 messageId: job.data.step.metadata.humanReadableName,
@@ -657,7 +657,7 @@ export class MessageStepProcessor extends ProcessorBase {
         } else if (messageSendType === 'LIMIT_HOLD') {
           await this.journeyLocationsService.unlock(
             job.data.location,
-            job.data.step
+            job.data.step.id
           );
           return;
         } else if (
@@ -667,13 +667,13 @@ export class MessageStepProcessor extends ProcessorBase {
           await this.stepsService.requeueMessage(
             job.data.owner,
             job.data.step,
-            job.data.customer._id,
+            job.data.customer.id.toString(),
             requeueTime,
             job.data.session
           );
           await this.journeyLocationsService.unlock(
             job.data.location,
-            job.data.step
+            job.data.step.id
           );
           return;
         }
@@ -712,7 +712,7 @@ export class MessageStepProcessor extends ProcessorBase {
             // customer has stopped moving so we can release lock
             await this.journeyLocationsService.unlock(
               job.data.location,
-              nextStep
+              nextStep.id
             );
           }
         } else {
@@ -720,7 +720,7 @@ export class MessageStepProcessor extends ProcessorBase {
           // customer has stopped moving so we can release lock
           await this.journeyLocationsService.unlock(
             job.data.location,
-            job.data.step
+            job.data.step.id
           );
         }
         if (nextStep && nextJob)

@@ -15,8 +15,6 @@ import { AuthHelper } from './auth.helper';
 import { Queue } from 'bullmq';
 import { Verification } from './entities/verification.entity';
 import { CustomersService } from '../customers/customers.service';
-import mongoose from 'mongoose';
-import { InjectConnection } from '@nestjs/mongoose';
 import { RequestResetPasswordDto } from './dto/request-reset-password.dto';
 import { Recovery } from './entities/recovery.entity';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -24,9 +22,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Workspaces } from '../workspaces/entities/workspaces.entity';
 import { OrganizationInvites } from '../organizations/entities/organization-invites.entity';
 import { OrganizationTeam } from '../organizations/entities/organization-team.entity';
-import { randomUUID } from 'node:crypto';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
+import { QueueType } from '../../common/services/queue/types/queue-type';
+import { Producer } from '../../common/services/queue/classes/producer';
 
 @Injectable()
 export class AuthService {
@@ -47,10 +44,9 @@ export class AuthService {
     @Inject(AuthHelper)
     public readonly helper: AuthHelper,
     @Inject(CustomersService) private customersService: CustomersService,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     @InjectRepository(OrganizationInvites)
     public organizationInvitesRepository: Repository<OrganizationInvites>
-  ) {}
+  ) { }
 
   log(message, method, session, user = 'ANONYMOUS') {
     this.logger.log(
@@ -312,19 +308,14 @@ export class AuthService {
 
     const { email, firstName, lastName, verified } = account;
 
-    const transactionSession = await this.connection.startSession();
-    transactionSession.startTransaction();
 
     try {
       await this.dataSource.transaction(async (transactionSession) => {
         await transactionSession.save(account);
         await transactionSession.save(verification);
       });
-      await transactionSession.commitTransaction();
     } catch (e) {
-      await transactionSession.abortTransaction();
     } finally {
-      await transactionSession.endSession();
     }
   }
 

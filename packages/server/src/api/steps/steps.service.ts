@@ -5,7 +5,6 @@ import { Step } from './entities/step.entity';
 import { CreateStepDto } from './dto/create-step.dto';
 import { UpdateStepDto } from './dto/update-step.dto';
 import { Account } from '../accounts/entities/accounts.entity';
-import { CustomerDocument } from '../customers/schemas/customer.schema';
 import Errors from '../../shared/utils/errors';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Queue } from 'bullmq';
@@ -14,15 +13,14 @@ import { Requeue } from './entities/requeue.entity';
 import { JourneyLocationsService } from '../journeys/journey-locations.service';
 import { CustomersService } from '../customers/customers.service';
 import { Journey } from '../journeys/entities/journey.entity';
-import { InjectConnection } from '@nestjs/mongoose';
-import mongoose, { ClientSession } from 'mongoose';
 import * as Sentry from '@sentry/node';
 import {
   ClickHouseTable,
   ClickHouseClient
-} from '@/common/services/clickhouse';
-import { CacheService } from '@/common/services/cache.service';
-import { CacheConstants } from '@/common/services/cache.constants';
+} from '../../common/services/clickhouse';
+import { CacheService } from '../../common/services/cache.service';
+import { CacheConstants } from '../../common/services/cache.constants';
+import { Query } from '../../common/services/query';
 
 @Injectable()
 export class StepsService {
@@ -35,7 +33,6 @@ export class StepsService {
     private dataSource: DataSource,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     @InjectRepository(Step)
     public stepsRepository: Repository<Step>,
     @InjectRepository(Requeue)
@@ -139,67 +136,54 @@ export class StepsService {
    * Add array of customer documents to starting step of a journey
    * @param account
    * @param journeyID
-   * @param unenrolledCustomers
+   * @param query
    * @param queryRunner
    * @param session
    */
   async triggerStart(
     account: Account,
     journey: Journey,
-    query: any,
-    audienceSize: number,
-    queryRunner: QueryRunner,
-    client?: any,
-    session?: string,
-    collectionName?: string
-  ): Promise<{ collectionName: string; jobData: any }> {
+    queryJSON: any,
+    session: string,
+  ): Promise<{ jobData: any }> {
     return Sentry.startSpan({ name: 'StepsService.triggerStart' }, async () => {
       const workspace = account?.teams?.[0]?.organization?.workspaces?.[0];
 
       const startStep = await this.getStartStep(
         account,
         journey,
-        session,
-        queryRunner);
+        session);
 
       if (!startStep)
         throw new Error('Could not find start step.');
 
-      const CUSTOMERS_PER_BATCH = 50000;
-      let batch = 0;
+      const query: Query = Query.fromJSON(queryJSON);
+      query.setContext({
+        "journey_id": journey.id,
+        "step_id": startStep.id,
+        "workspace_id": workspace.id,
+      });
 
-      while (batch * CUSTOMERS_PER_BATCH <= audienceSize) {
-        const customers = await this.customersService.find(
-          account,
-          query,
-          session,
-          null,
-          batch * CUSTOMERS_PER_BATCH,
-          CUSTOMERS_PER_BATCH,
-          collectionName
-        );
-        this.log(
-          `Skip ${batch * CUSTOMERS_PER_BATCH}, limit: ${CUSTOMERS_PER_BATCH}`,
-          this.triggerStart.name,
-          session
-        );
-        batch++;
+      const nCustomers = await query.count(this.dataSource);
 
-        await this.journeyLocationsService.createAndLockBulk(
-          journey.id,
-          customers.map((document) => {
-            return document._id.toString();
-          }),
-          startStep,
-          session,
-          account,
-          queryRunner,
-          client
-        );
-      }
+      // -      while (batch * CUSTOMERS_PER_BATCH <= audienceSize) {
+      // -        const customers = await this.customersService.find(
+      // -          account,
+      // -          query,
+      // -          session,
+      // -          batch * CUSTOMERS_PER_BATCH,
+      // -          CUSTOMERS_PER_BATCH,
+      // -          collectionName
+
+      await this.journeyLocationsService.createAndLockBulk(
+        account,
+        journey.id,
+        queryJSON,
+        startStep.id,
+        session,
+      );
 
       return {
-        collectionName,
         jobData: {
           owner: account,
           step: startStep[0],
@@ -207,8 +191,7 @@ export class StepsService {
           session: session,
           query,
           skip: 0,
-          limit: audienceSize,
-          collectionName,
+          limit: nCustomers,
         },
       };
     });
@@ -455,8 +438,7 @@ export class StepsService {
   async getStartStep(
     account: Account,
     journey: Journey,
-    session: string,
-    queryRunner?: QueryRunner
+    session: string
   ): Promise<Step | null> {
     const startStep = await this.cacheService.getIgnoreError(
       CacheConstants.JOURNEY_WORKSPACE_START_STEPS,
@@ -466,8 +448,7 @@ export class StepsService {
           account,
           journey,
           StepType.START,
-          session,
-          queryRunner);
+          session);
         }
     );
 

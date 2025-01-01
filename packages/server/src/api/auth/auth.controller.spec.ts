@@ -8,7 +8,6 @@ import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { Account } from '../accounts/entities/accounts.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MongooseModule } from '@nestjs/mongoose';
 import { WinstonModule } from 'nest-winston';
 import { TypeOrmConfigService } from '../../shared/typeorm/typeorm.service';
 import * as winston from 'winston';
@@ -29,7 +28,6 @@ describe('AuthController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       imports: [
-        MongooseModule.forRoot(process.env.MONGOOSE_URL),
         WinstonModule.forRootAsync({
           useFactory: () => ({
             level: 'debug',

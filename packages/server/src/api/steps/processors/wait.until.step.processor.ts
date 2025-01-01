@@ -8,21 +8,21 @@ import {
 import { Job, MetricsTime, Queue } from 'bullmq';
 import { StepType } from '../types/step.interface';
 import { Step } from '../entities/step.entity';
-import { CustomerDocument } from '@/api/customers/schemas/customer.schema';
-import { Account } from '@/api/accounts/entities/accounts.entity';
+import { Account } from '../../accounts/entities/accounts.entity';
 import * as _ from 'lodash';
 import * as Sentry from '@sentry/node';
-import { JourneyLocationsService } from '@/api/journeys/journey-locations.service';
+import { JourneyLocationsService } from '../../journeys/journey-locations.service';
 import { StepsService } from '../steps.service';
-import { Journey } from '@/api/journeys/entities/journey.entity';
-import { JourneyLocation } from '@/api/journeys/entities/journey-location.entity';
-import { CacheService } from '@/common/services/cache.service';
+import { Journey } from '../../journeys/entities/journey.entity';
+import { JourneyLocation } from '../../journeys/entities/journey-location.entity';
+import { CacheService } from '../../../common/services/cache.service';
 import { Temporal } from '@js-temporal/polyfill';
-import { Processor } from '@/common/services/queue/decorators/processor';
-import { ProcessorBase } from '@/common/services/queue/classes/processor-base';
-import { QueueType } from '@/common/services/queue/types/queue-type';
-import { Producer } from '@/common/services/queue/classes/producer';
-import { CacheConstants } from '@/common/services/cache.constants';
+import { Processor } from '../../../common/services/queue/decorators/processor';
+import { ProcessorBase } from '../../../common/services/queue/classes/processor-base';
+import { QueueType } from '../../../common/services/queue/types/queue-type';
+import { Producer } from '../../../common/services/queue/classes/producer';
+import { Customer } from '../../customers/entities/customer.entity';
+import { CacheConstants } from '../../../common/services/cache.constants';
 
 @Injectable()
 @Processor('wait.until.step')
@@ -103,7 +103,7 @@ export class WaitUntilStepProcessor extends ProcessorBase {
         step: Step;
         owner: Account;
         journey: Journey;
-        customer: CustomerDocument;
+        customer: Customer;
         location: JourneyLocation;
         session: string;
         event?: string;
@@ -218,7 +218,7 @@ export class WaitUntilStepProcessor extends ProcessorBase {
                 // customer has stopped moving so we can release lock
                 await this.journeyLocationsService.unlock(
                   job.data.location,
-                  nextStep
+                  nextStep.id
                 );
               }
             } else {
@@ -226,7 +226,7 @@ export class WaitUntilStepProcessor extends ProcessorBase {
               // customer has stopped moving so we can release lock
               await this.journeyLocationsService.unlock(
                 job.data.location,
-                job.data.step
+                job.data.step.id
               );
             }
           } else {
@@ -234,7 +234,7 @@ export class WaitUntilStepProcessor extends ProcessorBase {
             // customer has stopped moving so we can release lock
             await this.journeyLocationsService.unlock(
               job.data.location,
-              job.data.step
+              job.data.step.id
             );
           }
         } else if (
@@ -275,7 +275,7 @@ export class WaitUntilStepProcessor extends ProcessorBase {
               // customer has stopped moving so we can release lock
               await this.journeyLocationsService.unlock(
                 job.data.location,
-                nextStep
+                nextStep.id
               );
             }
           } else {
@@ -283,13 +283,13 @@ export class WaitUntilStepProcessor extends ProcessorBase {
             // customer has stopped moving so we can release lock
             await this.journeyLocationsService.unlock(
               job.data.location,
-              job.data.step
+              job.data.step.id
             );
           }
         } else {
           await this.journeyLocationsService.unlock(
             job.data.location,
-            job.data.step
+            job.data.step.id
           );
         }
         if (nextStep && nextJob)

@@ -1,24 +1,9 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Customer, CustomerSchema } from '../customers/schemas/customer.schema';
 import { Template } from '../templates/entities/template.entity';
 import { Installation } from '../slack/entities/installation.entity';
 import { State } from '../slack/entities/state.entity';
 import { Account } from '../accounts/entities/accounts.entity';
-import {
-  CustomerKeys,
-  CustomerKeysSchema,
-} from '../customers/schemas/customer-keys.schema';
-import {
-  EventKeys,
-  EventKeysSchema,
-} from '../events/schemas/event-keys.schema';
-import {
-  Event,
-  EventSchema
-} from '../events/schemas/event.schema';
-import { AudiencesModule } from '../audiences/audiences.module';
 import { CustomersModule } from '../customers/customers.module';
 import { TemplatesModule } from '../templates/templates.module';
 import { SlackModule } from '../slack/slack.module';
@@ -31,7 +16,7 @@ import { StepsModule } from '../steps/steps.module';
 import { JourneyLocation } from './entities/journey-location.entity';
 import { JourneyLocationsService } from './journey-locations.service';
 import { JourneyChange } from './entities/journey-change.entity';
-import { CacheService } from '@/common/services/cache.service';
+import { CacheService } from '../../common/services/cache.service';
 import { JourneyStatisticsService } from './journey-statistics.service';
 
 @Module({
@@ -46,15 +31,6 @@ import { JourneyStatisticsService } from './journey-statistics.service';
       JourneyLocation,
       JourneyChange,
     ]),
-    MongooseModule.forFeature([
-      { name: Customer.name, schema: CustomerSchema },
-      { name: EventKeys.name, schema: EventKeysSchema },
-      { name: Event.name, schema: EventSchema }
-    ]),
-    MongooseModule.forFeature([
-      { name: CustomerKeys.name, schema: CustomerKeysSchema },
-    ]),
-    AudiencesModule,
     forwardRef(() => CustomersModule),
     forwardRef(() => StepsModule),
     forwardRef(() => SegmentsModule),
@@ -70,4 +46,4 @@ import { JourneyStatisticsService } from './journey-statistics.service';
   ],
   exports: [JourneysService],
 })
-export class JourneysModule {}
+export class JourneysModule { }

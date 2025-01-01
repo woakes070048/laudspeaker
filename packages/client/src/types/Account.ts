@@ -1,14 +1,12 @@
-import { AttributeType } from "pages/PeopleImport/PeopleImport";
-import { ConnectedPushFirebasePlatforms } from "pages/PushSettings/PushSettings";
+import { AttributeType } from "pages/PeopleSettings/PeopleSettings";
 import PlanType from "./PlanType";
 import { PushPlatforms } from "pages/PushBuilder/PushBuilderContent";
 
 export interface UserPK {
-  _id: string;
-  key: string;
-  isArray: boolean;
+  id: number;
+  name: string;
   type: AttributeType;
-  isPrimary: true;
+  is_primary: true;
 }
 
 export interface CommonWorkspaceConnection {
